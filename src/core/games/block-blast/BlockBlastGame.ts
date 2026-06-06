@@ -80,7 +80,9 @@ export class BlockBlastGame {
   public onGameOver?: (score: number, bestScore: number) => void;
 
   private particles: any[] = [];
-  private floatingTexts: any[] = [];
+  private floatingTexts: { text: string, x: number, y: number, color: string, life: number, size: number }[] = [];
+  private shockwaves: { x: number, y: number, radius: number, maxRadius: number, color: string, life: number, width: number }[] = [];
+  private screenFlash = 0;
   
   // Screen shake
   private shakeTime = 0;
@@ -181,6 +183,8 @@ export class BlockBlastGame {
     this.isGameOver = false;
     this.particles = [];
     this.floatingTexts = [];
+    this.shockwaves = [];
+    this.screenFlash = 0;
     this.pendingBlocks = [];
     this.perfectClearCheckPending = false;
     this.availableShapes = [null, null, null];
@@ -546,14 +550,19 @@ export class BlockBlastGame {
     this.shakeTime = duration;
   }
 
-  private spawnFloatingText(text: string, x: number, y: number, color: string) {
+  private spawnFloatingText(text: string, x: number, y: number, color: string, size: number = 28) {
     this.floatingTexts.push({
-      text, x, y, life: 1.0, color
+      text, x, y, color, life: 1.0, size
     });
   }
 
   private update(dt: number) {
     this.time += dt;
+
+    if (this.screenFlash > 0) {
+      this.screenFlash -= dt * 0.002;
+      if (this.screenFlash < 0) this.screenFlash = 0;
+    }
 
     if (this.shakeTime > 0) {
       this.shakeTime -= dt;
@@ -595,14 +604,33 @@ export class BlockBlastGame {
       this.perfectClearCheckPending = false;
       if (!this.hasBlocksOnGrid()) {
         // PERFECT CLEAR!
-        this.score += 1000;
+        this.score += 2000;
         if (this.onScore) this.onScore(this.score);
-        this.triggerScreenShake(15, 500);
-        this.spawnFloatingText("PERFECT CLEAR! +1000", this.canvas.width/2, this.canvas.height/2, '#00f0ff');
+        this.triggerScreenShake(25, 800);
+        this.spawnFloatingText("PERFECT CLEAR!", this.canvas.width/2, this.canvas.height/2 - 40, '#ff007f', 60);
+        this.spawnFloatingText("+2000", this.canvas.width/2, this.canvas.height/2 + 20, '#00f0ff', 40);
         
-        // Huge particle burst
-        for(let i=0; i<50; i++) {
-          this.spawnParticles(this.canvas.width/2 + (Math.random() - 0.5)*100, this.canvas.height/2 + (Math.random() - 0.5)*100, COLORS[Math.floor(Math.random() * COLORS.length)]);
+        // Screen flash
+        this.screenFlash = 1.0;
+
+        // Giant Shockwaves
+        this.shockwaves.push({ x: this.canvas.width/2, y: this.canvas.height/2, radius: 10, maxRadius: this.canvas.width, color: '#ff007f', life: 1.0, width: 20 });
+        this.shockwaves.push({ x: this.canvas.width/2, y: this.canvas.height/2, radius: 10, maxRadius: this.canvas.width * 0.8, color: '#00f0ff', life: 1.0, width: 10 });
+
+        // Mega particle burst from center
+        for(let i=0; i<150; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 25 + 5;
+          const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+          this.particles.push({
+            x: this.canvas.width/2,
+            y: this.canvas.height/2,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1.0,
+            color: color,
+            size: Math.random() * 8 + 4
+          });
         }
       }
     }
@@ -624,6 +652,14 @@ export class BlockBlastGame {
       ft.y -= dt * 0.05;
       ft.life -= dt * 0.0015;
       if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+    }
+
+    // Update shockwaves
+    for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+      let sw = this.shockwaves[i];
+      sw.radius += (sw.maxRadius - sw.radius) * 0.08;
+      sw.life -= dt * 0.002;
+      if (sw.life <= 0) this.shockwaves.splice(i, 1);
     }
   }
 
@@ -758,11 +794,26 @@ export class BlockBlastGame {
     }
     c.restore();
 
+    // Draw Shockwaves
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (let sw of this.shockwaves) {
+      c.beginPath();
+      c.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+      c.strokeStyle = sw.color;
+      c.lineWidth = sw.width * sw.life;
+      c.globalAlpha = sw.life;
+      c.shadowColor = sw.color;
+      c.shadowBlur = 20;
+      c.stroke();
+    }
+    c.restore();
+
     // Draw Floating Texts
     c.save();
     c.textAlign = 'center';
-    c.font = 'bold 28px "Orbitron", sans-serif';
     for (let ft of this.floatingTexts) {
+      c.font = `bold ${ft.size}px "Orbitron", sans-serif`;
       c.fillStyle = ft.color;
       c.globalAlpha = ft.life;
       c.shadowColor = ft.color;
@@ -770,6 +821,15 @@ export class BlockBlastGame {
       c.fillText(ft.text, ft.x, ft.y);
     }
     c.restore();
+
+    // Draw Screen Flash
+    if (this.screenFlash > 0) {
+      c.save();
+      c.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to cover full screen
+      c.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.5})`;
+      c.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      c.restore();
+    }
 
     // Restore shake translation
     c.restore();
