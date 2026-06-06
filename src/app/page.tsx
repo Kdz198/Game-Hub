@@ -51,28 +51,28 @@ export default function Home() {
 
   return (
     <div className={`${styles.container} ${rajdhani.className} animate-fade-in`}>
-      <section className={styles.hero}>
-        <div className={styles.gridOverlay}></div>
-        <div className={styles.heroContent}>
+      <section className={styles.heroSplit}>
+        <div className={styles.heroLeft}>
           <h1 className={`${styles.title} ${orbitron.className}`}>
-            <span className={styles.neonTextBlue}>ARCADE</span> <span className={styles.neonTextPink}>NEXUS</span>
+            ARCADE<br/>NEXUS
           </h1>
-          <p className={styles.subtitle}>GIAO THỨC GIẢI TRÍ ĐA CHIỀU • PHIÊN BẢN 2.0</p>
-          <div className={styles.heroStats}>
-            <div className={styles.statBox}>
-              <span className={`${styles.statValue} ${orbitron.className} ${styles.neonTextBlue}`}>99.9%</span>
-              <span className={styles.statLabel}>SERVER UPTIME</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={`${styles.statValue} ${orbitron.className} ${styles.neonTextPink}`}>4</span>
-              <span className={styles.statLabel}>ACTIVE PROTOCOLS</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={`${styles.statValue} ${orbitron.className} ${styles.neonTextGreen}`}>1.3K</span>
-              <span className={styles.statLabel}>CONNECTED USERS</span>
+          <p className={styles.subtitle}>GIAO THỨC GIẢI TRÍ ĐA CHIỀU • V3.0</p>
+          <div className={styles.marqueeContainer}>
+            <div className={`${styles.marquee} ${orbitron.className}`}>
+              <span>[ STATUS: ONLINE ]</span>
+              <span>[ 99.9% UPTIME ]</span>
+              <span>[ 1.3K ACTIVE USERS ]</span>
+              <span>[ 4 PROTOCOLS ]</span>
+              <span>[ STATUS: ONLINE ]</span>
             </div>
           </div>
-          <button className={`${styles.primaryButton} ${orbitron.className}`}>INITIALIZE_SYSTEM()</button>
+          <button className={`${styles.cyberButton} ${orbitron.className}`}>INITIALIZE</button>
+        </div>
+        
+        <div className={styles.heroRight}>
+          <div className={styles.outrunSun}>
+            <div className={styles.sunLines}></div>
+          </div>
         </div>
       </section>
 
