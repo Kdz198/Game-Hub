@@ -84,7 +84,7 @@
 
 .speedometerBox {
   position: absolute;
-  bottom: 30px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(10, 0, 20, 0.85);

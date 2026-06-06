@@ -141,37 +141,12 @@ export default function GridRiderCanvas() {
       <div className={`${styles.hud} ${gameState === 'PLAYING' ? styles.hudVisible : ''}`}>
         <div className={styles.hudTop}>
           <div className={styles.hudItem}>
-            <span className={styles.hudLabel}>SCORE</span>
-            <span className={`${styles.hudValue} ${orbitron.className}`}>{score}</span>
-          </div>
-
-          <div className={styles.hudItem}>
-            <span className={styles.hudLabel}>TIME</span>
-            <span className={`${styles.hudValue} ${orbitron.className}`}>
-              {formatTime(timeElapsed)}
-            </span>
-          </div>
-
-          <div className={styles.hudItem}>
             <span className={styles.hudLabel}>DISTANCE</span>
             <span className={`${styles.hudValue} ${orbitron.className}`}>{distance}m</span>
           </div>
-
-          <div className={styles.hudItem}>
-            <span className={styles.hudLabel}>SHIELD</span>
-            <span 
-              className={`${styles.hudValue} ${orbitron.className} ${shield <= 25 ? styles.timerDanger : ''}`}
-              style={{ 
-                color: shield > 50 ? '#39ff14' : (shield > 25 ? '#ffaa00' : '#ff3333'),
-                textShadow: shield > 50 ? '0 0 10px rgba(57, 255, 20, 0.6)' : (shield > 25 ? '0 0 10px rgba(255, 170, 0, 0.6)' : '0 0 10px rgba(255, 51, 51, 0.6)')
-              }}
-            >
-              {shield}%
-            </span>
-          </div>
         </div>
 
-        {/* Speedometer Gauges at bottom center */}
+        {/* Speedometer Gauges at top center */}
         <div className={styles.speedometerBox}>
           <div className={styles.speedDial}>
             <span className={`${styles.speedNumber} ${orbitron.className}`}>{speed}</span>
@@ -184,13 +159,6 @@ export default function GridRiderCanvas() {
             />
           </div>
         </div>
-
-        {/* Checkpoint Pop-up Alert */}
-        {checkpointText && (
-          <div className={`${styles.checkpointAlert} ${orbitron.className} animate-pulse`}>
-            {checkpointText}
-          </div>
-        )}
 
         {/* Virtual Mobile Controls */}
         {isMobile && gameState === 'PLAYING' && (
@@ -249,10 +217,10 @@ export default function GridRiderCanvas() {
           <p className={styles.menuSub}>SYNTHWAVE 3D HIGHWAY CRUISER</p>
           
           <div className={styles.menuRules}>
-            <p>⌨️ Controls: <b>A / D</b> (or <b>Left / Right</b> Arrow) to steer</p>
+            <p>⌨️ Controls: <b>A / D</b> (or <b>Left / Right</b> Arrow) to steer. Hold <b>Space</b> to Handbrake & Drift!</p>
             <p>⌨️ Speed: <b>W / Up</b> to accelerate, <b>S / Down</b> to brake</p>
-            <p>🛡️ Shield: Avoid crashes! Hits reduce shield. Pass checkpoints to recover <b>+25% shield</b></p>
-            <p>❌ Obstacles: Avoid construction barriers and slow AI traffic</p>
+            <p>🌌 Atmosphere: Endless chill midnight driving. No checkpoints, no shield limits, no Game Over</p>
+            <p>🚧 Obstacles: Avoid barriers and slow traffic. Collisions shake the screen, but the drive never ends</p>
           </div>
 
           {bestScore > 0 && (

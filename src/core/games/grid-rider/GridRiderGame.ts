@@ -5,7 +5,7 @@ import { AudioSynth } from "../../utils/AudioSynth";
 
 interface SpriteInfo {
   x: number; // Offset from road center
-  type: 'palm' | 'light' | 'gate' | 'barrier' | 'sign_checkpoint' | 'building';
+  type: 'palm' | 'light' | 'gate' | 'barrier' | 'sign_checkpoint' | 'building' | 'pole';
   width: number;
   height: number;
   color: string;
@@ -63,23 +63,23 @@ const CAMERA_DEPTH = 0.85;   // Scale factor (FOV helper)
 const TRACK_SEGMENTS = 800; // Total track length in segments
 const GAME_DURATION = 40;   // Initial time limit (seconds)
 
-// Colors palette (Neon / Cyberpunk theme)
+// Colors palette (Midnight / realistic night theme)
 const COLORS = {
-  skyDark: '#0a0015',
-  skyLight: '#240038',
-  sunGold: '#ff007f',
-  sunYellow: '#fff01f',
-  gridLine: 'rgba(255, 0, 240, 0.12)',
-  roadDark: '#120024',
-  roadLight: '#18002d',
-  grassDark: '#05000d',
-  grassLight: '#080012',
-  rumbleCyan: '#00f0ff',
-  rumblePink: '#ff00f0',
-  laneLine: 'rgba(255, 255, 255, 0.4)',
-  carTailRed: '#ff3333',
-  carTailAmber: '#ffaa00',
-  boostBlue: '#00f0ff',
+  skyDark: '#010003',
+  skyLight: '#03020c',
+  sunGold: '#060414',
+  sunYellow: '#b8c5e0',
+  gridLine: 'rgba(255, 0, 240, 0.01)',
+  roadDark: '#05050a',
+  roadLight: '#080810',
+  grassDark: '#010102',
+  grassLight: '#010104',
+  rumbleCyan: '#2d3345', // dark steel slate
+  rumblePink: '#232838', // dark steel slate
+  laneLine: 'rgba(255, 255, 255, 0.08)', // faint white reflect line
+  carTailRed: '#d1152a',
+  carTailAmber: '#cc7a00',
+  boostBlue: '#4fa1d9',
 };
 
 /* ── Grid Rider Game Engine ─────────────────────────────────────── */
@@ -145,6 +145,17 @@ export class GridRiderGame {
   private touchSteer = 0; // -1 to 1 (left to right)
   private touchAccel = false;
   private touchBrake = false;
+  private playerRumble = 0;
+  private lastLeftPole: { x1: number; y1: number; x2: number; y2: number } | null = null;
+  private lastRightPole: { x1: number; y1: number; x2: number; y2: number } | null = null;
+  private playerDX = 0;
+  private rollAngle = 0;
+  private rollVelocity = 0;
+  private yawAngle = 0;
+  private isDrifting = false;
+  private driftDirection = 0;
+  private visualCarX = 0;
+  private pitchY = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -234,50 +245,55 @@ export class GridRiderGame {
 
         // Add roadside sprites randomly
         if (index > 15 && index < TRACK_SEGMENTS - 20) {
-          // Buildings corridor: place a building every 6 segments on both sides
-          if (index % 6 === 0) {
-            const leftColor = index % 12 === 0 ? '#ff00f0' : '#00f0ff';
-            const rightColor = index % 12 === 0 ? '#00f0ff' : '#ff00f0';
+          // 1. Towering buildings corridor: place a building every 12 segments on both sides to create separate skyscrapers
+          if (index % 12 === 0) {
+            const leftColor = index % 36 === 0 ? '#1f3c6d' : (index % 36 === 12 ? '#16354d' : '#224a56');
+            const rightColor = index % 36 === 0 ? '#224a56' : (index % 36 === 12 ? '#1f3c6d' : '#16354d');
             
             segment.sprites.push({
-              x: -2.3, // Situated just past the rumble strips
+              x: -2.8, // Situated in the background
               type: 'building',
-              width: 550 + (Math.sin(index) * 200), // Variable width
-              height: 1500 + (Math.cos(index * 2) * 700), // Variable height
+              width: 1200 + (Math.sin(index) * 200),
+              height: 4500 + (Math.cos(index * 2) * 1500),
               color: leftColor,
             });
             segment.sprites.push({
-              x: 2.3, // Situated just past the rumble strips
+              x: 2.8, // Situated in the background
               type: 'building',
-              width: 550 + (Math.cos(index) * 200),
-              height: 1500 + (Math.sin(index * 2) * 700),
+              width: 1200 + (Math.cos(index) * 200),
+              height: 4500 + (Math.sin(index * 2) * 1500),
               color: rightColor,
             });
           }
 
-          // Neon lampposts placed every 18 segments
-          if (index % 18 === 9) {
+          // 2. Neon lampposts placed every 12 segments
+          if (index % 12 === 6) {
             segment.sprites.push({
-              x: index % 36 === 9 ? -1.4 : 1.4,
+              x: index % 24 === 6 ? -1.35 : 1.35,
               type: 'light',
-              width: 120,
-              height: 400,
-              color: '#fff01f',
+              width: 100,
+              height: 420,
+              color: '#ffe070', // warm yellow streetlights
             });
           }
 
-          // No speed boost pads (endless drive mode)
-        }
-
-        // Add checkpoint billboards at the side of the road
-        if (index > 0 && index % 200 === 0 && index < TRACK_SEGMENTS - 50) {
-          segment.sprites.push({
-            x: 1.6,
-            type: 'sign_checkpoint',
-            width: 600,
-            height: 1200,
-            color: '#00f0ff',
-          });
+          // 3. Telephone poles placed every 16 segments
+          if (index % 16 === 0) {
+            segment.sprites.push({
+              x: -1.75, // in front of buildings, outside guardrail
+              type: 'pole',
+              width: 90,
+              height: 500,
+              color: '#1a1424',
+            });
+            segment.sprites.push({
+              x: 1.75, // in front of buildings, outside guardrail
+              type: 'pole',
+              width: 90,
+              height: 500,
+              color: '#1a1424',
+            });
+          }
         }
 
         this.segments.push(segment);
@@ -309,7 +325,7 @@ export class GridRiderGame {
 
   private spawnAICars() {
     this.aiCars = [];
-    const count = 16;
+    const count = 5;
     for (let i = 0; i < count; i++) {
       // Spread them across the track starting from segment 80
       const segIndex = 80 + Math.floor(Math.random() * (this.segments.length - 150));
@@ -317,8 +333,8 @@ export class GridRiderGame {
         id: i,
         x: (Math.random() - 0.5) * 1.4, // Lane offset
         z: segIndex * SEGMENT_LENGTH,
-        speed: 4000 + Math.random() * 3800, // Speed in world units
-        color: i % 3 === 0 ? '#ff9900' : (i % 3 === 1 ? '#fff01f' : '#39ff14'),
+        speed: 1200 + Math.random() * 1000, // Speed in world units (chilling slow traffic)
+        color: i % 3 === 0 ? '#2a446c' : (i % 3 === 1 ? '#3c3f4a' : '#1b2a22'),
         type: i % 2,
         width: 320,
         height: 160,
@@ -339,6 +355,9 @@ export class GridRiderGame {
     this.timeElapsed = 0;
     this.shield = 100;
     this.playerX = 0;
+    this.playerDX = 0;
+    this.rollAngle = 0;
+    this.rollVelocity = 0;
     this.playerZ = 0;
     this.playerSpeed = 0;
     this.speed = 0;
@@ -352,6 +371,11 @@ export class GridRiderGame {
     this.backgroundOffset = 0;
     this.skyOffset = 0;
     this.particles = [];
+    this.yawAngle = 0;
+    this.isDrifting = false;
+    this.driftDirection = 0;
+    this.visualCarX = 0;
+    this.pitchY = 0;
     
     this.spawnAICars();
 
@@ -391,50 +415,130 @@ export class GridRiderGame {
     this.timeElapsed += dtSec;
     if (this.onTime) this.onTime(this.timeElapsed);
 
-    // Capture controls
-    const steerLeft = this.keys['ArrowLeft'] || this.keys['KeyA'] || (this.touchSteer < -0.2);
-    const steerRight = this.keys['ArrowRight'] || this.keys['KeyD'] || (this.touchSteer > 0.2);
-    const accelerate = this.keys['ArrowUp'] || this.keys['KeyW'] || this.touchAccel;
-    const brake = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
-
-    // Steering velocity factor based on speed (can't steer if stationary)
-    // Capped at a minimum speed percentage of 0.35 so steering remains responsive off-road
-    const speedPct = this.playerSpeed / this.maxSpeed;
-    const steerFactor = 2.6 * dtSec * Math.max(0.35, Math.min(speedPct, 1.2));
-
-    if (steerLeft) {
-      this.playerX -= steerFactor * (this.touchSteer < -0.2 ? Math.abs(this.touchSteer) : 1);
-    } else if (steerRight) {
-      this.playerX += steerFactor * (this.touchSteer > 0.2 ? this.touchSteer : 1);
-    }
-
-    // Off-road check & steering drag
+    // Get track segment at current position
     const playerSegmentIndex = Math.floor(this.playerZ / SEGMENT_LENGTH);
     const playerSeg = this.segments[playerSegmentIndex % this.segments.length];
-    
-    // Road drift centrifugal physics on curve (balanced to prevent uncontrollable sliding off-road)
-    const curveInfluence = playerSeg.curve * 0.12 * (this.playerSpeed / this.maxSpeed);
-    this.playerX -= curveInfluence * dtSec * 3.5;
-
     const isOffRoad = Math.abs(this.playerX) > 1.0;
 
-    // Speed calculation
-    const currentMaxSpeed = isOffRoad ? this.offRoadLimit : this.maxSpeed;
+    // Read steering, accelerate, brake, handbrake keys
+    const steerLeft = this.keys['ArrowLeft'] || this.keys['KeyA'] || this.touchSteer < -0.2;
+    const steerRight = this.keys['ArrowRight'] || this.keys['KeyD'] || this.touchSteer > 0.2;
+    const accelerate = this.keys['ArrowUp'] || this.keys['KeyW'] || this.touchAccel;
+    const brake = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
+    const handbrake = this.keys['Space'];
 
-    if (accelerate) {
-      this.playerSpeed += this.accel * dtSec;
-    } else if (brake) {
-      this.playerSpeed += this.decel * 2.0 * dtSec; // Strong braking
-    } else {
-      this.playerSpeed += this.decel * 0.5 * dtSec; // Friction
+    const speedPct = this.playerSpeed / this.maxSpeed;
+
+    // 1. Handbrake & Drifting Logic (GTA style)
+    // Drift initiates when handbrake is held while steering at decent speed
+    if (handbrake && speedPct > 0.22 && (steerLeft || steerRight)) {
+      if (!this.isDrifting) {
+        this.isDrifting = true;
+        this.driftDirection = steerLeft ? -1 : 1;
+      }
     }
 
-    // Off road braking drag
+    // Stop drifting if speed drops too low or we aren't steering/handbraking
+    if (this.isDrifting) {
+      if (speedPct < 0.12 || (!steerLeft && !steerRight && !handbrake)) {
+        this.isDrifting = false;
+        this.driftDirection = 0;
+      }
+    }
+
+    // 2. Steering Grip & Quán tính đánh lái (GTA style responsive grip & slide)
+    // Đánh lái phụ thuộc vào vận tốc hiện tại (không thể lái khi đứng yên)
+    let steerResponse = 0;
+    if (speedPct > 0.05) {
+      steerResponse = Math.min(1.0, speedPct * 2.0); // starts scaling up
+      if (speedPct > 0.65) {
+        steerResponse = 1.0 - (speedPct - 0.65) * 1.85; // heavy understeer at max speed for downforce stability
+        steerResponse = Math.max(0.35, steerResponse);
+      }
+    }
+
+    // Steering is more violent/rapid when drifting (slides rear out), heavier under normal drive
+    const steerPower = this.isDrifting ? 8.5 * steerResponse : 4.6 * steerResponse;
+
+    if (steerLeft) {
+      this.playerDX -= steerPower * dtSec * (this.touchSteer < -0.2 ? Math.abs(this.touchSteer) : 1);
+    } else if (steerRight) {
+      this.playerDX += steerPower * dtSec * (this.touchSteer > 0.2 ? this.touchSteer : 1);
+    } else {
+      // Xe tự động bám đường và trả lái về tâm nhanh gọn khi nhả nút
+      // Damping is lower, so the car slides sideways or rebounds heavily/smoothly (GTA boat feel)
+      const centerDamping = this.isDrifting ? 1.8 : (isOffRoad ? 3.0 : 6.0);
+      this.playerDX += (0 - this.playerDX) * centerDamping * dtSec;
+    }
+
+    // Lực ly tâm của khúc cua kéo xe ra làn ngoài
+    const curveForce = playerSeg.curve * 2.8 * speedPct;
+    this.playerDX -= curveForce * dtSec;
+
+    // Giới hạn vận tốc ngang tối đa (slightly wider range for drift slide)
+    const maxDX = this.isDrifting ? 2.2 : 1.8;
+    this.playerDX = Math.max(-maxDX, Math.min(this.playerDX, maxDX));
+
+    // Cập nhật vị trí ngang
+    this.playerX += this.playerDX * dtSec;
+
+    // 3. Vật lý Hộ Lan phản lực (Va chạm nảy ngược lại và sụt giáp)
+    if (Math.abs(this.playerX) > 1.15) {
+      this.playerX = this.playerX > 0 ? 1.14 : -1.14;
+      this.playerDX = -this.playerDX * 0.45; // Nảy ngược vào trong
+      this.triggerCrash(); // Trừ giáp, gầm rú âm thanh và rung lắc
+    }
+
+    // 4. Hệ thống treo vật lý lò xo - giảm chấn (Spring-Damper) cho góc nghiêng (GTA style body sway)
+    const targetRoll = -this.playerDX * 0.075; // Leans opposite to slide/movement due to centrifugal force
+    const rollSpring = 135.0; // Spring stiffness
+    const rollDamping = 11.5; // Shock damper
+    const rollAcc = (targetRoll - this.rollAngle) * rollSpring - this.rollVelocity * rollDamping;
+    this.rollVelocity += rollAcc * dtSec;
+    this.rollAngle += this.rollVelocity * dtSec;
+
+    // Update visual yaw angle for camera perspective (larger angle when drifting)
+    const targetYaw = this.isDrifting ? this.driftDirection * 0.22 : this.playerDX * 0.07;
+    this.yawAngle += (targetYaw - this.yawAngle) * (this.isDrifting ? 6.0 : 12.0) * dtSec;
+
+    // Camera trailing lag on screen
+    const targetVisualCarX = this.playerDX * 48; // Shift up to 86px left/right
+    this.visualCarX += (targetVisualCarX - this.visualCarX) * 4.5 * dtSec;
+
+    // Suspension pitch (nose-dive on brakes, tail-squat on accel)
+    const isBraking = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
+    const isAccelerating = this.keys['ArrowUp'] || this.keys['KeyW'] || this.touchAccel;
+    const targetPitchY = (isBraking || handbrake) ? 4.0 : (isAccelerating ? -3.0 : 0);
+    this.pitchY += (targetPitchY - this.pitchY) * 8.0 * dtSec;
+
+    // 5. Bức tốc động cơ (Torque Curve) & Lực cản gió khí động học (Wind Drag)
+    const currentMaxSpeed = isOffRoad ? this.offRoadLimit : this.maxSpeed;
+
+    // Torque curve: Động cơ tăng tốc khỏe ở dải tua thấp, đuối dần ở dải tốc cao (Bức tốc từ từ)
+    const torqueFactor = Math.max(0.25, 1.0 - (this.playerSpeed / this.maxSpeed) * 0.75);
+    const engineForce = this.accel * torqueFactor;
+
+    // Lực cản lăn tuyến tính + lực cản gió tăng theo hàm bình phương tốc độ
+    const rollingFriction = this.playerSpeed * 0.25;
+    const windDrag = Math.pow(this.playerSpeed, 2) * 0.000045;
+
+    // Brake / deceleration calculations
+    if (accelerate) {
+      this.playerSpeed += (engineForce - rollingFriction - windDrag) * dtSec;
+    } else if (brake || handbrake) {
+      const brakeForce = handbrake ? this.decel * 1.5 : this.decel * 2.0; // handbrake slides, brake stops
+      this.playerSpeed += brakeForce * dtSec;
+    } else {
+      // Trôi tự do chịu ma sát lăn và cản gió
+      this.playerSpeed += (this.decel * 0.4 - rollingFriction - windDrag) * dtSec;
+    }
+
+    // Ma sát off-road kéo phanh phụ thêm
     if (isOffRoad && this.playerSpeed > this.offRoadLimit) {
       this.playerSpeed += this.offRoadDrag * dtSec;
     }
 
-    // Clamp speed limits
+    // Giới hạn tốc độ theo làn đường hiện tại
     this.playerSpeed = Math.max(0, Math.min(this.playerSpeed, currentMaxSpeed));
 
     // Move player
@@ -452,29 +556,23 @@ export class GridRiderGame {
       if (this.onScore) this.onScore(this.score);
     }
 
-    // Loop or finish check
+    // Loop track silently (no checkpoints)
     if (this.playerZ >= this.trackLength) {
-      // Loop track
       this.playerZ -= this.trackLength;
       this.checkpointIndex = 1;
-      this.triggerCheckpoint("VÒNG MỚI! +25% GIÁP");
-    }
-
-    // Checkpoint detection inside the track
-    const currentCheckpoint = Math.floor(this.playerZ / (200 * SEGMENT_LENGTH)) + 1;
-    if (currentCheckpoint > this.checkpointIndex && currentCheckpoint <= 3) {
-      this.checkpointIndex = currentCheckpoint;
-      this.triggerCheckpoint(`CHECKPOINT ${this.checkpointIndex - 1}! +25% GIÁP`);
     }
 
     // Parallax backgrounds offsets
     this.backgroundOffset += playerSeg.curve * 0.05 * speedPct;
     this.skyOffset += playerSeg.curve * 0.01 * speedPct;
 
-    // Update particles (exhaust fires)
+    // Update particles (exhaust fires & drift smoke)
     this.updateParticles(dtSec);
     if (this.playerSpeed > 100 && Math.random() < 0.35) {
       this.spawnExhaustParticles();
+    }
+    if (this.isDrifting && Math.random() < 0.6) {
+      this.spawnDriftSmoke();
     }
 
     // Update AI cars
@@ -494,38 +592,88 @@ export class GridRiderGame {
 
   private spawnExhaustParticles() {
     // Left/right exhausts position offsets relative to player's center
-    const tilt = this.keys['ArrowLeft'] || this.keys['KeyA'] ? -15 : (this.keys['ArrowRight'] || this.keys['KeyD'] ? 15 : 0);
+    const tilt = this.keys['ArrowLeft'] || this.keys['KeyA'] || this.touchSteer < -0.2 ? -15 : (this.keys['ArrowRight'] || this.keys['KeyD'] || this.touchSteer > 0.2 ? 15 : 0);
     
     // Aligned to new car design dimensions (width = 240, height = 110, carY = h - 110)
     // Exhaust ports are at +/- 0.2 * width = +/- 48px, Y is h - 110 - 13 = h - 123
     const leftOffset = -48 + tilt * 0.3;
     const rightOffset = 48 + tilt * 0.3;
-    const isBoosting = false;
 
-    const baseColor = isBoosting ? '#00f0ff' : '#ff007f';
-    const spawnY = this.canvas.height - 123;
+    const baseColor = 'rgba(75, 65, 90, 0.45)'; // soft grey-purple exhaust smoke
+    const spawnY = this.canvas.height - 123 + this.pitchY;
 
     // Spawn exhaust left
     this.particles.push({
-      x: this.canvas.width / 2 + leftOffset + (Math.random() - 0.5) * 6,
+      x: this.canvas.width / 2 + this.visualCarX + leftOffset + (Math.random() - 0.5) * 6,
       y: spawnY,
-      vx: (Math.random() - 0.5) * 1.5 + (tilt * -0.05),
-      vy: Math.random() * 2 + 1,
-      size: Math.random() * (isBoosting ? 6 : 4) + 2,
+      vx: (Math.random() - 0.5) * 1.0 + (tilt * -0.03),
+      vy: Math.random() * 1.2 + 0.6,
+      size: Math.random() * 3.5 + 1.5,
       color: baseColor,
-      life: 0.4,
+      life: 0.35,
     });
 
     // Spawn exhaust right
     this.particles.push({
-      x: this.canvas.width / 2 + rightOffset + (Math.random() - 0.5) * 6,
+      x: this.canvas.width / 2 + this.visualCarX + rightOffset + (Math.random() - 0.5) * 6,
       y: spawnY,
-      vx: (Math.random() - 0.5) * 1.5 + (tilt * -0.05),
-      vy: Math.random() * 2 + 1,
-      size: Math.random() * (isBoosting ? 6 : 4) + 2,
+      vx: (Math.random() - 0.5) * 1.0 + (tilt * -0.03),
+      vy: Math.random() * 1.2 + 0.6,
+      size: Math.random() * 3.5 + 1.5,
       color: baseColor,
+      life: 0.35,
+    });
+  }
+
+  private spawnDriftSmoke() {
+    const spawnY = this.canvas.height - 110 + this.pitchY;
+    // Left and right tire offsets (rear wheels)
+    const leftOffset = -80;
+    const rightOffset = 80;
+    
+    // Spawn smoke & sparks left
+    this.particles.push({
+      x: this.canvas.width / 2 + this.visualCarX + leftOffset + (Math.random() - 0.5) * 15,
+      y: spawnY + 15,
+      vx: (Math.random() - 0.5) * 2 - this.playerDX * 3,
+      vy: Math.random() * 2 + 1,
+      size: Math.random() * 8 + 4,
+      color: 'rgba(220, 220, 230, 0.45)', // white/grey tire smoke
       life: 0.4,
     });
+    if (Math.random() < 0.45) {
+      this.particles.push({
+        x: this.canvas.width / 2 + this.visualCarX + leftOffset + (Math.random() - 0.5) * 8,
+        y: spawnY + 15,
+        vx: (Math.random() - 0.5) * 4 - this.playerDX * 5,
+        vy: Math.random() * 3 + 2,
+        size: Math.random() * 2.5 + 1.2,
+        color: Math.random() < 0.5 ? '#ffaa00' : '#ff3300', // orange/red friction sparks
+        life: 0.28,
+      });
+    }
+    
+    // Spawn smoke & sparks right
+    this.particles.push({
+      x: this.canvas.width / 2 + this.visualCarX + rightOffset + (Math.random() - 0.5) * 15,
+      y: spawnY + 15,
+      vx: (Math.random() - 0.5) * 2 - this.playerDX * 3,
+      vy: Math.random() * 2 + 1,
+      size: Math.random() * 8 + 4,
+      color: 'rgba(220, 220, 230, 0.45)',
+      life: 0.4,
+    });
+    if (Math.random() < 0.45) {
+      this.particles.push({
+        x: this.canvas.width / 2 + this.visualCarX + rightOffset + (Math.random() - 0.5) * 8,
+        y: spawnY + 15,
+        vx: (Math.random() - 0.5) * 4 - this.playerDX * 5,
+        vy: Math.random() * 3 + 2,
+        size: Math.random() * 2.5 + 1.2,
+        color: Math.random() < 0.5 ? '#ffaa00' : '#ff3300',
+        life: 0.28,
+      });
+    }
   }
 
   private updateParticles(dtSec: number) {
@@ -629,14 +777,9 @@ export class GridRiderGame {
     this.triggerShake(12, 450);
     this.screenFlash = 0.25;
 
-    // Deduct shield (energy)
-    this.shield = Math.max(0, this.shield - 20);
+    // Keep shield at 100
+    this.shield = 100;
     if (this.onShield) this.onShield(this.shield);
-
-    if (this.shield <= 0) {
-      this.triggerGameOver(false);
-      return;
-    }
     
     // Negative visual feedback (centered on new car y-level)
     this.particles.push({
@@ -681,12 +824,26 @@ export class GridRiderGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Apply Screen Shake
+    // Calculate consistent player rumble for both reflections and car rendering
+    this.playerRumble = (Math.random() - 0.5) * (this.playerSpeed / this.maxSpeed) * 2.5;
+
+    // Apply Screen Shake & High-Speed Vibration
     c.save();
+    let totalShakeX = 0;
+    let totalShakeY = 0;
     if (this.shakeTime > 0) {
-      const dx = (Math.random() - 0.5) * this.shakeMag;
-      const dy = (Math.random() - 0.5) * this.shakeMag;
-      c.translate(dx, dy);
+      totalShakeX += (Math.random() - 0.5) * this.shakeMag;
+      totalShakeY += (Math.random() - 0.5) * this.shakeMag;
+    }
+    const speedPct = this.playerSpeed / this.maxSpeed;
+    if (speedPct > 0.65) {
+      // High-frequency speed vibration
+      const vib = (speedPct - 0.65) * 1.8;
+      totalShakeX += (Math.random() - 0.5) * vib;
+      totalShakeY += (Math.random() - 0.5) * vib;
+    }
+    if (totalShakeX !== 0 || totalShakeY !== 0) {
+      c.translate(totalShakeX, totalShakeY);
     }
 
     // 1. Draw Sky & Horizon Sunset
@@ -724,77 +881,69 @@ export class GridRiderGame {
   private drawSky(c: CanvasRenderingContext2D, w: number, h: number) {
     const horizon = h / 2;
 
-    // Sky gradient
+    // 1. Midnight sky gradient (dark and easy on the eyes)
     const skyGrad = c.createLinearGradient(0, 0, 0, horizon);
-    skyGrad.addColorStop(0, COLORS.skyDark);
-    skyGrad.addColorStop(1, COLORS.skyLight);
+    skyGrad.addColorStop(0, '#030108'); // pitch black top
+    skyGrad.addColorStop(0.6, '#08041c'); // midnight blue middle
+    skyGrad.addColorStop(1, '#180d38'); // deep indigo-purple horizon glow
     c.fillStyle = skyGrad;
     c.fillRect(0, 0, w, horizon);
 
-    // Stars
-    c.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    for (let i = 0; i < 40; i++) {
-      const starX = (Math.sin(i * 123.45) * 0.5 + 0.5) * w;
-      const starY = (Math.cos(i * 456.78) * 0.5 + 0.5) * (horizon - 20);
-      c.fillRect(starX, starY, 1.5, 1.5);
+    // 2. Faint twinkling stars in the night sky
+    c.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    for (let i = 0; i < 60; i++) {
+      const starX = (Math.sin(i * 321.45) * 0.5 + 0.5) * w;
+      const starY = (Math.cos(i * 123.78) * 0.5 + 0.5) * (horizon - 25);
+      const twinkle = 0.3 + Math.sin(this.gameTime * 2 + i) * 0.25;
+      c.globalAlpha = twinkle;
+      c.fillRect(starX, starY, 1.2, 1.2);
     }
+    c.globalAlpha = 1.0;
 
-    // Drawing the Synthwave grid sun
+    // 3. Painterly thin dark wispy night clouds
     c.save();
-    const sunX = w / 2 - (this.skyOffset * w * 0.5) % (w * 0.4);
-    const sunY = horizon - 20;
-    const sunRadius = 130;
+    c.globalAlpha = 0.06;
+    c.fillStyle = '#6c4fa1';
+    for (let i = 0; i < 3; i++) {
+      const cy = horizon * 0.3 + i * horizon * 0.12;
+      const cx = ((w * 0.15 + i * w * 0.3) - this.skyOffset * w * 0.05) % w;
+      c.beginPath();
+      c.ellipse(cx, cy, w * 0.22, horizon * 0.05, 0, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.restore();
 
-    c.shadowColor = COLORS.sunGold;
-    c.shadowBlur = 40;
+    // 4. Drawing the silver crescent moon in the upper-left
+    c.save();
+    const moonX = w / 2 - 200 - (this.playerX * 10);
+    const moonY = horizon - 150;
+    const moonRadius = 35;
 
-    const sunGrad = c.createLinearGradient(0, sunY - sunRadius, 0, sunY);
-    sunGrad.addColorStop(0, COLORS.sunYellow);
-    sunGrad.addColorStop(1, COLORS.sunGold);
-    c.fillStyle = sunGrad;
-
+    // Moon body with soft cyan/blue glow
+    c.shadowColor = '#5c8aff';
+    c.shadowBlur = 25;
+    c.fillStyle = '#e8f0ff';
     c.beginPath();
-    c.arc(sunX, sunY, sunRadius, Math.PI, 0, false);
+    c.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
     c.fill();
 
-    // Horizontal grid cut lines in the sun
+    // Cut out circle to create crescent effect (colored with midnight sky color)
     c.shadowBlur = 0;
-    c.fillStyle = COLORS.skyLight;
-    const lines = 8;
-    for (let i = 0; i < lines; i++) {
-      const lineY = sunY - (i * 15) - 3;
-      const lineHeight = Math.max(1, i * 1.5);
-      c.fillRect(sunX - sunRadius - 10, lineY - lineHeight, sunRadius * 2 + 20, lineHeight);
-    }
-    c.restore();
-
-    // Mountain silhouettes in background
-    c.save();
-    c.fillStyle = '#11001e';
+    c.fillStyle = '#050212'; // matches middle sky gradient stop
     c.beginPath();
-    c.moveTo(0, horizon);
-    
-    // Multi-layered jagged neon hills
-    const hillsCount = 8;
-    const sliceWidth = w / hillsCount;
-    for (let i = 0; i <= hillsCount; i++) {
-      const shiftX = (this.skyOffset * w * 0.2) % sliceWidth;
-      const x = i * sliceWidth - shiftX;
-      const y = horizon - 15 - Math.abs(Math.sin(i * 987.65) * 35);
-      c.lineTo(x, y);
-    }
-    c.lineTo(w, horizon);
-    c.closePath();
+    c.arc(moonX + 11, moonY - 5, moonRadius, 0, Math.PI * 2);
     c.fill();
     c.restore();
 
-    // Draw grid horizon line
-    c.strokeStyle = COLORS.sunGold;
-    c.lineWidth = 2;
+    // Draw grid horizon line (extremely soft, deep purple haze)
+    c.save();
+    c.strokeStyle = 'rgba(120, 100, 255, 0.12)';
+    c.lineWidth = 1;
     c.beginPath();
     c.moveTo(0, horizon);
     c.lineTo(w, horizon);
     c.stroke();
+    c.restore();
   }
 
   private drawRoadAndAssets(c: CanvasRenderingContext2D, w: number, h: number) {
@@ -803,6 +952,9 @@ export class GridRiderGame {
     const playerPercent = (this.playerZ % SEGMENT_LENGTH) / SEGMENT_LENGTH;
     const playerSeg = this.segments[playerSegmentIndex % this.segments.length];
     const playerY = playerSeg.world.y + playerPercent * playerSeg.hill;
+
+    this.lastLeftPole = null;
+    this.lastRightPole = null;
 
     let dx = 0;
     let segmentCurveAccum = 0;
@@ -829,7 +981,10 @@ export class GridRiderGame {
 
       // Project to 2D
       const px = w / 2 + (seg.world.x - this.playerX * ROAD_WIDTH + dx) * scale * (w / 2);
-      const py = horizon - (seg.world.y - playerY - CAMERA_HEIGHT) * scale * (h / 2);
+      // Dynamic camera height: camera drops closer to the road at high speed, flattening perspective and emphasizing speed
+      const speedPct = this.playerSpeed / this.maxSpeed;
+      const dynamicCameraHeight = CAMERA_HEIGHT - (speedPct * 180);
+      const py = horizon - (seg.world.y - playerY - dynamicCameraHeight) * scale * (h / 2);
       const pw = ROAD_WIDTH * scale * (w / 2);
 
       seg.screen.x = px;
@@ -858,7 +1013,7 @@ export class GridRiderGame {
       // Draw grass and road surfaces
       c.save();
       
-      // 1. Draw Grass/Glow outer area
+      // 1. Draw Grass/Glow outer area (shaded city ground)
       c.fillStyle = curr.color.grass;
       c.beginPath();
       c.moveTo(0, prev.screen.y);
@@ -867,26 +1022,64 @@ export class GridRiderGame {
       c.lineTo(0, curr.screen.y);
       c.fill();
 
-      // 2. Draw Rumble strips (neon edges)
-      const rumbleW1 = prev.screen.w * 0.12;
-      const rumbleW2 = curr.screen.w * 0.12;
-      c.fillStyle = curr.color.rumble;
+      // 2. Draw 3D metallic guardrails (concrete/barrier walls)
+      // Guardrail height in world units: 140
+      const H_prev = 140 * prev.screen.scale * (h / 2);
+      const H_curr = 140 * curr.screen.scale * (h / 2);
+
+      const isAlternate = Math.floor(curr.index / 3) % 2 === 0;
       
-      // Left rumble strip
+      // Left guardrail face (facing road)
+      c.fillStyle = isAlternate ? '#1a1a24' : '#22222f';
       c.beginPath();
-      c.moveTo(prev.screen.x - prev.screen.w - rumbleW1, prev.screen.y);
-      c.lineTo(prev.screen.x - prev.screen.w, prev.screen.y);
+      c.moveTo(prev.screen.x - prev.screen.w, prev.screen.y);
       c.lineTo(curr.screen.x - curr.screen.w, curr.screen.y);
-      c.lineTo(curr.screen.x - curr.screen.w - rumbleW2, curr.screen.y);
+      c.lineTo(curr.screen.x - curr.screen.w, curr.screen.y - H_curr);
+      c.lineTo(prev.screen.x - prev.screen.w, prev.screen.y - H_prev);
+      c.closePath();
       c.fill();
 
-      // Right rumble strip
+      // Left guardrail top highlight (reflecting orange sunset)
+      c.strokeStyle = curr.color.rumble; // Use the rumble color which is orange/red
+      c.lineWidth = Math.max(1.5, 3.5 * curr.screen.scale * (w / 2) * 0.05);
+      c.beginPath();
+      c.moveTo(prev.screen.x - prev.screen.w, prev.screen.y - H_prev);
+      c.lineTo(curr.screen.x - curr.screen.w, curr.screen.y - H_curr);
+      c.stroke();
+
+      // Left guardrail vertical seam to show speed
+      c.strokeStyle = '#0e0e13';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(curr.screen.x - curr.screen.w, curr.screen.y);
+      c.lineTo(curr.screen.x - curr.screen.w, curr.screen.y - H_curr);
+      c.stroke();
+
+      // Right guardrail face (facing road)
+      c.fillStyle = isAlternate ? '#1a1a24' : '#22222f';
       c.beginPath();
       c.moveTo(prev.screen.x + prev.screen.w, prev.screen.y);
-      c.lineTo(prev.screen.x + prev.screen.w + rumbleW1, prev.screen.y);
-      c.lineTo(curr.screen.x + curr.screen.w + rumbleW2, curr.screen.y);
       c.lineTo(curr.screen.x + curr.screen.w, curr.screen.y);
+      c.lineTo(curr.screen.x + curr.screen.w, curr.screen.y - H_curr);
+      c.lineTo(prev.screen.x + prev.screen.w, prev.screen.y - H_prev);
+      c.closePath();
       c.fill();
+
+      // Right guardrail top highlight (reflecting orange sunset)
+      c.strokeStyle = curr.color.rumble;
+      c.lineWidth = Math.max(1.5, 3.5 * curr.screen.scale * (w / 2) * 0.05);
+      c.beginPath();
+      c.moveTo(prev.screen.x + prev.screen.w, prev.screen.y - H_prev);
+      c.lineTo(curr.screen.x + curr.screen.w, curr.screen.y - H_curr);
+      c.stroke();
+
+      // Right guardrail vertical seam
+      c.strokeStyle = '#0e0e13';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(curr.screen.x + curr.screen.w, curr.screen.y);
+      c.lineTo(curr.screen.x + curr.screen.w, curr.screen.y - H_curr);
+      c.stroke();
 
       // 3. Draw Road body
       c.fillStyle = curr.color.road;
@@ -938,6 +1131,102 @@ export class GridRiderGame {
         }
       }
     }
+
+    // DRAW WET ROAD REFLECTIONS
+    c.save();
+    c.globalCompositeOperation = 'screen';
+
+    // 1. Streetlight reflections
+    for (let i = 1; i < DRAW_DISTANCE - 1; i++) {
+      const idx = (playerSegmentIndex + i) % this.segments.length;
+      const seg = this.segments[idx];
+      if (!segmentVisible[i]) continue;
+
+      for (const sprite of seg.sprites) {
+        if (sprite.type === 'light') {
+          // Calculate screen position of light base
+          const lx = seg.screen.x + seg.screen.w * sprite.x;
+          const ly = seg.screen.y;
+          
+          // Width of reflection (proportional to segment width)
+          const refW = Math.max(15, seg.screen.w * 0.12);
+
+          const grad = c.createLinearGradient(lx, ly, lx, h);
+          grad.addColorStop(0, 'rgba(255, 220, 100, 0.10)');
+          grad.addColorStop(0.3, 'rgba(255, 220, 100, 0.03)');
+          grad.addColorStop(1, 'rgba(255, 220, 100, 0)');
+          
+          c.fillStyle = grad;
+          c.fillRect(lx - refW / 2, ly, refW, h - ly);
+        }
+      }
+    }
+
+    // 2. AI Car reflections
+    const curPlayerZ = this.playerZ;
+    for (const car of this.aiCars) {
+      // Find Z distance relative to player
+      let carZ = car.z;
+      if (carZ < curPlayerZ - this.trackLength / 2) carZ += this.trackLength;
+      else if (carZ > curPlayerZ + this.trackLength / 2) carZ -= this.trackLength;
+
+      const zDiff = carZ - curPlayerZ;
+      if (zDiff > 0 && zDiff < DRAW_DISTANCE * SEGMENT_LENGTH) {
+        // Project car coordinates
+        const scale = CAMERA_DEPTH / zDiff;
+        if (scale > 0) {
+          const visualSegIdx = Math.floor(zDiff / SEGMENT_LENGTH);
+          if (visualSegIdx > 0 && visualSegIdx < DRAW_DISTANCE) {
+            const roadSeg = this.segments[(playerSegmentIndex + visualSegIdx) % this.segments.length];
+            const sx = roadSeg.screen.x + roadSeg.screen.w * car.x;
+            const sy = roadSeg.screen.y;
+            const width = car.width * scale * (w / 2);
+
+            const leftLightX = sx - width * 0.33;
+            const rightLightX = sx + width * 0.33;
+            const refW = Math.max(8, width * 0.15);
+
+            // Left tail light reflection
+            const leftGrad = c.createLinearGradient(leftLightX, sy, leftLightX, h);
+            leftGrad.addColorStop(0, 'rgba(209, 21, 42, 0.25)');
+            leftGrad.addColorStop(0.4, 'rgba(209, 21, 42, 0.05)');
+            leftGrad.addColorStop(1, 'rgba(209, 21, 42, 0)');
+            c.fillStyle = leftGrad;
+            c.fillRect(leftLightX - refW / 2, sy, refW, h - sy);
+
+            // Right tail light reflection
+            const rightGrad = c.createLinearGradient(rightLightX, sy, rightLightX, h);
+            rightGrad.addColorStop(0, 'rgba(209, 21, 42, 0.25)');
+            rightGrad.addColorStop(0.4, 'rgba(209, 21, 42, 0.05)');
+            rightGrad.addColorStop(1, 'rgba(209, 21, 42, 0)');
+            c.fillStyle = rightGrad;
+            c.fillRect(rightLightX - refW / 2, sy, refW, h - sy);
+          }
+        }
+      }
+    }
+
+    // 3. Player Car Reflections (drawn stretching from carY to screen bottom)
+    const pLeftX = w / 2 + this.playerRumble + this.visualCarX - 80;
+    const pRightX = w / 2 + this.playerRumble + this.visualCarX + 80;
+    const pRefW = 24;
+    const carY = h - 110 + this.pitchY;
+
+    const pLeftGrad = c.createLinearGradient(pLeftX, carY, pLeftX, h);
+    pLeftGrad.addColorStop(0, 'rgba(209, 21, 42, 0.35)');
+    pLeftGrad.addColorStop(0.5, 'rgba(209, 21, 42, 0.10)');
+    pLeftGrad.addColorStop(1, 'rgba(209, 21, 42, 0)');
+    c.fillStyle = pLeftGrad;
+    c.fillRect(pLeftX - pRefW / 2, carY, pRefW, h - carY);
+
+    const pRightGrad = c.createLinearGradient(pRightX, carY, pRightX, h);
+    pRightGrad.addColorStop(0, 'rgba(209, 21, 42, 0.35)');
+    pRightGrad.addColorStop(0.5, 'rgba(209, 21, 42, 0.10)');
+    pRightGrad.addColorStop(1, 'rgba(209, 21, 42, 0)');
+    c.fillStyle = pRightGrad;
+    c.fillRect(pRightX - pRefW / 2, carY, pRefW, h - carY);
+
+    c.restore();
   }
 
   private drawRoadsideSprite(
@@ -945,12 +1234,14 @@ export class GridRiderGame {
     seg: Segment,
     sprite: SpriteInfo
   ) {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
     const sx = seg.screen.x + seg.screen.w * sprite.x;
     const sy = seg.screen.y;
     
     // Scale sprite dimension with perspective
-    const width = sprite.width * seg.screen.scale * (this.canvas.width / 2);
-    const height = sprite.height * seg.screen.scale * (this.canvas.height / 2);
+    const width = sprite.width * seg.screen.scale * (w / 2);
+    const height = sprite.height * seg.screen.scale * (h / 2);
 
     if (width <= 0 || height <= 0) return;
 
@@ -959,7 +1250,7 @@ export class GridRiderGame {
       c.save();
       const leftSide = sprite.x < 0;
       
-      const frontIndex = (seg.index - 5 + this.segments.length) % this.segments.length;
+      const frontIndex = (seg.index - 6 + this.segments.length) % this.segments.length;
       let frontSeg = this.segments[frontIndex];
       
       // If the front segment has outdated or invalid scale, mock it
@@ -1017,9 +1308,8 @@ export class GridRiderGame {
       c.stroke();
       
       // Draw window grid on the side wall (perspective rows)
-      c.fillStyle = 'rgba(255, 240, 31, 0.45)'; // glowing yellow windows
-      c.shadowColor = '#fff01f';
-      c.shadowBlur = 4;
+      c.fillStyle = 'rgba(240, 210, 140, 0.18)'; // warm soft amber windows
+      c.shadowBlur = 0;
       
       const rows = 6;
       const cols = 5;
@@ -1034,11 +1324,11 @@ export class GridRiderGame {
           const wy = y_front_w + (y_back_w - y_front_w) * colRatio;
           
           const wScale = scale_front + (scale_back - scale_front) * colRatio;
-          const winSizeW = 12 * wScale * screenW * 0.15;
-          const winSizeH = 20 * wScale * screenH * 0.15;
+          const winSizeW = Math.max(2.5, 45 * wScale * screenW * 0.15);
+          const winSizeH = Math.max(3.5, 70 * wScale * screenH * 0.15);
           
           const litSeed = Math.sin(sprite.width + r * 17 + col * 23) * 0.5 + 0.5;
-          if (litSeed > 0.45 && winSizeW > 1) {
+          if (litSeed > 0.45 && winSizeW > 1.5) {
             c.fillRect(wx - winSizeW/2, wy - winSizeH/2, winSizeW, winSizeH);
           }
         }
@@ -1061,22 +1351,21 @@ export class GridRiderGame {
       c.stroke();
       
       // Draw window grid on the front face
-      c.fillStyle = 'rgba(0, 240, 255, 0.45)'; // cyan windows on the front face
-      c.shadowColor = '#00f0ff';
-      c.shadowBlur = 4;
+      c.fillStyle = 'rgba(170, 200, 240, 0.15)'; // cool soft blue-grey windows
+      c.shadowBlur = 0;
       
       for (let r = 0; r < rows; r++) {
         const rRatio = (r + 0.5) / rows;
         const wy = y_front_roof + (y_front_road - y_front_roof) * rRatio;
-        const winSizeH = 14 * scale_front * screenH * 0.15;
+        const winSizeH = Math.max(3.0, 50 * scale_front * screenH * 0.15);
         
         for (let col = 0; col < 3; col++) {
           const colRatio = (col + 0.5) / 3;
           const wx = x_front_outer + (x_front_road - x_front_outer) * colRatio;
-          const winSizeW = 14 * scale_front * screenW * 0.15;
+          const winSizeW = Math.max(3.0, 50 * scale_front * screenW * 0.15);
           
           const litSeed = Math.sin(sprite.height + r * 13 + col * 29) * 0.5 + 0.5;
-          if (litSeed > 0.5 && winSizeW > 1) {
+          if (litSeed > 0.5 && winSizeW > 1.5) {
             c.fillRect(wx - winSizeW/2, wy - winSizeH/2, winSizeW, winSizeH);
           }
         }
@@ -1127,23 +1416,33 @@ export class GridRiderGame {
       c.restore();
     }
     else {
-      // Translated draw for lampposts and billboards
+      // Translated draw for lampposts, poles, and billboards
       c.save();
       c.translate(sx, sy);
       
       if (sprite.type === 'light') {
-        c.strokeStyle = '#00f0ff';
-        c.lineWidth = 2.5;
+        c.strokeStyle = '#1b122b';
+        c.lineWidth = Math.max(1.5, 3.5 * seg.screen.scale * (w / 2) * 0.04);
         c.beginPath();
         c.moveTo(0, 0);
-        c.lineTo(0, -height * 0.9);
+        c.lineTo(0, -height * 0.95);
         const reach = sprite.x > 0 ? -width * 0.8 : width * 0.8;
         c.lineTo(reach, -height);
         c.stroke();
 
+        // Light fixture bulb
+        c.fillStyle = '#ffe030';
+        c.shadowColor = '#ffe030';
+        c.shadowBlur = 12;
+        c.beginPath();
+        c.arc(reach, -height, Math.max(2, 4 * seg.screen.scale * (w / 2) * 0.03), 0, Math.PI * 2);
+        c.fill();
+        c.shadowBlur = 0;
+
+        // Glowing light cone
         const beamGrad = c.createLinearGradient(reach, -height, reach, 0);
-        beamGrad.addColorStop(0, 'rgba(0, 240, 255, 0.4)');
-        beamGrad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
+        beamGrad.addColorStop(0, 'rgba(255, 224, 48, 0.26)');
+        beamGrad.addColorStop(1, 'rgba(255, 224, 48, 0)');
         c.fillStyle = beamGrad;
         c.beginPath();
         c.moveTo(reach, -height);
@@ -1151,6 +1450,73 @@ export class GridRiderGame {
         c.lineTo(reach + width * 0.5, 0);
         c.closePath();
         c.fill();
+      }
+      else if (sprite.type === 'pole') {
+        const tx1 = sx - width * 0.45;
+        const ty1 = sy - height * 0.82;
+        const tx2 = sx + width * 0.45;
+        const ty2 = sy - height * 0.82;
+
+        const isLeft = sprite.x < 0;
+        const lastPole = isLeft ? this.lastLeftPole : this.lastRightPole;
+
+        if (lastPole) {
+          c.restore(); // Escape translated space
+          c.save(); // Save root space
+          
+          c.strokeStyle = 'rgba(23, 11, 43, 0.45)';
+          c.lineWidth = Math.max(0.6, 1.2 * seg.screen.scale);
+          
+          // Wire 1: outer tip
+          c.beginPath();
+          c.moveTo(lastPole.x1, lastPole.y1);
+          const midX1 = (lastPole.x1 + tx1) / 2;
+          const midY1 = (lastPole.y1 + ty1) / 2 + 10 * seg.screen.scale * (h / 2) * 0.25;
+          c.quadraticCurveTo(midX1, midY1, tx1, ty1);
+          c.stroke();
+
+          // Wire 2: inner tip
+          c.beginPath();
+          c.moveTo(lastPole.x2, lastPole.y2);
+          const midX2 = (lastPole.x2 + tx2) / 2;
+          const midY2 = (lastPole.y2 + ty2) / 2 + 10 * seg.screen.scale * (h / 2) * 0.25;
+          c.quadraticCurveTo(midX2, midY2, tx2, ty2);
+          c.stroke();
+          
+          c.restore(); // Restore root
+          c.save(); // Re-save root
+          c.translate(sx, sy); // Re-translate
+        }
+
+        if (isLeft) {
+          this.lastLeftPole = { x1: tx1, y1: ty1, x2: tx2, y2: ty2 };
+        } else {
+          this.lastRightPole = { x1: tx1, y1: ty1, x2: tx2, y2: ty2 };
+        }
+
+        // Draw the local pole (in translated space)
+        c.fillStyle = '#0a0614';
+        c.strokeStyle = '#150f24';
+        c.lineWidth = 1;
+
+        // Vertical pole
+        c.fillRect(-width * 0.08, -height, width * 0.16, height);
+        c.strokeRect(-width * 0.08, -height, width * 0.16, height);
+
+        // Lower crossarm
+        c.fillRect(-width * 0.5, -height * 0.85, width, height * 0.05);
+        c.strokeRect(-width * 0.5, -height * 0.85, width, height * 0.05);
+
+        // Upper crossarm
+        c.fillRect(-width * 0.5, -height * 0.96, width, height * 0.05);
+        c.strokeRect(-width * 0.5, -height * 0.96, width, height * 0.05);
+
+        // insulations (pegs)
+        c.fillStyle = '#1c152b';
+        c.fillRect(-width * 0.47, -height * 0.89, width * 0.06, height * 0.04);
+        c.fillRect(width * 0.41, -height * 0.89, width * 0.06, height * 0.04);
+        c.fillRect(-width * 0.47, -height * 1.0, width * 0.06, height * 0.04);
+        c.fillRect(width * 0.41, -height * 1.0, width * 0.06, height * 0.04);
       }
       else if (sprite.type === 'sign_checkpoint') {
         c.save();
@@ -1208,55 +1574,127 @@ export class GridRiderGame {
     c.save();
     c.translate(sx, sy);
 
-    const neonTheme = car.color; // Use the AI car's specific light color
+    const neonTheme = car.color;
 
-    // Dynamic metallic paint colors based on car color
     let paintDark = '#08080c';
     let paintMid = '#14141c';
     
-    if (neonTheme === '#ff9900') {
-      paintDark = '#331a00';
-      paintMid = '#804c00';
-    } else if (neonTheme === '#fff01f') {
-      paintDark = '#333000';
-      paintMid = '#807800';
-    } else if (neonTheme === '#39ff14') {
-      paintDark = '#062600';
-      paintMid = '#146000';
+    if (neonTheme === '#2a446c') {
+      paintDark = '#0e1b2f';
+      paintMid = '#1c3456';
+    } else if (neonTheme === '#3c3f4a') {
+      paintDark = '#181a20';
+      paintMid = '#2b2e36';
+    } else if (neonTheme === '#1b2a22') {
+      paintDark = '#0a120f';
+      paintMid = '#121f19';
     }
 
-    // Metallic AI body shading gradient
     const bodyGrad = c.createLinearGradient(0, -height, 0, 0);
     bodyGrad.addColorStop(0, paintMid);
     bodyGrad.addColorStop(0.5, paintDark);
     bodyGrad.addColorStop(1, '#05050a');
 
-    // 1. Rear Tires
+    // 0. Soft Ground Shadow
+    c.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    c.beginPath();
+    c.ellipse(0, height * 0.08, width * 0.44, height * 0.08, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // 1. Rear Tires (with negative camber and scrolling treads)
+    const tireW = width * 0.12;
+    const tireH = height * 0.32;
+    const rimAngle = (car.z * 0.045) % (Math.PI * 2);
+
+    // Left Tire
+    c.save();
+    c.translate(-width * 0.38, height * 0.08);
+    c.rotate(0.04); // negative camber angle tilt inwards
     c.fillStyle = '#06020c';
-    c.fillRect(-width * 0.44, -height * 0.08, width * 0.12, height * 0.32);
-    c.fillRect(width * 0.32, -height * 0.08, width * 0.12, height * 0.32);
+    c.fillRect(-tireW / 2, -tireH / 2, tireW, tireH);
     
-    // Tire rims
-    c.strokeStyle = neonTheme;
+    // Scrolling treads
+    c.strokeStyle = '#121217';
     c.lineWidth = 1.5;
     c.beginPath();
-    c.ellipse(-width * 0.38, height * 0.08, width * 0.03, height * 0.11, 0, 0, Math.PI * 2);
-    c.ellipse(width * 0.38, height * 0.08, width * 0.03, height * 0.11, 0, 0, Math.PI * 2);
+    const treadSpacing = 8;
+    const treadScroll = (car.z * 0.05) % treadSpacing;
+    for (let offset = -tireH / 2 - treadSpacing + treadScroll; offset < tireH / 2; offset += treadSpacing) {
+      c.moveTo(-tireW / 2, offset);
+      c.lineTo(tireW / 2, offset);
+    }
     c.stroke();
+
+    // Rim
+    c.save();
+    c.rotate(rimAngle);
+    c.strokeStyle = '#32323d';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.arc(0, 0, tireW * 0.35, 0, Math.PI * 2);
+    c.stroke();
+    // 5-spoke wheels
+    c.strokeStyle = '#5a5d66';
+    c.lineWidth = 2.0;
+    for (let s = 0; s < 5; s++) {
+      const angle = (s * Math.PI * 2) / 5;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(angle) * tireW * 0.33, Math.sin(angle) * tireW * 0.33);
+      c.stroke();
+    }
+    c.restore();
+    c.restore();
+
+    // Right Tire
+    c.save();
+    c.translate(width * 0.38, height * 0.08);
+    c.rotate(-0.04); // negative camber angle tilt inwards
+    c.fillStyle = '#06020c';
+    c.fillRect(-tireW / 2, -tireH / 2, tireW, tireH);
+    
+    // Scrolling treads
+    c.strokeStyle = '#121217';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    for (let offset = -tireH / 2 - treadSpacing + treadScroll; offset < tireH / 2; offset += treadSpacing) {
+      c.moveTo(-tireW / 2, offset);
+      c.lineTo(tireW / 2, offset);
+    }
+    c.stroke();
+
+    // Rim
+    c.save();
+    c.rotate(rimAngle);
+    c.strokeStyle = '#32323d';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.arc(0, 0, tireW * 0.35, 0, Math.PI * 2);
+    c.stroke();
+    // 5-spoke wheels
+    c.strokeStyle = '#5a5d66';
+    c.lineWidth = 2.0;
+    for (let s = 0; s < 5; s++) {
+      const angle = (s * Math.PI * 2) / 5;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(angle) * tireW * 0.33, Math.sin(angle) * tireW * 0.33);
+      c.stroke();
+    }
+    c.restore();
+    c.restore();
 
     // 2. Diffuser Fins
     c.fillStyle = '#020005';
     c.fillRect(-width * 0.2, 0, width * 0.4, height * 0.1);
-    c.fillStyle = neonTheme;
+    c.fillStyle = '#ff3344';
     c.fillRect(-width * 0.1, 0, 1.5, height * 0.1);
     c.fillRect(width * 0.1, 0, 1.5, height * 0.1);
 
-    // 3. Main Bumper Panel
-    c.shadowColor = neonTheme;
-    c.shadowBlur = 8;
+    // 3. Main Bumper Panel (detailed with carbon mesh)
     c.fillStyle = bodyGrad;
-    c.strokeStyle = neonTheme;
-    c.lineWidth = 2.5;
+    c.strokeStyle = '#181822';
+    c.lineWidth = 1.5;
     c.beginPath();
     c.moveTo(-width * 0.44, 0);
     c.lineTo(-width * 0.42, -height * 0.4);
@@ -1267,7 +1705,7 @@ export class GridRiderGame {
     c.stroke();
 
     // 4. Upper Cabin Shell
-    c.fillStyle = '#0f0f18';
+    c.fillStyle = '#0e0a16';
     c.beginPath();
     c.moveTo(-width * 0.37, -height * 0.4);
     c.lineTo(-width * 0.24, -height * 0.84);
@@ -1323,13 +1761,13 @@ export class GridRiderGame {
     c.fillRect(-width * 0.45, -height * 0.98, width * 0.9, height * 0.1);
     c.strokeRect(-width * 0.45, -height * 0.98, width * 0.9, height * 0.1);
 
-    // 6. Glowing LED Tail Lights Bar (colored with their own neon color)
+    // 6. Glowing LED Tail Lights Bar (always red tail lights for realism)
     c.fillStyle = '#03010a';
     c.fillRect(-width * 0.39, -height * 0.35, width * 0.78, height * 0.12);
     c.strokeRect(-width * 0.39, -height * 0.35, width * 0.78, height * 0.12);
     
-    c.fillStyle = neonTheme;
-    c.shadowColor = neonTheme;
+    c.fillStyle = '#ff1133';
+    c.shadowColor = '#ff1133';
     c.shadowBlur = 10;
     c.fillRect(-width * 0.36, -height * 0.32, width * 0.72, height * 0.05);
 
@@ -1364,175 +1802,504 @@ export class GridRiderGame {
 
     // Center player car sitting nicely on the road
     const carX = w / 2;
-    const carY = h - 110; // Sitting higher up so the bottom wheels/bumper are fully visible
+    const carY = h - 110; 
     
-    // Add small rumble wiggle based on speed
-    const rumble = (Math.random() - 0.5) * (this.playerSpeed / this.maxSpeed) * 2.5;
+    // Apply camera trailing lag (visualCarX) and suspension pitch (pitchY)
+    c.translate(carX + this.playerRumble + this.visualCarX, carY + this.pitchY);
 
-    c.translate(carX + rumble, carY);
+    // Combined roll (suspension) and yaw (pointing) rotation
+    c.rotate(this.rollAngle + this.yawAngle);
 
-    // Steering tilt calculation
-    const isSteeringLeft = this.keys['ArrowLeft'] || this.keys['KeyA'] || (this.touchSteer < -0.2);
-    const isSteeringRight = this.keys['ArrowRight'] || this.keys['KeyD'] || (this.touchSteer > 0.2);
-    
-    let rollAngle = 0;
-    if (isSteeringLeft) rollAngle = -0.06;
-    if (isSteeringRight) rollAngle = 0.06;
-
-    c.rotate(rollAngle);
-
-    // Premium supercar chassis sizes (Lamborghini Countach / DeLorean aesthetic)
+    // Supercar dimensions
     const width = 240;
     const height = 110;
 
     const isBraking = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
-    const isBoosting = false;
-    const neonTheme = isBoosting ? '#00f0ff' : '#ff00f0';
+    const handbrake = this.keys['Space'];
+    const cabinXOffset = this.playerDX * 14; // 3D perspective shift
 
-    // 1. Wide Rear Tires (drawn behind the chassis)
-    c.fillStyle = '#08020e';
-    c.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    c.lineWidth = 1.5;
-    // Left tire
-    c.fillRect(-width * 0.46, -height * 0.1, width * 0.13, height * 0.36);
-    c.strokeRect(-width * 0.46, -height * 0.1, width * 0.13, height * 0.36);
-    // Right tire
-    c.fillRect(width * 0.33, -height * 0.1, width * 0.13, height * 0.36);
-    c.strokeRect(width * 0.33, -height * 0.1, width * 0.13, height * 0.36);
-
-    // 2. Diffuser Fins underneath the bumper
-    c.fillStyle = '#060012';
-    c.fillRect(-width * 0.22, 0, width * 0.44, height * 0.12);
-    c.fillStyle = neonTheme;
-    c.fillRect(-width * 0.16, 0, 3, height * 0.12);
-    c.fillRect(-width * 0.06, 0, 3, height * 0.12);
-    c.fillRect(width * 0.06, 0, 3, height * 0.12);
-    c.fillRect(width * 0.16, 0, 3, height * 0.12);
-
-    // 3. Lower Bumper & License Plate Deck
-    const bumperGrad = c.createLinearGradient(0, -height * 0.42, 0, 0);
-    bumperGrad.addColorStop(0, '#2e0854'); // metallic purple top
-    bumperGrad.addColorStop(0.5, '#120029'); // dark indigo middle
-    bumperGrad.addColorStop(1, '#060012'); // deep black base
-
-    c.shadowColor = neonTheme;
-    c.shadowBlur = 10;
-    c.fillStyle = bumperGrad;
-    c.strokeStyle = neonTheme;
-    c.lineWidth = 3.5;
+    // 0. Soft Ground Shadow (grounds the car, removes "floating" look)
+    c.fillStyle = 'rgba(0, 0, 0, 0.7)';
     c.beginPath();
-    c.moveTo(-width * 0.46, 0); // Bottom-left corner
-    c.lineTo(-width * 0.44, -height * 0.42); // Left bumper flank
-    c.lineTo(width * 0.44, -height * 0.42);  // Right bumper flank
-    c.lineTo(width * 0.46, 0);   // Bottom-right corner
-    c.closePath();
+    c.ellipse(0, 10, width * 0.46, 12, 0, 0, Math.PI * 2);
     c.fill();
+
+    // 1. Wide Rear Tires (with negative camber, alloy rims, and scrolling treads)
+    const tireW = width * 0.13;
+    const tireH = height * 0.36;
+    const rimAngle = (this.playerZ * 0.04) % (Math.PI * 2);
+    const treadSpacing = 10;
+    const treadScroll = (this.playerZ * 0.06) % treadSpacing;
+
+    // Left Tire
+    c.save();
+    c.translate(-width * 0.395, height * 0.08);
+    c.rotate(0.045); // negative camber angle tilt inwards (/ )
+    c.fillStyle = '#06060a';
+    c.fillRect(-tireW / 2, -tireH / 2, tireW, tireH);
+
+    // Speed-Rolling Tire Treads (scrolling)
+    c.strokeStyle = '#121217';
+    c.lineWidth = 2;
+    c.beginPath();
+    for (let offset = -tireH / 2 - treadSpacing + treadScroll; offset < tireH / 2; offset += treadSpacing) {
+      c.moveTo(-tireW / 2, offset);
+      c.lineTo(tireW / 2, offset);
+    }
     c.stroke();
 
-    // 4. Upper Cabin Shell (windshield columns, engine cover, and roof)
-    const cabinGrad = c.createLinearGradient(0, -height * 0.98, 0, -height * 0.42);
-    cabinGrad.addColorStop(0, '#3f0b70'); // bright metallic top roof
-    cabinGrad.addColorStop(0.4, '#1d003b'); // mid-indigo
-    cabinGrad.addColorStop(1, '#0d001e'); // base dark
+    // Tire side profiles for 3D realism
+    c.fillStyle = 'rgba(0,0,0,0.45)';
+    c.fillRect(-tireW / 2, -tireH / 2, 3, tireH);
+    c.fillRect(tireW / 2 - 3, -tireH / 2, 3, tireH);
 
-    c.fillStyle = cabinGrad;
+    // Brake Rotor
+    c.fillStyle = '#222326';
     c.beginPath();
-    c.moveTo(-width * 0.39, -height * 0.42);
-    c.lineTo(-width * 0.25, -height * 0.88); // Left windshield column
-    c.lineTo(-width * 0.16, -height * 0.98); // Left roof corner
-    c.lineTo(width * 0.16, -height * 0.98);  // Right roof corner
-    c.lineTo(width * 0.25, -height * 0.88);  // Right windshield column
-    c.lineTo(width * 0.39, -height * 0.42);
-    c.closePath();
+    c.arc(0, 0, tireW * 0.44, 0, Math.PI * 2);
     c.fill();
-    c.stroke();
 
-    // Windshield glass screen (synthwave grid view inside)
-    c.fillStyle = 'rgba(0, 240, 255, 0.15)';
-    c.strokeStyle = '#00f0ff';
-    c.lineWidth = 1.5;
-    c.beginPath();
-    c.moveTo(-width * 0.25, -height * 0.48);
-    c.lineTo(-width * 0.18, -height * 0.8);
-    c.lineTo(width * 0.18, -height * 0.8);
-    c.lineTo(width * 0.25, -height * 0.48);
-    c.closePath();
-    c.fill();
-    c.stroke();
-
-    // Louvered rear engine cover slats (DeLorean / Countach retro styling)
-    c.strokeStyle = 'rgba(255, 0, 240, 0.5)';
-    c.lineWidth = 2.5;
-    for (let i = 1; i <= 4; i++) {
-      const hRatio = 0.42 + (i * 0.095); // Y placement from 0.42 to 0.8
-      const wRatio = 0.39 - (i * 0.035); // Width decreases towards top
+    // Glowing Brake Discs if braking
+    if (isBraking || handbrake) {
+      c.save();
+      c.shadowColor = '#ff5500';
+      c.shadowBlur = 15;
+      c.strokeStyle = '#ff6600';
+      c.lineWidth = 3;
       c.beginPath();
-      c.moveTo(-width * wRatio, -height * hRatio);
-      c.lineTo(width * wRatio, -height * hRatio);
+      c.arc(0, 0, tireW * 0.38, 0, Math.PI * 2);
       c.stroke();
+      c.restore();
     }
 
-    // 5. Dual Sport Spoiler Wings
-    c.fillStyle = '#0b001a';
-    c.strokeStyle = neonTheme;
-    c.lineWidth = 3;
-    // Left spoiler bracket
+    // Brake Caliper (red block)
+    c.fillStyle = '#dd0c18';
     c.beginPath();
-    c.moveTo(-width * 0.41, -height * 0.42);
-    c.lineTo(-width * 0.43, -height * 0.95);
-    c.lineTo(-width * 0.36, -height * 0.95);
-    c.lineTo(-width * 0.36, -height * 0.42);
-    c.closePath();
+    c.arc(0, 0, tireW * 0.44, -Math.PI * 0.4, -Math.PI * 0.1);
+    c.lineWidth = 4;
+    c.strokeStyle = '#dd0c18';
+    c.stroke();
+
+    // Alloy Rim spokes (spinning!)
+    c.save();
+    c.rotate(rimAngle);
+
+    // Rim outer ring
+    c.strokeStyle = '#5a5e66';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(0, 0, tireW * 0.36, 0, Math.PI * 2);
+    c.stroke();
+
+    // Spokes (5-spoke design)
+    c.strokeStyle = '#8a8e98';
+    c.lineWidth = 3.5;
+    for (let s = 0; s < 5; s++) {
+      const angle = (s * Math.PI * 2) / 5;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(angle) * tireW * 0.34, Math.sin(angle) * tireW * 0.34);
+      c.stroke();
+
+      // Double spoke details
+      c.strokeStyle = '#3a3d45';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(angle + 0.15) * tireW * 0.32, Math.sin(angle + 0.15) * tireW * 0.32);
+      c.stroke();
+      c.strokeStyle = '#8a8e98';
+      c.lineWidth = 3.5;
+    }
+
+    // Center rim hub cap
+    c.fillStyle = '#181a20';
+    c.strokeStyle = '#5a5e66';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.arc(0, 0, 4, 0, Math.PI * 2);
     c.fill();
     c.stroke();
-    // Right spoiler bracket
+
+    c.restore();
+    c.restore();
+
+    // Right Tire
+    c.save();
+    c.translate(width * 0.395, height * 0.08);
+    c.rotate(-0.045); // negative camber angle tilt inwards ( \ )
+    c.fillStyle = '#06060a';
+    c.fillRect(-tireW / 2, -tireH / 2, tireW, tireH);
+
+    // Speed-Rolling Tire Treads (scrolling)
+    c.strokeStyle = '#121217';
+    c.lineWidth = 2;
     c.beginPath();
-    c.moveTo(width * 0.36, -height * 0.42);
-    c.lineTo(width * 0.36, -height * 0.95);
-    c.lineTo(width * 0.43, -height * 0.95);
+    for (let offset = -tireH / 2 - treadSpacing + treadScroll; offset < tireH / 2; offset += treadSpacing) {
+      c.moveTo(-tireW / 2, offset);
+      c.lineTo(tireW / 2, offset);
+    }
+    c.stroke();
+
+    // Tire side profiles
+    c.fillStyle = 'rgba(0,0,0,0.45)';
+    c.fillRect(-tireW / 2, -tireH / 2, 3, tireH);
+    c.fillRect(tireW / 2 - 3, -tireH / 2, 3, tireH);
+
+    // Brake Rotor
+    c.fillStyle = '#222326';
+    c.beginPath();
+    c.arc(0, 0, tireW * 0.44, 0, Math.PI * 2);
+    c.fill();
+
+    // Glowing Brake Discs if braking
+    if (isBraking || handbrake) {
+      c.save();
+      c.shadowColor = '#ff5500';
+      c.shadowBlur = 15;
+      c.strokeStyle = '#ff6600';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(0, 0, tireW * 0.38, 0, Math.PI * 2);
+      c.stroke();
+      c.restore();
+    }
+
+    // Brake Caliper
+    c.fillStyle = '#dd0c18';
+    c.beginPath();
+    c.arc(0, 0, tireW * 0.44, Math.PI * 1.1, Math.PI * 1.4);
+    c.lineWidth = 4;
+    c.strokeStyle = '#dd0c18';
+    c.stroke();
+
+    // Alloy Rim spokes (spinning!)
+    c.save();
+    c.rotate(rimAngle);
+
+    // Rim outer ring
+    c.strokeStyle = '#5a5e66';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(0, 0, tireW * 0.36, 0, Math.PI * 2);
+    c.stroke();
+
+    // Spokes
+    c.strokeStyle = '#8a8e98';
+    c.lineWidth = 3.5;
+    for (let s = 0; s < 5; s++) {
+      const angle = (s * Math.PI * 2) / 5;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(angle) * tireW * 0.34, Math.sin(angle) * tireW * 0.34);
+      c.stroke();
+
+      // Double spoke details
+      c.strokeStyle = '#3a3d45';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(angle + 0.15) * tireW * 0.32, Math.sin(angle + 0.15) * tireW * 0.32);
+      c.stroke();
+      c.strokeStyle = '#8a8e98';
+      c.lineWidth = 3.5;
+    }
+
+    // Center rim hub cap
+    c.fillStyle = '#181a20';
+    c.strokeStyle = '#5a5e66';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.arc(0, 0, 4, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+
+    c.restore();
+    c.restore();
+
+    // 2. Carbon Mesh Grille (draw behind exhausts and license plate)
+    c.fillStyle = '#0a0a0f';
+    c.fillRect(-width * 0.43, -height * 0.38, width * 0.86, height * 0.38);
+    // Draw cross-hatch carbon mesh lines
+    c.strokeStyle = '#161620';
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let gx = -width * 0.43; gx < width * 0.43; gx += 6) {
+      c.moveTo(gx, -height * 0.38);
+      c.lineTo(gx + 6, 0);
+    }
+    for (let gx = -width * 0.43; gx < width * 0.43; gx += 6) {
+      c.moveTo(gx, 0);
+      c.lineTo(gx + 6, -height * 0.38);
+    }
+    c.stroke();
+
+    // 3. Lower Bumper Shell / Hips (voluptuous hypercar fender curve)
+    const paintGrad = c.createLinearGradient(-width * 0.46, 0, width * 0.46, 0);
+    const shinePos = 0.5 - this.playerDX * 0.18;
+    const clampedShine = Math.max(0.1, Math.min(0.9, shinePos));
+    
+    paintGrad.addColorStop(0, '#101525');
+    paintGrad.addColorStop(clampedShine - 0.1, '#1b223c');
+    paintGrad.addColorStop(clampedShine, '#4e5b88');
+    paintGrad.addColorStop(clampedShine + 0.1, '#1b223c');
+    paintGrad.addColorStop(1, '#101525');
+
+    c.fillStyle = paintGrad;
+    c.strokeStyle = '#08080f';
+    c.lineWidth = 2.0;
+    c.beginPath();
+    c.moveTo(-width * 0.46, 0);
+    c.quadraticCurveTo(-width * 0.45, -height * 0.38, -width * 0.41, -height * 0.42);
     c.lineTo(width * 0.41, -height * 0.42);
+    c.quadraticCurveTo(width * 0.45, -height * 0.38, width * 0.46, 0);
+    c.lineTo(width * 0.28, 0);
+    c.lineTo(width * 0.26, -height * 0.12);
+    c.lineTo(-width * 0.26, -height * 0.12);
+    c.lineTo(-width * 0.28, 0);
     c.closePath();
     c.fill();
     c.stroke();
-    // Spoiler blade
-    c.fillRect(-width * 0.48, -height * 1.05, width * 0.96, height * 0.12);
-    c.strokeRect(-width * 0.48, -height * 1.05, width * 0.96, height * 0.12);
 
-    // 6. Glowing LED Tail Light Bar
-    const tailGlowColor = isBraking ? '#ff0033' : '#ff007f';
-    c.shadowColor = tailGlowColor;
-    c.shadowBlur = isBraking ? 30 : 15;
-    // Housing grid
-    c.fillStyle = '#060010';
-    c.strokeStyle = 'rgba(255, 0, 240, 0.3)';
-    c.lineWidth = 1.5;
-    c.fillRect(-width * 0.41, -height * 0.38, width * 0.82, height * 0.14);
-    c.strokeRect(-width * 0.41, -height * 0.38, width * 0.82, height * 0.14);
-    // Continuous light bar itself
-    c.fillStyle = tailGlowColor;
-    c.fillRect(-width * 0.38, -height * 0.34, width * 0.76, height * 0.06);
+    // Rear Air Vent openings inside bumper flanks
+    c.fillStyle = '#060609';
+    c.beginPath();
+    c.moveTo(-width * 0.40, -height * 0.08);
+    c.lineTo(-width * 0.38, -height * 0.34);
+    c.lineTo(-width * 0.30, -height * 0.34);
+    c.lineTo(-width * 0.29, -height * 0.08);
+    c.closePath();
+    c.fill();
+    c.stroke();
 
-    // 7. Glowing License Plate
-    c.shadowBlur = 8;
-    c.fillStyle = COLORS.sunYellow;
-    c.shadowColor = COLORS.sunYellow;
-    c.fillRect(-width * 0.08, -height * 0.2, width * 0.16, height * 0.11);
+    c.beginPath();
+    c.moveTo(width * 0.40, -height * 0.08);
+    c.lineTo(width * 0.38, -height * 0.34);
+    c.lineTo(width * 0.30, -height * 0.34);
+    c.lineTo(width * 0.29, -height * 0.08);
+    c.closePath();
+    c.fill();
+    c.stroke();
 
+    // 4. Central Carbon Exhaust Panel & Quad Chrome Tips
+    c.fillStyle = '#06060a';
+    c.fillRect(-width * 0.24, -height * 0.14, width * 0.48, height * 0.14);
+    
+    c.fillStyle = '#3a3e47';
+    c.strokeStyle = '#8a8e98';
+    c.lineWidth = 1;
+    // Left pair
+    c.beginPath(); c.arc(-16, -6, 5, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.beginPath(); c.arc(-26, -6, 5, 0, Math.PI * 2); c.fill(); c.stroke();
+    // Right pair
+    c.beginPath(); c.arc(16, -6, 5, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.beginPath(); c.arc(26, -6, 5, 0, Math.PI * 2); c.fill(); c.stroke();
+    
+    // Exhaust hollow interior
     c.fillStyle = '#000';
+    c.beginPath(); c.arc(-16, -6, 3.5, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(-26, -6, 3.5, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(16, -6, 3.5, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(26, -6, 3.5, 0, Math.PI * 2); c.fill();
+
+    // 5. Recovered Windshield, Cabin Shell & Engine Deck
+    c.save();
+    c.translate(cabinXOffset, 0);
+
+    const cabinColorGrad = c.createLinearGradient(0, -height * 0.88, 0, -height * 0.42);
+    cabinColorGrad.addColorStop(0, '#1a1f33');
+    cabinColorGrad.addColorStop(0.5, '#121524');
+    cabinColorGrad.addColorStop(1, '#080a10');
+
+    c.fillStyle = cabinColorGrad;
+    c.strokeStyle = '#050508';
+    c.lineWidth = 1.5;
+
+    c.beginPath();
+    c.moveTo(-width * 0.36, -height * 0.42);
+    c.quadraticCurveTo(-width * 0.28, -height * 0.72, -width * 0.22, -height * 0.86);
+    c.lineTo(width * 0.22, -height * 0.86);
+    c.quadraticCurveTo(width * 0.28, -height * 0.72, width * 0.36, -height * 0.42);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Deep Tinted Glass Windshield (Kính sau)
+    c.fillStyle = 'rgba(10, 15, 30, 0.85)';
+    c.beginPath();
+    c.moveTo(-width * 0.20, -height * 0.46);
+    c.lineTo(-width * 0.14, -height * 0.80);
+    c.lineTo(width * 0.14, -height * 0.80);
+    c.lineTo(width * 0.20, -height * 0.46);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Windshield diagonal reflection highlights
+    const glassReflexGrad = c.createLinearGradient(-width * 0.2, -height * 0.8, width * 0.2, -height * 0.46);
+    const glShine = 0.5 + this.playerDX * 0.3;
+    glassReflexGrad.addColorStop(Math.max(0, glShine - 0.15), 'rgba(255, 255, 255, 0)');
+    glassReflexGrad.addColorStop(Math.max(0, Math.min(1, glShine)), 'rgba(255, 255, 255, 0.14)');
+    glassReflexGrad.addColorStop(Math.min(1, glShine + 0.15), 'rgba(255, 255, 255, 0)');
+    c.fillStyle = glassReflexGrad;
+    c.fill();
+
+    // Engine deck spine / louvers
+    c.strokeStyle = '#0a0d14';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(0, -height * 0.42);
+    c.lineTo(0, -height * 0.86);
+    c.stroke();
+
+    c.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    c.lineWidth = 1;
+    for (let r = 1; r <= 3; r++) {
+      const yL = -height * (0.46 + r * 0.1);
+      c.beginPath();
+      c.moveTo(-width * (0.18 - r * 0.02), yL);
+      c.lineTo(width * (0.18 - r * 0.02), yL);
+      c.stroke();
+    }
+    c.restore();
+
+    // 6. Active Rear Wing / Spoiler (Twin Struts + Deploy & Airbrake Pitch)
+    const speedPct = this.playerSpeed / this.maxSpeed;
+    const isHeavyBraking = (isBraking || handbrake) && speedPct > 0.35;
+    const wingRise = speedPct * 24;
+    const wingTilt = isHeavyBraking ? 0.24 : 0;
+
+    c.save();
+    c.translate(cabinXOffset, -height * 0.85 - wingRise);
+    c.rotate(wingTilt);
+
+    // Twin struts
+    c.fillStyle = '#0a0a0f';
+    c.strokeStyle = '#1d222f';
+    c.lineWidth = 1;
+    // Left strut
+    c.beginPath();
+    c.moveTo(-width * 0.22, 0);
+    c.lineTo(-width * 0.24, wingRise + 8);
+    c.lineTo(-width * 0.18, wingRise + 8);
+    c.lineTo(-width * 0.18, 0);
+    c.closePath();
+    c.fill(); c.stroke();
+    // Right strut
+    c.beginPath();
+    c.moveTo(width * 0.22, 0);
+    c.lineTo(width * 0.24, wingRise + 8);
+    c.lineTo(width * 0.18, wingRise + 8);
+    c.lineTo(width * 0.18, 0);
+    c.closePath();
+    c.fill(); c.stroke();
+
+    // Spoiler Wing Blade
+    const wingGrad = c.createLinearGradient(-width * 0.42, 0, width * 0.42, 0);
+    wingGrad.addColorStop(0, '#121624');
+    wingGrad.addColorStop(0.5, '#23293f');
+    wingGrad.addColorStop(1, '#121624');
+    c.fillStyle = wingGrad;
+    c.strokeStyle = '#050508';
+    c.lineWidth = 1.5;
+
+    c.beginPath();
+    c.moveTo(-width * 0.43, -4);
+    c.quadraticCurveTo(0, -6, width * 0.43, -4);
+    c.lineTo(width * 0.45, -12);
+    c.quadraticCurveTo(0, -14, -width * 0.45, -12);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Endplates
+    c.fillStyle = '#080b14';
+    c.strokeStyle = '#ff3344';
+    c.lineWidth = 1;
+    // Left endplate
+    c.beginPath();
+    c.moveTo(-width * 0.44, -14);
+    c.lineTo(-width * 0.45, -2);
+    c.lineTo(-width * 0.42, 2);
+    c.lineTo(-width * 0.41, -10);
+    c.closePath();
+    c.fill(); c.stroke();
+    // Right endplate
+    c.beginPath();
+    c.moveTo(width * 0.44, -14);
+    c.lineTo(width * 0.45, -2);
+    c.lineTo(width * 0.42, 2);
+    c.lineTo(width * 0.41, -10);
+    c.closePath();
+    c.fill(); c.stroke();
+    c.restore();
+
+    // 7. LED Tail Lights Cluster (Sleek light bar style like Porsche 911 / Bugatti Chiron)
+    const tailGlowColor = isBraking ? '#ff081b' : '#cc0212';
+    
+    // Tail light housing bar
+    c.fillStyle = '#08080d';
+    c.strokeStyle = '#181a24';
+    c.lineWidth = 1.5;
+    c.fillRect(-width * 0.42, -height * 0.38, width * 0.84, height * 0.12);
+    c.strokeRect(-width * 0.42, -height * 0.38, width * 0.84, height * 0.12);
+
+    // Inner grille detail in housing
+    c.strokeStyle = 'rgba(255, 0, 0, 0.08)';
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let tx = -width * 0.40; tx < width * 0.40; tx += 5) {
+      c.moveTo(tx, -height * 0.38);
+      c.lineTo(tx, -height * 0.26);
+    }
+    c.stroke();
+
+    // Central LED light strip
+    c.shadowColor = tailGlowColor;
+    c.shadowBlur = isBraking ? 25 : 12;
+    c.strokeStyle = tailGlowColor;
+    c.lineWidth = 4;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(-width * 0.39, -height * 0.32);
+    c.bezierCurveTo(-width * 0.18, -height * 0.34, width * 0.18, -height * 0.34, width * 0.39, -height * 0.32);
+    c.stroke();
+    c.lineCap = 'butt';
+    c.shadowBlur = 0;
+
+    // 8. Glowing License Plate
+    c.fillStyle = '#282b35';
+    c.fillRect(-width * 0.08, -height * 0.21, width * 0.16, height * 0.11);
+    c.strokeStyle = '#1c1e24';
+    c.lineWidth = 1;
+    c.strokeRect(-width * 0.08, -height * 0.21, width * 0.16, height * 0.11);
+
+    c.fillStyle = '#ffaa00'; // LED light
+    c.shadowColor = '#ffaa00';
+    c.shadowBlur = 4;
     c.font = 'bold 8px "Orbitron", sans-serif';
     c.textAlign = 'center';
-    c.fillText("NEXUS", 0, -height * 0.115);
+    c.fillText("GTA CHILL", 0, -height * 0.13);
+    c.shadowBlur = 0;
 
-    // 8. Cybernetic Jet/Rocket Exhaust Ports
-    c.shadowBlur = 15;
-    c.shadowColor = isBoosting ? '#00f0ff' : '#ff007f';
-    c.fillStyle = isBoosting ? '#e0ffff' : '#ffb0e0';
+    // 9. Body Gloss Highlights
+    c.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    c.lineWidth = 1.0;
+    
+    // Bumper top crease line
     c.beginPath();
-    c.arc(-width * 0.2, -height * 0.12, 6, 0, Math.PI * 2);
-    c.fill();
+    c.moveTo(-width * 0.43, -height * 0.41);
+    c.lineTo(width * 0.43, -height * 0.41);
+    c.stroke();
+    
+    // Bumper bottom lip outline
+    c.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     c.beginPath();
-    c.arc(width * 0.2, -height * 0.12, 6, 0, Math.PI * 2);
-    c.fill();
+    c.moveTo(-width * 0.45, -2);
+    c.lineTo(-width * 0.25, -1);
+    c.moveTo(width * 0.25, -1);
+    c.lineTo(width * 0.45, -2);
+    c.stroke();
 
     c.restore();
   }
