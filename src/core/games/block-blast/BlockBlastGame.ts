@@ -79,6 +79,12 @@ export class BlockBlastGame {
   private shakeTime = 0;
   private shakeMag = 0;
 
+  // Effects state
+  private isCollapsing = false;
+  private collapseBlocks: any[] = [];
+  private pendingBlocks: { r: number, c: number, color: string, delay: number, isLast: boolean }[] = [];
+  private perfectClearCheckPending = false;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext("2d");
@@ -135,18 +141,53 @@ export class BlockBlastGame {
   }
 
   public start() {
-    this.reset();
+    this.reset(true);
     this.loop.start();
   }
 
-  public reset() {
+  public reset(skipCollapse = false) {
+    if (!skipCollapse && this.hasBlocksOnGrid()) {
+      // Trigger collapse animation instead of instant wipe
+      this.isCollapsing = true;
+      this.collapseBlocks = [];
+      for (let r=0; r<this.gridRows; r++) {
+        for (let c=0; c<this.gridCols; c++) {
+          if (this.grid[r][c]) {
+            this.collapseBlocks.push({
+              x: this.gridX + c*this.cellSize,
+              y: this.gridY + r*this.cellSize,
+              vx: (Math.random() - 0.5) * 4,
+              vy: Math.random() * -5 - 2, // Jump up a bit then fall
+              color: this.grid[r][c],
+              size: this.cellSize
+            });
+          }
+        }
+      }
+    } else {
+      this.isCollapsing = false;
+      this.collapseBlocks = [];
+    }
+
     this.grid = Array(this.gridRows).fill(null).map(() => Array(this.gridCols).fill(null));
     this.score = 0;
     this.isGameOver = false;
     this.particles = [];
     this.floatingTexts = [];
+    this.pendingBlocks = [];
+    this.perfectClearCheckPending = false;
+    this.availableShapes = [null, null, null];
     this.refillShapes();
     if (this.onScore) this.onScore(this.score);
+  }
+
+  private hasBlocksOnGrid(): boolean {
+    for (let r=0; r<this.gridRows; r++) {
+      for (let c=0; c<this.gridCols; c++) {
+        if (this.grid[r][c]) return true;
+      }
+    }
+    return false;
   }
 
   private getRandomShape(): ShapeDef {
@@ -203,7 +244,7 @@ export class BlockBlastGame {
   }
 
   private onPointerDown = (e: PointerEvent) => {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this.isCollapsing) return;
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -358,12 +399,20 @@ export class BlockBlastGame {
     linesCleared = rowsToClear.length + colsToClear.length;
 
     if (linesCleared > 0) {
-      // Clear them and spawn particles
+      // Setup pending destruction for wave effect
+      const addedToPending: string[] = []; // track to prevent double add
+      
       rowsToClear.forEach(r => {
         for(let c=0; c<this.gridCols; c++) {
           if (this.grid[r][c]) {
-            this.spawnParticles(this.gridX + c*this.cellSize + this.cellSize/2, this.gridY + r*this.cellSize + this.cellSize/2, this.grid[r][c]!);
-            this.grid[r][c] = null;
+            const key = `${r}-${c}`;
+            if (!addedToPending.includes(key)) {
+              addedToPending.push(key);
+              this.pendingBlocks.push({
+                r, c, color: this.grid[r][c]!, delay: c * 30, isLast: false
+              });
+              this.grid[r][c] = null;
+            }
           }
         }
       });
@@ -371,17 +420,32 @@ export class BlockBlastGame {
       colsToClear.forEach(c => {
         for(let r=0; r<this.gridRows; r++) {
           if (this.grid[r][c]) {
-            this.spawnParticles(this.gridX + c*this.cellSize + this.cellSize/2, this.gridY + r*this.cellSize + this.cellSize/2, this.grid[r][c]!);
-            this.grid[r][c] = null;
+            const key = `${r}-${c}`;
+            if (!addedToPending.includes(key)) {
+              addedToPending.push(key);
+              this.pendingBlocks.push({
+                r, c, color: this.grid[r][c]!, delay: r * 30, isLast: false
+              });
+              this.grid[r][c] = null;
+            }
           }
         }
       });
+
+      // Mark the very last block to trigger perfect clear check
+      if (this.pendingBlocks.length > 0) {
+        let maxDelayObj = this.pendingBlocks[0];
+        for (let pb of this.pendingBlocks) {
+          if (pb.delay > maxDelayObj.delay) maxDelayObj = pb;
+        }
+        maxDelayObj.isLast = true;
+      }
 
       // Score multiplier for multiple lines
       const lineScore = linesCleared * 100 * linesCleared;
       this.score += lineScore;
       
-      this.triggerScreenShake(linesCleared * 3, 200); // 3px shake per line cleared
+      // Delay the big text floating until wave finishes or do it now? Do it now.
       this.spawnFloatingText(`${linesCleared} LINE${linesCleared>1?'S':''}! +${lineScore}`, this.canvas.width/2, this.gridY + this.gridRows*this.cellSize/2, '#fff');
 
       if (this.onScore) this.onScore(this.score);
@@ -458,6 +522,53 @@ export class BlockBlastGame {
       if (this.shakeTime < 0) this.shakeTime = 0;
     }
 
+    if (this.isCollapsing) {
+      let allFallen = true;
+      for (let b of this.collapseBlocks) {
+        b.x += b.vx;
+        b.vy += 0.5; // gravity
+        b.y += b.vy;
+        if (b.y < this.canvas.height) {
+          allFallen = false;
+        }
+      }
+      if (allFallen) {
+        this.isCollapsing = false;
+      }
+    }
+
+    // Process pending blocks
+    for (let i = this.pendingBlocks.length - 1; i >= 0; i--) {
+      let pb = this.pendingBlocks[i];
+      pb.delay -= dt;
+      if (pb.delay <= 0) {
+        // Explode!
+        this.triggerScreenShake(2, 50); // Small shake per block
+        this.spawnParticles(this.gridX + pb.c*this.cellSize + this.cellSize/2, this.gridY + pb.r*this.cellSize + this.cellSize/2, pb.color);
+        
+        if (pb.isLast) {
+          this.perfectClearCheckPending = true;
+        }
+        this.pendingBlocks.splice(i, 1);
+      }
+    }
+
+    if (this.perfectClearCheckPending && this.pendingBlocks.length === 0) {
+      this.perfectClearCheckPending = false;
+      if (!this.hasBlocksOnGrid()) {
+        // PERFECT CLEAR!
+        this.score += 1000;
+        if (this.onScore) this.onScore(this.score);
+        this.triggerScreenShake(15, 500);
+        this.spawnFloatingText("PERFECT CLEAR! +1000", this.canvas.width/2, this.canvas.height/2, '#00f0ff');
+        
+        // Huge particle burst
+        for(let i=0; i<50; i++) {
+          this.spawnParticles(this.canvas.width/2 + (Math.random() - 0.5)*100, this.canvas.height/2 + (Math.random() - 0.5)*100, COLORS[Math.floor(Math.random() * COLORS.length)]);
+        }
+      }
+    }
+
     // Update particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       let p = this.particles[i];
@@ -511,13 +622,36 @@ export class BlockBlastGame {
       }
     }
 
-    // Draw Docked Shapes
-    for (let i=0; i<3; i++) {
-      if (i === this.draggedShapeIndex) continue; // don't draw dragged one in dock
-      const shape = this.availableShapes[i];
-      if (shape) {
-        const pos = this.getDockPosition(i);
-        this.drawShapeCentered(c, shape, pos.x, pos.y, this.cellSize * 0.5); // scale down
+    // Draw Pending Blocks (about to explode)
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (let pb of this.pendingBlocks) {
+      // Glow effect while waiting to explode
+      const glowAlpha = Math.random() * 0.5 + 0.5;
+      c.shadowColor = '#fff';
+      c.shadowBlur = 20 * glowAlpha;
+      this.drawBlock(c, this.gridX + pb.c*this.cellSize, this.gridY + pb.r*this.cellSize, this.cellSize, pb.color);
+      c.fillStyle = `rgba(255, 255, 255, ${glowAlpha * 0.5})`;
+      c.fillRect(this.gridX + pb.c*this.cellSize, this.gridY + pb.r*this.cellSize, this.cellSize, this.cellSize);
+    }
+    c.restore();
+
+    // Draw Collapsing Blocks
+    if (this.isCollapsing) {
+      for (let b of this.collapseBlocks) {
+        this.drawBlock(c, b.x, b.y, b.size, b.color);
+      }
+    }
+
+    // Draw Docked Shapes (Fade out if collapsing)
+    if (!this.isCollapsing) {
+      for (let i=0; i<3; i++) {
+        if (i === this.draggedShapeIndex) continue; // don't draw dragged one in dock
+        const shape = this.availableShapes[i];
+        if (shape) {
+          const pos = this.getDockPosition(i);
+          this.drawShapeCentered(c, shape, pos.x, pos.y, this.cellSize * 0.5); // scale down
+        }
       }
     }
 
