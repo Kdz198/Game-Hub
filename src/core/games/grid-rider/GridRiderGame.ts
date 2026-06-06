@@ -847,7 +847,7 @@ export class GridRiderGame {
       // World coordinates calculation
       // Wrap-around track calculation
       const zOffset = (playerSegmentIndex + i >= this.segments.length) ? this.trackLength : 0;
-      const pz = seg.world.z + zOffset - this.playerZ;
+      const pz = Math.max(20, seg.world.z + zOffset - this.playerZ);
 
       // Project coordinates
       const scale = CAMERA_DEPTH / (pz / CAMERA_HEIGHT);
