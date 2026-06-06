@@ -853,7 +853,7 @@ export class GridRiderGame {
       const pz = Math.max(20, seg.world.z + zOffset - this.playerZ);
 
       // Project coordinates
-      const scale = CAMERA_DEPTH / (pz / CAMERA_HEIGHT);
+      const scale = CAMERA_DEPTH / pz;
       seg.screen.scale = scale;
 
       segmentCurveAccum += seg.curve;
