@@ -189,6 +189,7 @@ export class StackBallGame {
   private bounceStrength = 0.38; // Upward velocity on bounce
   private gravity = 0.00095; // Gravity per ms^2
   private smashSpeed = 0.95; // Downward smash speed
+  private platformSpacing = 74;
 
   // Fever states
   private feverTimer = 0; // Fever duration remaining
@@ -228,12 +229,11 @@ export class StackBallGame {
     this.feverTimer = 0;
 
     // Platform spacing along Y axis
-    const spacing = 88;
     this.totalPlatforms = 35 + this.level * 4; // levels get taller
     this.currentPlatformIndex = this.totalPlatforms - 1;
 
     // Ball starts bouncing above the top platform
-    this.ballY = this.totalPlatforms * spacing + 50;
+    this.ballY = this.totalPlatforms * this.platformSpacing + 50;
     this.ballVY = 0;
     this.cameraY = this.ballY;
     this.targetCameraY = this.ballY;
@@ -243,7 +243,7 @@ export class StackBallGame {
 
     // Generate platforms from bottom (index 0) to top (index total - 1)
     for (let i = 0; i < this.totalPlatforms; i++) {
-      const y = i * spacing;
+      const y = i * this.platformSpacing;
       
       // Customize segment layout based on height
       const segments: PlatformSegment[] = [];
@@ -260,21 +260,16 @@ export class StackBallGame {
           });
         }
       } else {
-        // Normal platforms: mix safe and hazard segments
-        // Hazard count increases as level gets higher
-        const hazardCount = Math.min(5, 1 + Math.floor(this.level / 3) + (Math.random() < 0.3 ? 1 : 0));
-        
-        // Distribute hazard segments randomly
-        const hazardIndices = new Set<number>();
-        while (hazardIndices.size < hazardCount) {
-          // Never place hazard directly at the starting angle to give player a fair start
-          const randIdx = 1 + Math.floor(Math.random() * (numSegments - 1));
-          hazardIndices.add(randIdx);
-        }
+        // Normal platforms: single contiguous hazard block
+        // Hazard size starts at 3 segments at Level 1, up to 5 at Level 10
+        const hazardSize = Math.min(5, 3 + Math.floor(this.level / 5)); 
+        // Choose a random start index for the hazard block (leave starting index 0 safe)
+        const startHazardIdx = 2 + Math.floor(Math.random() * (numSegments - hazardSize - 2));
 
         for (let j = 0; j < numSegments; j++) {
+          const isHazard = j >= startHazardIdx && j < startHazardIdx + hazardSize;
           segments.push({
-            type: hazardIndices.has(j) ? 'hazard' : 'safe',
+            type: isHazard ? 'hazard' : 'safe',
             startAngle: j * step,
             endAngle: (j + 1) * step
           });
@@ -368,7 +363,7 @@ export class StackBallGame {
     this.towerAngle += this.rotationSpeed * speedMultiplier * dt;
 
     // Get current top platform info
-    const platformSpacing = 88;
+    const platformSpacing = this.platformSpacing;
     const currentPlatform = this.platforms[this.currentPlatformIndex];
     const platformY = currentPlatform.y;
 
@@ -399,7 +394,7 @@ export class StackBallGame {
 
     // Smooth camera tracking
     // Keep camera slightly below the ball
-    this.targetCameraY = this.ballY + 120;
+    this.targetCameraY = this.ballY + 40;
     this.cameraY += (this.targetCameraY - this.cameraY) * 0.0065 * dt;
   }
 
@@ -671,7 +666,7 @@ export class StackBallGame {
 
     // Determine platform draw range based on camera culling
     // Top-most index to draw, bottom-most to draw
-    const ballScreenY = h * 0.45;
+    const ballScreenY = h * 0.3;
 
     // Draw platforms in Z-sorted order (back-to-front within each platform)
     // Draw from bottom platforms (index 0) to top platforms (index totalPlatforms - 1)
@@ -772,7 +767,7 @@ export class StackBallGame {
   }
 
   private drawShards(c: CanvasRenderingContext2D, w: number, h: number, cx: number) {
-    const ballScreenY = h * 0.45;
+    const ballScreenY = h * 0.3;
     
     this.shards.forEach((s) => {
       const screenY = ballScreenY - (s.y - this.cameraY);
@@ -799,7 +794,7 @@ export class StackBallGame {
   }
 
   private drawBall(c: CanvasRenderingContext2D, w: number, h: number, cx: number) {
-    const ballScreenY = h * 0.45;
+    const ballScreenY = h * 0.3;
     const sy = ballScreenY - (this.ballY - this.cameraY);
 
     c.save();
