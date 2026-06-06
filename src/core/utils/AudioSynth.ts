@@ -1,21 +1,26 @@
 /**
- * AudioSynth — WAV Blob + pooled HTMLAudioElement approach.
+ * AudioSynth — Pre-created Audio element pool.
  *
- * Key insight: `new Audio(url).play()` fails silently when the Audio
- * object gets garbage-collected before it finishes playing.  We fix
- * this by keeping a strong reference to every active Audio element
- * and only releasing it after it ends.
+ * Instead of creating a new Audio() every time (which Chrome throttles),
+ * we pre-create a fixed pool of Audio elements for each sound and
+ * round-robin through them.  This guarantees every play() call reuses
+ * an existing, already-loaded element.
  */
 export class AudioSynth {
   public enabled = true;
-
-  private eatUrl = '';
-  private crashUrl = '';
-  private milestoneUrl = '';
   private initialised = false;
 
-  /** Strong references so GC doesn't kill playing Audio elements */
-  private playing: Set<HTMLAudioElement> = new Set();
+  private eatPool: HTMLAudioElement[] = [];
+  private crashPool: HTMLAudioElement[] = [];
+  private milestonePool: HTMLAudioElement[] = [];
+
+  private eatIndex = 0;
+  private crashIndex = 0;
+  private milestoneIndex = 0;
+
+  private urls: string[] = [];
+
+  private static POOL_SIZE = 6; // enough for rapid-fire eating
 
   constructor() {}
 
@@ -23,52 +28,70 @@ export class AudioSynth {
     if (this.initialised) return;
     this.initialised = true;
 
-    this.eatUrl       = this.makeWavUrl(4410,  (i, sr) => this.genEat(i, sr));
-    this.crashUrl     = this.makeWavUrl(22050, (i, sr) => this.genCrash(i, sr));
-    this.milestoneUrl = this.makeWavUrl(13230, (i, sr) => this.genMilestone(i, sr));
+    const eatUrl       = this.makeWavUrl(4410,  (i, sr) => this.genEat(i, sr));
+    const crashUrl     = this.makeWavUrl(22050, (i, sr) => this.genCrash(i, sr));
+    const milestoneUrl = this.makeWavUrl(13230, (i, sr) => this.genMilestone(i, sr));
+
+    this.urls = [eatUrl, crashUrl, milestoneUrl];
+
+    this.eatPool       = this.buildPool(eatUrl, 0.4);
+    this.crashPool     = this.buildPool(crashUrl, 0.6);
+    this.milestonePool = this.buildPool(milestoneUrl, 0.5);
   }
 
   public destroy() {
-    this.playing.forEach(a => { a.pause(); a.src = ''; });
-    this.playing.clear();
-    if (this.eatUrl)       URL.revokeObjectURL(this.eatUrl);
-    if (this.crashUrl)     URL.revokeObjectURL(this.crashUrl);
-    if (this.milestoneUrl) URL.revokeObjectURL(this.milestoneUrl);
-    this.eatUrl = '';
-    this.crashUrl = '';
-    this.milestoneUrl = '';
+    [...this.eatPool, ...this.crashPool, ...this.milestonePool].forEach(a => {
+      a.pause();
+      a.src = '';
+    });
+    this.eatPool = [];
+    this.crashPool = [];
+    this.milestonePool = [];
+    this.urls.forEach(u => URL.revokeObjectURL(u));
+    this.urls = [];
     this.initialised = false;
   }
 
   /* ── public API ───────────────────────────────────────────────── */
 
-  public playEat()       { this.playUrl(this.eatUrl, 0.4); }
-  public playCrash()     { this.playUrl(this.crashUrl, 0.6); }
-  public playMilestone() { this.playUrl(this.milestoneUrl, 0.5); }
+  public playEat() {
+    if (!this.enabled || this.eatPool.length === 0) return;
+    this.playFromPool(this.eatPool, this.eatIndex);
+    this.eatIndex = (this.eatIndex + 1) % this.eatPool.length;
+  }
 
-  /* ── play with GC protection ──────────────────────────────────── */
+  public playCrash() {
+    if (!this.enabled || this.crashPool.length === 0) return;
+    this.playFromPool(this.crashPool, this.crashIndex);
+    this.crashIndex = (this.crashIndex + 1) % this.crashPool.length;
+  }
 
-  private playUrl(url: string, volume: number) {
-    if (!this.enabled || !url) return;
-    try {
+  public playMilestone() {
+    if (!this.enabled || this.milestonePool.length === 0) return;
+    this.playFromPool(this.milestonePool, this.milestoneIndex);
+    this.milestoneIndex = (this.milestoneIndex + 1) % this.milestonePool.length;
+  }
+
+  /* ── pool helpers ─────────────────────────────────────────────── */
+
+  private buildPool(url: string, volume: number): HTMLAudioElement[] {
+    const pool: HTMLAudioElement[] = [];
+    for (let i = 0; i < AudioSynth.POOL_SIZE; i++) {
       const a = new Audio(url);
       a.volume = volume;
+      a.preload = 'auto';
+      // Force the browser to load/decode the audio data now
+      a.load();
+      pool.push(a);
+    }
+    return pool;
+  }
 
-      // Hold a strong reference until it finishes
-      this.playing.add(a);
-      a.addEventListener('ended', () => {
-        this.playing.delete(a);
-      }, { once: true });
-
-      // Safety: release after 2 seconds even if 'ended' never fires
-      setTimeout(() => {
-        this.playing.delete(a);
-      }, 2000);
-
-      a.play().catch(() => {
-        this.playing.delete(a);
-      });
-    } catch (_) { /* swallow */ }
+  private playFromPool(pool: HTMLAudioElement[], index: number) {
+    const a = pool[index];
+    // Reset to start if it was already playing or finished
+    a.currentTime = 0;
+    a.play().catch(() => {});
   }
 
   /* ── WAV generator ────────────────────────────────────────────── */
@@ -76,41 +99,34 @@ export class AudioSynth {
   private makeWavUrl(numSamples: number, fn: (i: number, sr: number) => number): string {
     const sr = 44100;
     const bitsPerSample = 16;
-    const numChannels = 1;
-    const byteRate = sr * numChannels * bitsPerSample / 8;
-    const blockAlign = numChannels * bitsPerSample / 8;
+    const blockAlign = bitsPerSample / 8;
     const dataSize = numSamples * blockAlign;
-    const headerSize = 44;
-    const buf = new ArrayBuffer(headerSize + dataSize);
-    const view = new DataView(buf);
+    const buf = new ArrayBuffer(44 + dataSize);
+    const v = new DataView(buf);
 
-    this.writeStr(view, 0,  'RIFF');
-    view.setUint32(4, 36 + dataSize, true);
-    this.writeStr(view, 8,  'WAVE');
-    this.writeStr(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sr, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-    this.writeStr(view, 36, 'data');
-    view.setUint32(40, dataSize, true);
+    this.w(v, 0, 'RIFF');
+    v.setUint32(4, 36 + dataSize, true);
+    this.w(v, 8, 'WAVE');
+    this.w(v, 12, 'fmt ');
+    v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true);
+    v.setUint32(28, sr * blockAlign, true);
+    v.setUint16(32, blockAlign, true);
+    v.setUint16(34, bitsPerSample, true);
+    this.w(v, 36, 'data');
+    v.setUint32(40, dataSize, true);
 
     for (let i = 0; i < numSamples; i++) {
-      const sample = Math.max(-1, Math.min(1, fn(i, sr)));
-      view.setInt16(headerSize + i * 2, sample * 32767, true);
+      v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, fn(i, sr))) * 32767, true);
     }
 
-    const blob = new Blob([buf], { type: 'audio/wav' });
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
   }
 
-  private writeStr(view: DataView, offset: number, str: string) {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
+  private w(v: DataView, o: number, s: string) {
+    for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
   }
 
   /* ── waveform functions ───────────────────────────────────────── */
