@@ -58,7 +58,7 @@ const SEGMENT_LENGTH = 200; // Length of each track segment (Z units)
 const DRAW_DISTANCE = 160;  // How many segments to draw ahead
 const ROAD_WIDTH = 2200;    // Width of the road
 const LANES = 3;            // Number of lanes
-const CAMERA_HEIGHT = 1600; // Height of camera above road (raised for top-down 3rd person perspective)
+const CAMERA_HEIGHT = 900;  // Height of camera above road (lowered for a fast 3D chase perspective)
 const CAMERA_DEPTH = 0.85;   // Scale factor (FOV helper)
 const TRACK_SEGMENTS = 800; // Total track length in segments
 const GAME_DURATION = 40;   // Initial time limit (seconds)
@@ -535,16 +535,20 @@ export class GridRiderGame {
   private spawnExhaustParticles() {
     // Left/right exhausts position offsets relative to player's center
     const tilt = this.keys['ArrowLeft'] || this.keys['KeyA'] ? -15 : (this.keys['ArrowRight'] || this.keys['KeyD'] ? 15 : 0);
-    const leftOffset = -40 + tilt * 0.3;
-    const rightOffset = 40 + tilt * 0.3;
+    
+    // Aligned to new car design dimensions (width = 240, height = 110, carY = h - 110)
+    // Exhaust ports are at +/- 0.2 * width = +/- 48px, Y is h - 110 - 13 = h - 123
+    const leftOffset = -48 + tilt * 0.3;
+    const rightOffset = 48 + tilt * 0.3;
     const isBoosting = this.boostTimer > 0;
 
     const baseColor = isBoosting ? '#00f0ff' : '#ff007f';
+    const spawnY = this.canvas.height - 123;
 
     // Spawn exhaust left
     this.particles.push({
       x: this.canvas.width / 2 + leftOffset + (Math.random() - 0.5) * 6,
-      y: this.canvas.height - 75,
+      y: spawnY,
       vx: (Math.random() - 0.5) * 1.5 + (tilt * -0.05),
       vy: Math.random() * 2 + 1,
       size: Math.random() * (isBoosting ? 6 : 4) + 2,
@@ -555,7 +559,7 @@ export class GridRiderGame {
     // Spawn exhaust right
     this.particles.push({
       x: this.canvas.width / 2 + rightOffset + (Math.random() - 0.5) * 6,
-      y: this.canvas.height - 75,
+      y: spawnY,
       vx: (Math.random() - 0.5) * 1.5 + (tilt * -0.05),
       vy: Math.random() * 2 + 1,
       size: Math.random() * (isBoosting ? 6 : 4) + 2,
@@ -683,10 +687,10 @@ export class GridRiderGame {
     this.triggerShake(12, 450);
     this.screenFlash = 0.25;
     
-    // Negative visual feedback
+    // Negative visual feedback (centered on new car y-level)
     this.particles.push({
       x: this.canvas.width / 2 + (Math.random() - 0.5) * 50,
-      y: this.canvas.height - 80,
+      y: this.canvas.height - 120,
       vx: (Math.random() - 0.5) * 8,
       vy: Math.random() * 5 + 3,
       size: Math.random() * 12 + 6,
@@ -1228,9 +1232,9 @@ export class GridRiderGame {
   private drawPlayerCar(c: CanvasRenderingContext2D, w: number, h: number) {
     c.save();
 
-    // Center player car at bottom of screen
+    // Center player car sitting nicely on the road
     const carX = w / 2;
-    const carY = h - 60;
+    const carY = h - 110; // Sitting higher up so the bottom wheels/bumper are fully visible
     
     // Add small rumble wiggle based on speed
     const rumble = (Math.random() - 0.5) * (this.playerSpeed / this.maxSpeed) * 2.5;
@@ -1247,85 +1251,148 @@ export class GridRiderGame {
 
     c.rotate(rollAngle);
 
-    // Scale sizing of player car (slightly smaller to fit the raised camera perspective)
-    const width = 200;
-    const height = 95;
+    // Premium supercar chassis sizes (Lamborghini Countach / DeLorean aesthetic)
+    const width = 240;
+    const height = 110;
 
     const isBraking = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
     const isBoosting = this.boostTimer > 0;
     const neonTheme = isBoosting ? '#00f0ff' : '#ff00f0';
 
+    // 1. Wide Rear Tires (drawn behind the chassis)
+    c.fillStyle = '#08020e';
+    c.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    c.lineWidth = 1.5;
+    // Left tire
+    c.fillRect(-width * 0.46, -height * 0.1, width * 0.13, height * 0.36);
+    c.strokeRect(-width * 0.46, -height * 0.1, width * 0.13, height * 0.36);
+    // Right tire
+    c.fillRect(width * 0.33, -height * 0.1, width * 0.13, height * 0.36);
+    c.strokeRect(width * 0.33, -height * 0.1, width * 0.13, height * 0.36);
+
+    // 2. Diffuser Fins underneath the bumper
+    c.fillStyle = '#060012';
+    c.fillRect(-width * 0.22, 0, width * 0.44, height * 0.12);
+    c.fillStyle = neonTheme;
+    c.fillRect(-width * 0.16, 0, 3, height * 0.12);
+    c.fillRect(-width * 0.06, 0, 3, height * 0.12);
+    c.fillRect(width * 0.06, 0, 3, height * 0.12);
+    c.fillRect(width * 0.16, 0, 3, height * 0.12);
+
+    // 3. Lower Bumper & License Plate Deck
     c.shadowColor = neonTheme;
-    c.shadowBlur = 25;
-    c.fillStyle = '#1c003d';
+    c.shadowBlur = 10;
+    c.fillStyle = '#100024';
     c.strokeStyle = neonTheme;
     c.lineWidth = 3.5;
-
-    // Outer premium cyber car vector chassis (DeLorean / Countach style)
     c.beginPath();
-    c.moveTo(-width * 0.48, 0); // Bottom-left wheel arch
-    c.lineTo(-width * 0.44, -height * 0.45); // Left flank
-    c.lineTo(-width * 0.33, -height * 0.85); // Left windshield column
-    c.lineTo(-width * 0.18, -height * 0.98); // Left roof
-    c.lineTo(width * 0.18, -height * 0.98);  // Right roof
-    c.lineTo(width * 0.33, -height * 0.85);  // Right windshield column
-    c.lineTo(width * 0.44, -height * 0.45);  // Right flank
-    c.lineTo(width * 0.48, 0);  // Bottom-right wheel arch
+    c.moveTo(-width * 0.46, 0); // Bottom-left corner
+    c.lineTo(-width * 0.44, -height * 0.42); // Left bumper flank
+    c.lineTo(width * 0.44, -height * 0.42);  // Right bumper flank
+    c.lineTo(width * 0.46, 0);   // Bottom-right corner
     c.closePath();
     c.fill();
     c.stroke();
 
-    // Spoiler wings
-    c.fillStyle = '#0c001a';
+    // 4. Upper Cabin Shell (windshield columns, engine cover, and roof)
+    c.fillStyle = '#1a0236';
     c.beginPath();
-    c.moveTo(-width * 0.51, -height * 0.9);
-    c.lineTo(-width * 0.51, -height * 1.05);
-    c.lineTo(width * 0.51, -height * 1.05);
-    c.lineTo(width * 0.51, -height * 0.9);
+    c.moveTo(-width * 0.39, -height * 0.42);
+    c.lineTo(-width * 0.25, -height * 0.88); // Left windshield column
+    c.lineTo(-width * 0.16, -height * 0.98); // Left roof corner
+    c.lineTo(width * 0.16, -height * 0.98);  // Right roof corner
+    c.lineTo(width * 0.25, -height * 0.88);  // Right windshield column
+    c.lineTo(width * 0.39, -height * 0.42);
     c.closePath();
     c.fill();
     c.stroke();
 
-    // Windshield screen (tinted glass look)
+    // Windshield glass screen (synthwave grid view inside)
     c.fillStyle = 'rgba(0, 240, 255, 0.15)';
+    c.strokeStyle = '#00f0ff';
+    c.lineWidth = 1.5;
     c.beginPath();
-    c.moveTo(-width * 0.28, -height * 0.5);
-    c.lineTo(-width * 0.2, -height * 0.8);
-    c.lineTo(width * 0.2, -height * 0.8);
-    c.lineTo(width * 0.28, -height * 0.5);
+    c.moveTo(-width * 0.25, -height * 0.48);
+    c.lineTo(-width * 0.18, -height * 0.8);
+    c.lineTo(width * 0.18, -height * 0.8);
+    c.lineTo(width * 0.25, -height * 0.48);
     c.closePath();
     c.fill();
     c.stroke();
 
-    // Neon glowing license plate board
+    // Louvered rear engine cover slats (DeLorean / Countach retro styling)
+    c.strokeStyle = 'rgba(255, 0, 240, 0.5)';
+    c.lineWidth = 2.5;
+    for (let i = 1; i <= 4; i++) {
+      const hRatio = 0.42 + (i * 0.095); // Y placement from 0.42 to 0.8
+      const wRatio = 0.39 - (i * 0.035); // Width decreases towards top
+      c.beginPath();
+      c.moveTo(-width * wRatio, -height * hRatio);
+      c.lineTo(width * wRatio, -height * hRatio);
+      c.stroke();
+    }
+
+    // 5. Dual Sport Spoiler Wings
+    c.fillStyle = '#0b001a';
+    c.strokeStyle = neonTheme;
+    c.lineWidth = 3;
+    // Left spoiler bracket
+    c.beginPath();
+    c.moveTo(-width * 0.41, -height * 0.42);
+    c.lineTo(-width * 0.43, -height * 0.95);
+    c.lineTo(-width * 0.36, -height * 0.95);
+    c.lineTo(-width * 0.36, -height * 0.42);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    // Right spoiler bracket
+    c.beginPath();
+    c.moveTo(width * 0.36, -height * 0.42);
+    c.lineTo(width * 0.36, -height * 0.95);
+    c.lineTo(width * 0.43, -height * 0.95);
+    c.lineTo(width * 0.41, -height * 0.42);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    // Spoiler blade
+    c.fillRect(-width * 0.48, -height * 1.05, width * 0.96, height * 0.12);
+    c.strokeRect(-width * 0.48, -height * 1.05, width * 0.96, height * 0.12);
+
+    // 6. Glowing LED Tail Light Bar
+    const tailGlowColor = isBraking ? '#ff0033' : '#ff007f';
+    c.shadowColor = tailGlowColor;
+    c.shadowBlur = isBraking ? 30 : 15;
+    // Housing grid
+    c.fillStyle = '#060010';
+    c.strokeStyle = 'rgba(255, 0, 240, 0.3)';
+    c.lineWidth = 1.5;
+    c.fillRect(-width * 0.41, -height * 0.38, width * 0.82, height * 0.14);
+    c.strokeRect(-width * 0.41, -height * 0.38, width * 0.82, height * 0.14);
+    // Continuous light bar itself
+    c.fillStyle = tailGlowColor;
+    c.fillRect(-width * 0.38, -height * 0.34, width * 0.76, height * 0.06);
+
+    // 7. Glowing License Plate
+    c.shadowBlur = 8;
     c.fillStyle = COLORS.sunYellow;
     c.shadowColor = COLORS.sunYellow;
-    c.shadowBlur = 10;
-    c.fillRect(-width * 0.08, -height * 0.22, width * 0.16, height * 0.12);
+    c.fillRect(-width * 0.08, -height * 0.2, width * 0.16, height * 0.11);
 
     c.fillStyle = '#000';
     c.font = 'bold 8px "Orbitron", sans-serif';
     c.textAlign = 'center';
-    c.fillText("NEXUS", 0, -height * 0.13);
+    c.fillText("NEXUS", 0, -height * 0.115);
 
-    // Glowing Neon Tail lights (Bright red or intense neon red when braking)
-    const tailGlowColor = isBraking ? '#ff0000' : '#ff4444';
-    c.fillStyle = tailGlowColor;
-    c.shadowColor = tailGlowColor;
-    c.shadowBlur = isBraking ? 25 : 12;
-
-    // Left Tail light bar
-    c.fillRect(-width * 0.42, -height * 0.45, width * 0.25, height * 0.12);
-    // Right Tail light bar
-    c.fillRect(width * 0.17, -height * 0.45, width * 0.25, height * 0.12);
-
-    // Cyber hover wheels
-    c.fillStyle = '#110022';
-    c.strokeStyle = neonTheme;
-    c.lineWidth = 2;
-    c.shadowBlur = 0;
-    c.fillRect(-width * 0.48, -height * 0.15, width * 0.09, height * 0.35); // Left wheel
-    c.fillRect(width * 0.39, -height * 0.15, width * 0.09, height * 0.35);  // Right wheel
+    // 8. Cybernetic Jet/Rocket Exhaust Ports
+    c.shadowBlur = 15;
+    c.shadowColor = isBoosting ? '#00f0ff' : '#ff007f';
+    c.fillStyle = isBoosting ? '#e0ffff' : '#ffb0e0';
+    c.beginPath();
+    c.arc(-width * 0.2, -height * 0.12, 6, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(width * 0.2, -height * 0.12, 6, 0, Math.PI * 2);
+    c.fill();
 
     c.restore();
   }
