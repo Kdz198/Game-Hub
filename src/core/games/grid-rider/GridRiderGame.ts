@@ -58,7 +58,7 @@ const SEGMENT_LENGTH = 200; // Length of each track segment (Z units)
 const DRAW_DISTANCE = 160;  // How many segments to draw ahead
 const ROAD_WIDTH = 2200;    // Width of the road
 const LANES = 3;            // Number of lanes
-const CAMERA_HEIGHT = 900;  // Height of camera above road
+const CAMERA_HEIGHT = 1600; // Height of camera above road (raised for top-down 3rd person perspective)
 const CAMERA_DEPTH = 0.85;   // Scale factor (FOV helper)
 const TRACK_SEGMENTS = 800; // Total track length in segments
 const GAME_DURATION = 40;   // Initial time limit (seconds)
@@ -601,23 +601,27 @@ export class GridRiderGame {
 
   private checkCollisions(playerSeg: Segment) {
     // 1. Check AI car collisions
-    const playerSegZ = Math.floor(this.playerZ / SEGMENT_LENGTH);
     for (const car of this.aiCars) {
-      const carSegZ = Math.floor(car.z / SEGMENT_LENGTH);
-      
-      // Detect if in the same proximity
-      const zDiff = Math.abs(this.playerZ - car.z);
+      // Calculate Z distance taking loop wrap-around into account
+      let carZ = car.z;
+      if (carZ < this.playerZ - this.trackLength / 2) {
+        carZ += this.trackLength;
+      } else if (carZ > this.playerZ + this.trackLength / 2) {
+        carZ -= this.trackLength;
+      }
+
+      const zDiff = Math.abs(this.playerZ - carZ);
       if (zDiff < 140) {
-        // Side offset overlap
+        // Side offset overlap (tightened threshold to 0.26 to prevent side-swiping adjacent lanes)
         const xDiff = Math.abs(this.playerX - car.x);
-        if (xDiff < 0.45) {
+        if (xDiff < 0.26) {
           // Crash!
           this.triggerCrash();
           // Bounce car away
           if (this.playerX > car.x) {
-            this.playerX = car.x + 0.48;
+            this.playerX = car.x + 0.28;
           } else {
-            this.playerX = car.x - 0.48;
+            this.playerX = car.x - 0.28;
           }
           break;
         }
@@ -629,15 +633,25 @@ export class GridRiderGame {
     for (let i = 0; i < visibleSegs; i++) {
       const idx = (playerSeg.index + i) % this.segments.length;
       const seg = this.segments[idx];
-      const zDiff = Math.abs(this.playerZ - (seg.index * SEGMENT_LENGTH));
+      
+      let segZ = seg.index * SEGMENT_LENGTH;
+      // Calculate Z distance taking loop wrap-around into account
+      if (segZ < this.playerZ - this.trackLength / 2) {
+        segZ += this.trackLength;
+      } else if (segZ > this.playerZ + this.trackLength / 2) {
+        segZ -= this.trackLength;
+      }
+
+      const zDiff = Math.abs(this.playerZ - segZ);
 
       if (zDiff < 120) {
         for (const sprite of seg.sprites) {
           if (sprite.type === 'barrier') {
+            // Side offset overlap (tightened threshold to 0.22 to fix invisible collisions)
             const xDiff = Math.abs(this.playerX - sprite.x);
-            if (xDiff < 0.42) {
+            if (xDiff < 0.22) {
               this.triggerCrash();
-              this.playerX += this.playerX > sprite.x ? 0.3 : -0.3;
+              this.playerX += this.playerX > sprite.x ? 0.24 : -0.24;
             }
           }
         }
@@ -1233,9 +1247,9 @@ export class GridRiderGame {
 
     c.rotate(rollAngle);
 
-    // Scale sizing of player car
-    const width = 230;
-    const height = 110;
+    // Scale sizing of player car (slightly smaller to fit the raised camera perspective)
+    const width = 200;
+    const height = 95;
 
     const isBraking = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
     const isBoosting = this.boostTimer > 0;
