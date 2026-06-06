@@ -135,10 +135,21 @@ export default function GameCanvas() {
                       filter: `drop-shadow(0 0 10px ${SKIN_COLORS[currentSkin.id].glow})`
                     }}
                   >
-                    {/* Animal body outline */}
+                    {/* Animal base */}
                     <path 
                       d={ANIMAL_PATHS[currentSkin.id]} 
-                      fill="rgba(0,0,0,0.6)" 
+                      fill="rgba(5, 2, 10, 0.9)" 
+                    />
+                    {/* Animal inner glow */}
+                    <path 
+                      d={ANIMAL_PATHS[currentSkin.id]} 
+                      fill={skinColor} 
+                      opacity="0.25"
+                    />
+                    {/* Animal outline */}
+                    <path 
+                      d={ANIMAL_PATHS[currentSkin.id]} 
+                      fill="none" 
                       stroke={skinColor} 
                       strokeWidth="2.5"
                       strokeLinejoin="round"

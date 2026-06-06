@@ -18,17 +18,17 @@ export const SKIN_COLORS = {
 };
 
 export const ANIMAL_PATHS: Record<BirdSkin, string> = {
-  'cyber-bird': 'M 15 0 L 5 -10 L -15 -10 L -8 0 L -15 10 L 0 10 Z',
-  'neon-cat': 'M 14 4 L 8 -12 L 0 -8 L -10 -12 L -12 0 L -8 10 L 8 10 Z',
-  'toxic-bat': 'M 12 0 L 6 -14 L 0 -6 L -14 -12 L -8 10 L -2 4 L 8 12 Z',
-  'plasma-fox': 'M 16 2 L 6 -14 L -2 -8 L -12 -12 L -14 2 L -6 12 L 4 10 Z'
+  'cyber-bird': 'M 16 0 L 6 -6 L -10 -6 L -16 -12 L -12 0 L -16 12 L -6 4 L 0 6 Z',
+  'neon-cat': 'M 12 4 L 6 -10 L 2 -6 L -6 -10 L -10 -2 L -10 8 L -4 12 L 6 12 Z',
+  'toxic-bat': 'M 10 0 L 4 -12 L -2 -4 L -14 -10 L -8 2 L -14 12 L -2 4 L 4 12 Z',
+  'plasma-fox': 'M 16 2 L 8 -12 L 0 -6 L -10 -10 L -12 2 L -6 12 L 2 10 Z'
 };
 
 export const ANIMAL_EYES: Record<BirdSkin, {x: number, y: number}> = {
-  'cyber-bird': {x: 5, y: -3},
-  'neon-cat': {x: 6, y: -2},
-  'toxic-bat': {x: 4, y: -2},
-  'plasma-fox': {x: 4, y: -2}
+  'cyber-bird': {x: 6, y: -2},
+  'neon-cat': {x: 4, y: -2},
+  'toxic-bat': {x: 2, y: -1},
+  'plasma-fox': {x: 4, y: -1}
 };
 
 interface Particle {
@@ -248,9 +248,8 @@ export class FlappyBirdGame {
 
     // Trails Update
     if (deltaTime > 0) {
-      // Create trails with a slight delay or distance based
-      this.trails.push({ x: this.width / 3 - this.bird.size, y: this.bird.y });
-      if (this.trails.length > 15) this.trails.shift();
+      this.trails.push({ x: this.width / 3 - 10, y: this.bird.y });
+      if (this.trails.length > 25) this.trails.shift();
     }
     for (let i = 0; i < this.trails.length; i++) {
       this.trails[i].x -= PIPE_SPEED * deltaTime;
@@ -442,30 +441,45 @@ export class FlappyBirdGame {
     });
     this.ctx.shadowBlur = 0;
 
-    // Draw Trails (Hollow Circles)
-    if (!this.isGameOver && this.isStarted) {
+    // Draw Tron Light Ribbon Trail
+    if (!this.isGameOver && this.isStarted && this.trails.length > 1) {
       const skinColor = SKIN_COLORS[this.currentSkin].main;
       const skinGlow = SKIN_COLORS[this.currentSkin].glow;
 
-      this.ctx.strokeStyle = skinColor;
-      this.ctx.shadowColor = skinGlow;
-      this.ctx.shadowBlur = 12;
-      this.ctx.lineWidth = 2.5;
+      const tailX = this.trails[0].x;
+      const headX = this.width / 3 - 10;
+      
+      const grad = this.ctx.createLinearGradient(tailX, 0, headX, 0);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, skinColor);
 
-      for (let i = 0; i < this.trails.length; i++) {
-        const t = this.trails[i];
-        const size = Math.max(1, (i / this.trails.length) * this.bird.size * 0.8);
-        
-        this.ctx.globalAlpha = Math.pow(i / this.trails.length, 1.5); // Smooth fade
-        this.ctx.beginPath();
-        this.ctx.arc(t.x, t.y, size, 0, Math.PI * 2);
-        this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.trails[0].x, this.trails[0].y);
+      for (let i = 1; i < this.trails.length; i++) {
+        this.ctx.lineTo(this.trails[i].x, this.trails[i].y);
       }
-      this.ctx.globalAlpha = 1.0;
+      this.ctx.lineTo(headX, this.bird.y);
+
+      // Outer Neon Ribbon
+      this.ctx.strokeStyle = grad;
+      this.ctx.lineWidth = 5;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.shadowColor = skinGlow;
+      this.ctx.shadowBlur = 15;
+      this.ctx.stroke();
+      
+      // Inner Bright Core
+      const gradInner = this.ctx.createLinearGradient(tailX, 0, headX, 0);
+      gradInner.addColorStop(0, 'rgba(255,255,255,0)');
+      gradInner.addColorStop(1, '#ffffff');
+      this.ctx.strokeStyle = gradInner;
+      this.ctx.lineWidth = 2;
       this.ctx.shadowBlur = 0;
+      this.ctx.stroke();
     }
 
-    // Draw Bird (Neon Animal Heads)
+    // Draw Bird (Neon Animal Holograms)
     if (!this.isGameOver) {
       this.ctx.save();
       this.ctx.translate(this.width / 3, this.bird.y);
@@ -474,20 +488,28 @@ export class FlappyBirdGame {
       const skinColor = SKIN_COLORS[this.currentSkin].main;
       const skinGlow = SKIN_COLORS[this.currentSkin].glow;
 
-      // Body (Hollow Neon Outline with Translucent Center)
+      const path = new Path2D(ANIMAL_PATHS[this.currentSkin]);
+      
+      // Deep dark base
+      this.ctx.fillStyle = 'rgba(5, 2, 10, 0.9)'; 
+      this.ctx.fill(path);
+
+      // Holographic inner glow
+      this.ctx.fillStyle = skinColor;
+      this.ctx.globalAlpha = 0.25;
+      this.ctx.fill(path);
+      this.ctx.globalAlpha = 1.0;
+
+      // Sharp Neon Outline
       this.ctx.shadowColor = skinGlow;
       this.ctx.shadowBlur = 15;
       this.ctx.strokeStyle = skinColor;
-      this.ctx.lineWidth = 3;
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; 
-      
-      const path = new Path2D(ANIMAL_PATHS[this.currentSkin]);
-      this.ctx.fill(path);
-      this.ctx.stroke(path);
+      this.ctx.lineWidth = 2.5;
+      this.ctx.stroke();
 
       // Eye
       const eye = ANIMAL_EYES[this.currentSkin];
-      this.ctx.shadowBlur = 5;
+      this.ctx.shadowBlur = 8;
       this.ctx.shadowColor = '#ffffff';
       this.ctx.fillStyle = '#ffffff';
       this.ctx.beginPath();
