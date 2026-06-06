@@ -1,4 +1,5 @@
 import { GameLoop } from "../../engine/GameLoop";
+import { AudioSynth } from "../../utils/AudioSynth";
 
 type Point = { x: number; y: number };
 
@@ -39,6 +40,9 @@ export class SnakeGame {
   
   // Auto Play
   public isAutoPlay = false;
+
+  // Audio
+  public audio = new AudioSynth();
 
   // Food
   private food: Point | null = null;
@@ -211,6 +215,7 @@ export class SnakeGame {
     this.isGameOver = true;
     this.screenFlash = 1.0;
     this.triggerScreenShake(20, 600);
+    this.audio.playCrash();
     
     // Explode snake head
     const head = this.snake[0];
@@ -443,11 +448,13 @@ export class SnakeGame {
       const fx = this.gridX + this.food.x * this.cellSize + this.cellSize/2;
       const fy = this.gridY + this.food.y * this.cellSize + this.cellSize/2;
       
+      this.audio.playEat();
       this.spawnFloatingText(`+${pts}`, fx, fy, this.foodColor);
       this.triggerScreenShake(3, 100);
 
       // Milestone check (every 100 points)
       if (Math.floor(this.score / 100) > Math.floor(oldScore / 100)) {
+         this.audio.playMilestone();
          this.triggerScreenShake(8, 300); // Mild shake
          this.spawnFloatingText(`SPEED UP!`, this.canvas.width/2, this.canvas.height/2, '#ff007f', 36);
          this.screenFlash = 0.3; // Slight flash

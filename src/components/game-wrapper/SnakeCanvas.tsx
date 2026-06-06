@@ -65,8 +65,9 @@ export default function SnakeCanvas() {
   useEffect(() => {
     if (gameRef.current) {
       gameRef.current.isAutoPlay = autoPlay;
+      gameRef.current.audio.enabled = soundOn;
     }
-  }, [autoPlay]);
+  }, [autoPlay, soundOn]);
 
   const startGame = () => {
     if (gameRef.current) {
