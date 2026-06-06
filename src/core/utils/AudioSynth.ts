@@ -99,29 +99,40 @@ export class AudioSynth {
 
   /* ── waveform generators (pure functions, t in seconds) ────── */
 
-  /** Retro blip: two-tone square wave beep */
+  /** Retro blip: two-tone sine wave beep */
   private genEat(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
-    // Two-tone: 1000Hz for first half, 1400Hz for second half
-    const freq = t < dur * 0.5 ? 1000 : 1400;
-    const square = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
-    return square * env * 0.8;
+    // Two-tone: 700Hz to 950Hz, sine wave (much softer than square)
+    const freq = t < dur * 0.45 ? 700 : 950;
+    const sine = Math.sin(2 * Math.PI * freq * t);
+    return sine * env * 0.22;
   }
 
+  /** Deep retro explosion: triangle sweep mixed with soft noise */
   private genCrash(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
-    const freq = 200 * Math.pow(0.05, t / dur);
+    // Low frequency triangle sweep (180Hz -> ~1.8Hz)
+    const freq = 180 * Math.pow(0.01, t / dur);
     const phase = freq * t;
-    return (2 * (phase - Math.floor(phase)) - 1) * env * 0.9;
+    const x = phase % 1;
+    const tri = x < 0.5 ? 4 * x - 1 : 3 - 4 * x;
+    
+    // Soft noise for crunchy texture
+    const noise = Math.random() * 2 - 1;
+    
+    // Mix 60% triangle sweep + 40% noise, low volume (0.28)
+    return (tri * 0.6 + noise * 0.4) * env * 0.28;
   }
 
+  /** Sweet level-up chime: rising major triad sine wave */
   private genMilestone(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
-    // Three rising tones
-    let freq = 600;
-    if (t > dur * 0.33) freq = 900;
-    if (t > dur * 0.66) freq = 1200;
-    const square = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
-    return square * env * 0.7;
+    // C major chord arpeggio: C5 (523Hz) -> E5 (659Hz) -> G5 (784Hz)
+    let freq = 523.25;
+    if (t > dur * 0.33) freq = 659.25;
+    if (t > dur * 0.66) freq = 783.99;
+    
+    const sine = Math.sin(2 * Math.PI * freq * t);
+    return sine * env * 0.22;
   }
 }

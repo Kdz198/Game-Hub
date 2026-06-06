@@ -38,14 +38,14 @@ export default function Home() {
       players: "1,890"
     },
     {
-      id: "racer",
-      title: "OUTRUN RACER",
-      category: "RACING / RETRO",
-      description: "Đua xe tốc độ cao trên dải ngân hà với nhạc nền Synthwave sôi động.",
-      icon: "🏎️",
-      neonColor: "#fff01f", // Neon Yellow
-      status: "IN DEVELOPMENT",
-      players: "--"
+      id: "fly-shooter",
+      title: "BUG HUNTER",
+      category: "ARCADE / SHOOTER",
+      description: "Tiêu diệt Drone Bug xâm nhập hệ thống bằng tia laser trong 30 giây căng thẳng.",
+      icon: "🪲",
+      neonColor: "#ff3333", // Neon Red
+      status: "ONLINE",
+      players: "978"
     }
   ];
 
