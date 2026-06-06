@@ -193,8 +193,8 @@ export class StackBallGame {
 
   // Fever states
   private feverTimer = 0; // Fever duration remaining
-  private feverBuildRate = 0.35; // How fast fever builds per smash
-  private feverDecayRate = 0.08; // How fast fever decays when not smashing
+  private feverBuildRate = 0.85; // How fast fever builds per smash
+  private feverDecayRate = 0.018; // How fast fever decays when not smashing
 
   // Screen shake
   private shakeTime = 0;
@@ -262,8 +262,8 @@ export class StackBallGame {
         }
       } else {
         // Normal platforms: single contiguous hazard block
-        // Hazard size starts at 3 segments at Level 1, up to 5 at Level 10
-        const hazardSize = Math.min(5, 3 + Math.floor(this.level / 5)); 
+        // Hazard size starts at 2 segments at Level 1, up to 4 at Level 10
+        const hazardSize = Math.min(4, 2 + Math.floor(this.level / 6)); 
         // Choose a random start index for the hazard block (leave starting index 0 safe)
         const startHazardIdx = 2 + Math.floor(Math.random() * (numSegments - hazardSize - 2));
 
@@ -395,7 +395,7 @@ export class StackBallGame {
     // Smooth camera tracking
     // Keep camera centered on the active platform
     const activePlatformY = this.platforms[this.currentPlatformIndex].y;
-    this.targetCameraY = activePlatformY + 60;
+    this.targetCameraY = activePlatformY + 32;
     this.cameraY += (this.targetCameraY - this.cameraY) * 0.0065 * dt;
   }
 
@@ -661,7 +661,7 @@ export class StackBallGame {
 
     // Determine platform draw range based on camera culling
     // Top-most index to draw, bottom-most to draw
-    const ballScreenY = h * 0.3;
+    const ballScreenY = h * 0.22;
 
     // Draw platforms in Z-sorted order (back-to-front within each platform)
     // Draw from bottom platforms (index 0) to top platforms (index totalPlatforms - 1)
@@ -762,7 +762,7 @@ export class StackBallGame {
   }
 
   private drawShards(c: CanvasRenderingContext2D, w: number, h: number, cx: number) {
-    const ballScreenY = h * 0.3;
+    const ballScreenY = h * 0.22;
     
     this.shards.forEach((s) => {
       const screenY = ballScreenY - (s.y - this.cameraY);
@@ -789,7 +789,7 @@ export class StackBallGame {
   }
 
   private drawBall(c: CanvasRenderingContext2D, w: number, h: number, cx: number) {
-    const ballScreenY = h * 0.3;
+    const ballScreenY = h * 0.22;
     const sy = ballScreenY - (this.ballY - this.cameraY);
 
     c.save();
