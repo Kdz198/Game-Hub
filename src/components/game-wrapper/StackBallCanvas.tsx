@@ -139,22 +139,6 @@ export default function StackBallCanvas() {
 
       {/* HUD Overlay */}
       <div className={`${styles.hud} ${gameState === 'PLAYING' ? styles.hudVisible : ''}`}>
-        <div className={styles.hudTop}>
-          <div className={styles.levelBox}>
-            <span className={styles.hudLabel}>LEVEL</span>
-            <span className={`${styles.hudValue} ${orbitron.className}`}>{level}</span>
-          </div>
-
-          <div className={styles.scoreBox}>
-            <span className={styles.hudLabel}>SCORE</span>
-            <span className={`${styles.hudValue} ${orbitron.className}`}>{score}</span>
-          </div>
-          
-          <div className={styles.bestBox}>
-            <span className={styles.hudLabel}>BEST</span>
-            <span className={`${styles.hudValue} ${orbitron.className}`}>{bestScore}</span>
-          </div>
-        </div>
 
         {/* Level Progress Bar */}
         <div className={styles.progressContainer}>

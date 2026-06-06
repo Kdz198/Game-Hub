@@ -183,7 +183,7 @@ export class StackBallGame {
 
   // Visual Properties
   private towerAngle = 0;
-  private rotationSpeed = 0.0016; // Radians per ms
+  private rotationSpeed = 0.00085; // Radians per ms (slower for chill play)
   private platforms: Platform[] = [];
   private shards: Shard[] = [];
   private bounceStrength = 0.38; // Upward velocity on bounce
@@ -193,8 +193,8 @@ export class StackBallGame {
 
   // Fever states
   private feverTimer = 0; // Fever duration remaining
-  private feverBuildRate = 0.85; // How fast fever builds per smash
-  private feverDecayRate = 0.018; // How fast fever decays when not smashing
+  private feverBuildRate = 1.8; // How fast fever builds per smash
+  private feverDecayRate = 0.008; // How fast fever decays when not smashing
 
   // Screen shake
   private shakeTime = 0;
@@ -262,8 +262,8 @@ export class StackBallGame {
         }
       } else {
         // Normal platforms: single contiguous hazard block
-        // Hazard size starts at 2 segments at Level 1, up to 4 at Level 10
-        const hazardSize = Math.min(4, 2 + Math.floor(this.level / 6)); 
+        // Hazard size starts at 1 segment at Level 1, up to 2 at Level 10
+        const hazardSize = Math.max(1, Math.min(2, 1 + Math.floor(this.level / 10))); 
         // Choose a random start index for the hazard block (leave starting index 0 safe)
         const startHazardIdx = 2 + Math.floor(Math.random() * (numSegments - hazardSize - 2));
 
@@ -344,7 +344,7 @@ export class StackBallGame {
     // Fever Mode timer countdown
     if (this.isFeverMode) {
       this.feverTimer -= dt;
-      this.feverMeter = Math.max(0, (this.feverTimer / 4000) * 100);
+      this.feverMeter = Math.max(0, (this.feverTimer / 5500) * 100);
       if (this.onFever) this.onFever(Math.floor(this.feverMeter));
       
       if (this.feverTimer <= 0) {
@@ -360,7 +360,7 @@ export class StackBallGame {
     }
 
     // Rotate the tower
-    const speedMultiplier = 1 + (this.level * 0.05); // slightly faster rotation at higher levels
+    const speedMultiplier = 1 + (this.level * 0.02); // scale up much slower
     this.towerAngle += this.rotationSpeed * speedMultiplier * dt;
 
     // Get current top platform info
@@ -446,7 +446,7 @@ export class StackBallGame {
 
         if (this.feverMeter >= 100) {
           this.isFeverMode = true;
-          this.feverTimer = 4000; // 4 seconds of super rage fireball
+          this.feverTimer = 5500; // 5.5 seconds of super rage fireball
         }
       }
 
