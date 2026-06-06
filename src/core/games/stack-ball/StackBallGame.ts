@@ -388,7 +388,6 @@ export class StackBallGame {
         this.ballY = platformY;
         this.ballVY = this.bounceStrength;
         this.audio.play('bounce');
-        this.triggerShake(3, 80);
       }
     }
 
@@ -623,13 +622,7 @@ export class StackBallGame {
     c.fillStyle = bgGrad;
     c.fillRect(0, 0, w, h);
 
-    // Apply Screen Shake
     c.save();
-    if (this.shakeTime > 0) {
-      const sx = (Math.random() - 0.5) * this.shakeMag;
-      const sy = (Math.random() - 0.5) * this.shakeMag;
-      c.translate(sx, sy);
-    }
 
     const centerX = w / 2;
 
