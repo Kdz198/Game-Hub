@@ -26,12 +26,20 @@ export default function GameCanvas() {
   const [bestScore, setBestScore] = useState(0);
   const [skinIndex, setSkinIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [bgmVol, setBgmVol] = useState(1.0);
+  const [vfxVol, setVfxVol] = useState(1.0);
 
   useEffect(() => {
     setBestScore(parseInt(localStorage.getItem('fb_best') || '0'));
-    const savedMute = localStorage.getItem('fb_muted') === 'true';
-    setIsMuted(savedMute);
-    audioSys.isMuted = savedMute;
+    const savedMuted = localStorage.getItem('fb_muted');
+      if (savedMuted) {
+        const muted = savedMuted === 'true';
+        setIsMuted(muted);
+        audioSys.isMuted = muted;
+      }
+      setBgmVol(audioSys.masterBgmVolume);
+      setVfxVol(audioSys.masterVfxVolume);
   }, []);
 
   useEffect(() => {
@@ -98,6 +106,24 @@ export default function GameCanvas() {
     audioSys.isMuted = newState;
     audioSys.updateBgm(gameState);
     localStorage.setItem('fb_muted', newState.toString());
+  };
+
+  const handleBgmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setBgmVol(val);
+    audioSys.masterBgmVolume = val;
+    localStorage.setItem('sys_bgm_vol', val.toString());
+    if (audioSys.bgmAudio && !audioSys.isMuted) {
+       const currentStateVol = audioSys.bgmAudio.volume / (audioSys.masterBgmVolume || 1) || 0.6;
+       audioSys.bgmAudio.volume = Math.max(0, Math.min(1, currentStateVol * val));
+    }
+  };
+
+  const handleVfxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setVfxVol(val);
+    audioSys.masterVfxVolume = val;
+    localStorage.setItem('sys_vfx_vol', val.toString());
   };
 
   const startGame = () => {
@@ -191,6 +217,12 @@ export default function GameCanvas() {
               </div>
               <p className={styles.subtitle}>RETRO CYBERPUNK ARCADE</p>
 
+              <button className={styles.settingsBtn} onClick={() => setIsSettingsOpen(true)} aria-label="Settings">
+                <svg viewBox="0 0 24 24" className={styles.icon}>
+                  <path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+              </button>
+
               <div className={styles.skinSelectorContainer}>
                 <h3 className={orbitron.className}>SELECT YOUR SHIP</h3>
                 <div className={styles.skinPicker}>
@@ -211,6 +243,35 @@ export default function GameCanvas() {
 
               <button className={`${styles.btn} ${styles.btnPrimary} ${orbitron.className}`} onClick={startGame}>LAUNCH SYSTEM</button>
               <p className={styles.controlsHint}>Press <span className={`${styles.key} ${orbitron.className}`}>SPACE</span> or <span className={`${styles.key} ${orbitron.className}`}>CLICK</span> to jump</p>
+            </div>
+          </div>
+
+          {/* SETTINGS OVERLAY */}
+          <div className={`${styles.overlay} ${isSettingsOpen ? styles.overlayActive : ''}`}>
+            <div className={`${styles.glassPanel} ${styles.settingsPanel}`}>
+              <h2 className={`${styles.neonTextBlue} ${orbitron.className}`}>AUDIO SETTINGS</h2>
+              
+              <div className={styles.settingRow}>
+                <label className={orbitron.className}>MUSIC (BGM)</label>
+                <input 
+                  type="range" min="0" max="2" step="0.1" 
+                  value={bgmVol} onChange={handleBgmChange}
+                  className={styles.slider} 
+                />
+                <span className={`${styles.valTxt} ${orbitron.className}`}>{(bgmVol * 100).toFixed(0)}%</span>
+              </div>
+
+              <div className={styles.settingRow}>
+                <label className={orbitron.className}>EFFECTS (VFX)</label>
+                <input 
+                  type="range" min="0" max="2" step="0.1" 
+                  value={vfxVol} onChange={handleVfxChange}
+                  className={styles.slider} 
+                />
+                <span className={`${styles.valTxt} ${orbitron.className}`}>{(vfxVol * 100).toFixed(0)}%</span>
+              </div>
+
+              <button className={`${styles.btn} ${styles.btnSecondary} ${orbitron.className}`} onClick={() => setIsSettingsOpen(false)}>CLOSE</button>
             </div>
           </div>
 

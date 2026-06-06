@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, Orbitron, Rajdhani } from "next/font/google";
 import "./globals.css";
 import styles from "./layout.module.css";
-import HeaderControls from "@/components/layout/HeaderControls";
 
 const inter = Inter({ subsets: ["latin"] });
 const orbitron = Orbitron({ subsets: ["latin"], weight: ["400", "700", "900"] });
@@ -34,7 +33,6 @@ export default function RootLayout({
             </nav>
             <div className={styles.userProfile}>
               <div className={styles.avatar}></div>
-              <HeaderControls />
             </div>
           </header>
           <main className={styles.mainContent}>
