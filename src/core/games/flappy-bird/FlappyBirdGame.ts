@@ -493,7 +493,7 @@ export class FlappyBirdGame {
   }
 
   private checkCollisions() {
-    if (this.bird.y + this.bird.radius >= this.groundY) {
+    if (this.bird.y + (this.bird.size / 2) >= this.groundY) {
         this.triggerGameOver();
         return;
     }
