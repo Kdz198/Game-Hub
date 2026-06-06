@@ -35,11 +35,18 @@ const SHAPE_DEFINITIONS: ShapeDef[] = [
   // 1x4, 4x1
   { blocks: [{x:0,y:0}, {x:0,y:1}, {x:0,y:2}, {x:0,y:3}], color: COLORS[4] },
   { blocks: [{x:0,y:0}, {x:1,y:0}, {x:2,y:0}, {x:3,y:0}], color: COLORS[4] },
-  // L shapes
+  // L shapes (2x3 or 3x2)
   { blocks: [{x:0,y:0}, {x:0,y:1}, {x:0,y:2}, {x:1,y:2}], color: COLORS[5] },
   { blocks: [{x:0,y:0}, {x:1,y:0}, {x:2,y:0}, {x:0,y:1}], color: COLORS[5] },
-  // T shape
+  // Big L shapes (3x3 bounding box)
+  { blocks: [{x:0,y:0}, {x:0,y:1}, {x:0,y:2}, {x:1,y:2}, {x:2,y:2}], color: COLORS[1] },
+  { blocks: [{x:2,y:0}, {x:2,y:1}, {x:0,y:2}, {x:1,y:2}, {x:2,y:2}], color: COLORS[1] },
+  // T shape (3x2)
   { blocks: [{x:1,y:0}, {x:0,y:1}, {x:1,y:1}, {x:2,y:1}], color: COLORS[0] },
+  // Big T shape (3x3)
+  { blocks: [{x:0,y:0}, {x:1,y:0}, {x:2,y:0}, {x:1,y:1}, {x:1,y:2}], color: COLORS[0] },
+  // 3x3 Square
+  { blocks: [{x:0,y:0},{x:1,y:0},{x:2,y:0}, {x:0,y:1},{x:1,y:1},{x:2,y:1}, {x:0,y:2},{x:1,y:2},{x:2,y:2}], color: COLORS[3] },
 ];
 
 export class BlockBlastGame {
@@ -194,6 +201,18 @@ export class BlockBlastGame {
     return SHAPE_DEFINITIONS[Math.floor(Math.random() * SHAPE_DEFINITIONS.length)];
   }
 
+  private generateSmartShapes(): ShapeDef[] {
+    const shapes = [this.getRandomShape(), this.getRandomShape(), this.getRandomShape()];
+    
+    // Ensure at least one small shape (size <= 3 blocks) to help player clear holes
+    const hasSmall = shapes.some(s => s.blocks.length <= 3);
+    if (!hasSmall) {
+      const smallShapes = SHAPE_DEFINITIONS.filter(s => s.blocks.length <= 3);
+      shapes[Math.floor(Math.random() * 3)] = smallShapes[Math.floor(Math.random() * smallShapes.length)];
+    }
+    return shapes;
+  }
+
   private refillShapes() {
     let emptyCount = 0;
     for (let i=0; i<3; i++) {
@@ -201,7 +220,26 @@ export class BlockBlastGame {
     }
     
     if (emptyCount === 3) {
-      this.availableShapes = [this.getRandomShape(), this.getRandomShape(), this.getRandomShape()];
+      let attempts = 0;
+      let validSpawn = false;
+      
+      // Guarantees that AT LEAST ONE shape can be placed on the current grid
+      while (!validSpawn && attempts < 50) {
+        const shapes = this.generateSmartShapes();
+        if (this.canPlaceShapeAnywhere(shapes[0]) || 
+            this.canPlaceShapeAnywhere(shapes[1]) || 
+            this.canPlaceShapeAnywhere(shapes[2])) {
+           this.availableShapes = shapes;
+           validSpawn = true;
+        }
+        attempts++;
+      }
+
+      // Fallback
+      if (!validSpawn) {
+        this.availableShapes = this.generateSmartShapes();
+      }
+
       this.checkGameOver();
     }
   }
