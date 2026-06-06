@@ -46,8 +46,6 @@ export class AudioSynth {
     this.buffers.eat       = this.renderBuffer(ctx, 0.20, this.genEat);
     this.buffers.crash     = this.renderBuffer(ctx, 0.50, this.genCrash);
     this.buffers.milestone = this.renderBuffer(ctx, 0.35, this.genMilestone);
-
-    console.log('[AUDIO] unlocked — sampleRate:', ctx.sampleRate, 'state:', ctx.state);
   }
 
   public destroy() {
@@ -65,15 +63,9 @@ export class AudioSynth {
   /* ── internal ─────────────────────────────────────────────────── */
 
   private play(name: string) {
-    if (!this.enabled) {
-      console.warn('[AUDIO]', name, 'SKIP: disabled');
-      return;
-    }
+    if (!this.enabled) return;
     const buf = this.buffers[name];
-    if (!buf) {
-      console.warn('[AUDIO]', name, 'SKIP: no buffer');
-      return;
-    }
+    if (!buf) return;
 
     const ctx = getCtx();
 
@@ -83,15 +75,8 @@ export class AudioSynth {
 
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.connect(ctx.destination);  // Direct to destination, no gain node
-
-    const startTime = ctx.currentTime;
-    src.onended = () => {
-      console.log('[AUDIO] ⏹', name, '— played for', ((ctx.currentTime - startTime) * 1000).toFixed(0), 'ms');
-    };
-
+    src.connect(ctx.destination);
     src.start();
-    console.log('[AUDIO] ▶', name, '— ctxState:', ctx.state, 'ctxTime:', ctx.currentTime.toFixed(3), 'bufDur:', buf.duration.toFixed(3));
   }
 
   /* ── buffer rendering ─────────────────────────────────────────── */
