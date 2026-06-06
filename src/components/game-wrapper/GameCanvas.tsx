@@ -128,30 +128,30 @@ export default function GameCanvas() {
                 <button className={styles.arrowBtn} onClick={prevSkin}>&lt;</button>
                 <div className={styles.shipPreviewBox}>
                   <svg 
-                    width="48" 
-                    height="48" 
+                    width="60" 
+                    height="60" 
                     viewBox="-20 -20 40 40" 
                     style={{
-                      filter: `drop-shadow(0 0 10px ${SKIN_COLORS[currentSkin.id].glow})`
+                      filter: `drop-shadow(0 0 12px ${SKIN_COLORS[currentSkin.id].glow})`
                     }}
                   >
                     {/* Animal base */}
                     <path 
                       d={ANIMAL_PATHS[currentSkin.id]} 
-                      fill="rgba(5, 2, 10, 0.9)" 
+                      fill="#000000" 
                     />
                     {/* Animal inner glow */}
                     <path 
                       d={ANIMAL_PATHS[currentSkin.id]} 
                       fill={skinColor} 
-                      opacity="0.25"
+                      opacity="0.5"
                     />
                     {/* Animal outline */}
                     <path 
                       d={ANIMAL_PATHS[currentSkin.id]} 
                       fill="none" 
                       stroke={skinColor} 
-                      strokeWidth="2.5"
+                      strokeWidth="3"
                       strokeLinejoin="round"
                     />
                     {/* Eye */}

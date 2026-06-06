@@ -133,7 +133,7 @@ export class FlappyBirdGame {
     return {
       y: this.height / 2,
       velocity: 0,
-      size: 14,
+      size: 20,
       rotation: 0
     };
   }
@@ -248,7 +248,7 @@ export class FlappyBirdGame {
 
     // Trails Update
     if (deltaTime > 0) {
-      this.trails.push({ x: this.width / 3 - 10, y: this.bird.y });
+      this.trails.push({ x: this.width / 3 - 20, y: this.bird.y });
       if (this.trails.length > 25) this.trails.shift();
     }
     for (let i = 0; i < this.trails.length; i++) {
@@ -447,7 +447,7 @@ export class FlappyBirdGame {
       const skinGlow = SKIN_COLORS[this.currentSkin].glow;
 
       const tailX = this.trails[0].x;
-      const headX = this.width / 3 - 10;
+      const headX = this.width / 3 - 20;
       
       const grad = this.ctx.createLinearGradient(tailX, 0, headX, 0);
       grad.addColorStop(0, 'rgba(0,0,0,0)');
@@ -485,31 +485,34 @@ export class FlappyBirdGame {
       this.ctx.translate(this.width / 3, this.bird.y);
       this.ctx.rotate(this.bird.rotation);
       
+      const scaleFactor = this.bird.size / 14;
+      this.ctx.scale(scaleFactor, scaleFactor);
+      
       const skinColor = SKIN_COLORS[this.currentSkin].main;
       const skinGlow = SKIN_COLORS[this.currentSkin].glow;
 
       const path = new Path2D(ANIMAL_PATHS[this.currentSkin]);
       
-      // Deep dark base
-      this.ctx.fillStyle = 'rgba(5, 2, 10, 0.9)'; 
+      // Deep dark base (Solid Black for contrast against space)
+      this.ctx.fillStyle = '#000000'; 
       this.ctx.fill(path);
 
-      // Holographic inner glow
+      // Holographic inner glow (Brighter to pop out)
       this.ctx.fillStyle = skinColor;
-      this.ctx.globalAlpha = 0.25;
+      this.ctx.globalAlpha = 0.5;
       this.ctx.fill(path);
       this.ctx.globalAlpha = 1.0;
 
       // Sharp Neon Outline
       this.ctx.shadowColor = skinGlow;
-      this.ctx.shadowBlur = 15;
+      this.ctx.shadowBlur = 20;
       this.ctx.strokeStyle = skinColor;
-      this.ctx.lineWidth = 2.5;
+      this.ctx.lineWidth = 3;
       this.ctx.stroke();
 
       // Eye
       const eye = ANIMAL_EYES[this.currentSkin];
-      this.ctx.shadowBlur = 8;
+      this.ctx.shadowBlur = 10;
       this.ctx.shadowColor = '#ffffff';
       this.ctx.fillStyle = '#ffffff';
       this.ctx.beginPath();
