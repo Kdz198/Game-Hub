@@ -36,7 +36,16 @@ export default function SnakeCanvas() {
     const game = new SnakeGame(canvas);
     gameRef.current = game;
 
-    game.onScore = (s) => setScore(s);
+    game.onScore = (s) => {
+      setScore(s);
+      setBestScore(prev => {
+        if (s > prev) {
+          localStorage.setItem('snakeBest', s.toString());
+          return s;
+        }
+        return prev;
+      });
+    };
     game.onGameOver = (s, b) => {
       setScore(s);
       setBestScore(b);
