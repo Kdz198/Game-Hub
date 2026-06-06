@@ -27,9 +27,8 @@ export default function HeaderControls() {
     // Actually, setting masterBgmVolume and doing nothing might not take effect immediately until next state change.
     // Let's just update the bgmAudio directly here for instant feedback.
     if (audioSys.bgmAudio && !audioSys.isMuted) {
-       // Just update it relatively
-       const currentStateVol = audioSys.bgmAudio.volume / (audioSys.masterBgmVolume || 1) || 0.6; // estimate
-       audioSys.bgmAudio.volume = currentStateVol * val;
+       const currentStateVol = audioSys.bgmAudio.volume / (audioSys.masterBgmVolume || 1) || 0.6;
+       audioSys.bgmAudio.volume = Math.max(0, Math.min(1, currentStateVol * val));
     }
   };
 

@@ -156,7 +156,7 @@ class AudioSystem {
             case 'PAUSED': targetVol = 0.3; break;
             case 'GAME_OVER': targetVol = 0.2; break;
         }
-        this.bgmAudio.volume = targetVol * this.masterBgmVolume;
+        this.bgmAudio.volume = Math.max(0, Math.min(1, targetVol * this.masterBgmVolume));
         if (this.bgmAudio.paused) {
             this.bgmAudio.play().catch(e => console.log("BGM autoplay blocked until interaction"));
         }
