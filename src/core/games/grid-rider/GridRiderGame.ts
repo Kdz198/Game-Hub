@@ -438,8 +438,9 @@ export class GridRiderGame {
     const brake = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
 
     // Steering velocity factor based on speed (can't steer if stationary)
+    // Capped at a minimum speed percentage of 0.35 so steering remains responsive off-road
     const speedPct = this.playerSpeed / this.maxSpeed;
-    const steerFactor = 2.4 * dtSec * Math.min(speedPct, 1.2);
+    const steerFactor = 2.6 * dtSec * Math.max(0.35, Math.min(speedPct, 1.2));
 
     if (steerLeft) {
       this.playerX -= steerFactor * (this.touchSteer < -0.2 ? Math.abs(this.touchSteer) : 1);
@@ -451,9 +452,9 @@ export class GridRiderGame {
     const playerSegmentIndex = Math.floor(this.playerZ / SEGMENT_LENGTH);
     const playerSeg = this.segments[playerSegmentIndex % this.segments.length];
     
-    // Road drift physics on curve
-    const curveInfluence = playerSeg.curve * 0.2 * (this.playerSpeed / this.maxSpeed);
-    this.playerX -= curveInfluence * dtSec * 15;
+    // Road drift centrifugal physics on curve (balanced to prevent uncontrollable sliding off-road)
+    const curveInfluence = playerSeg.curve * 0.12 * (this.playerSpeed / this.maxSpeed);
+    this.playerX -= curveInfluence * dtSec * 3.5;
 
     const isOffRoad = Math.abs(this.playerX) > 1.0;
 
@@ -975,18 +976,24 @@ export class GridRiderGame {
 
       c.restore();
 
-      // 6. Draw AI cars driving in front of player
-      // We check if an AI car is located on this Z segment
-      const curZ = curr.index * SEGMENT_LENGTH;
-      for (const car of this.aiCars) {
-        if (Math.abs(car.z - curZ) < SEGMENT_LENGTH / 2) {
-          this.drawAICar(c, curr, car);
-        }
-      }
+      // Get pz again to cull close sprites/AI cars that go out of field of view
+      const zOffset = (playerSegmentIndex + i >= this.segments.length) ? this.trackLength : 0;
+      const pz = curr.world.z + zOffset - this.playerZ;
 
-      // 7. Draw roadside scenery objects (billboards, lights, palms)
-      for (const sprite of curr.sprites) {
-        this.drawRoadsideSprite(c, curr, sprite);
+      if (pz >= 300) {
+        // 6. Draw AI cars driving in front of player
+        // We check if an AI car is located on this Z segment
+        const curZ = curr.index * SEGMENT_LENGTH;
+        for (const car of this.aiCars) {
+          if (Math.abs(car.z - curZ) < SEGMENT_LENGTH / 2) {
+            this.drawAICar(c, curr, car);
+          }
+        }
+
+        // 7. Draw roadside scenery objects (billboards, lights, palms)
+        for (const sprite of curr.sprites) {
+          this.drawRoadsideSprite(c, curr, sprite);
+        }
       }
     }
   }
