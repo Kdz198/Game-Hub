@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { FlappyBirdGame, BirdSkin, SKIN_COLORS, SHAPE_PATHS } from "@/core/games/flappy-bird/FlappyBirdGame";
+import { FlappyBirdGame, BirdSkin, SKINS_CONFIG, audioSys } from "@/core/games/flappy-bird/FlappyBirdGame";
 import styles from "./GameCanvas.module.css";
 import { Orbitron, Rajdhani } from "next/font/google";
 
@@ -10,23 +10,28 @@ const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["500", "700"] });
 type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER';
 
 const AVAILABLE_SKINS: { id: BirdSkin; name: string }[] = [
-  { id: 'cyber-arrow', name: 'CYBER ARROW' },
-  { id: 'neon-box', name: 'NEON BOX' },
-  { id: 'toxic-diamond', name: 'TOXIC DIAMOND' },
-  { id: 'plasma-star', name: 'PLASMA STAR' },
+  { id: 'cyber-swift', name: 'CYBER SWIFT' },
+  { id: 'laser-phoenix', name: 'LASER PHOENIX' },
+  { id: 'vector-gold', name: 'VECTOR GOLD' },
+  { id: 'synth-pulse', name: 'SYNTH PULSE' },
 ];
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<FlappyBirdGame | null>(null);
 
   const [gameState, setGameState] = useState<GameState>('MENU');
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
   const [skinIndex, setSkinIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
     setBestScore(parseInt(localStorage.getItem('fb_best') || '0'));
+    const savedMute = localStorage.getItem('fb_muted') === 'true';
+    setIsMuted(savedMute);
+    audioSys.isMuted = savedMute;
   }, []);
 
   useEffect(() => {
@@ -64,6 +69,30 @@ export default function GameCanvas() {
       game.destroy();
     };
   }, []);
+
+  // Update preview canvas when skin changes
+  useEffect(() => {
+    if (previewCanvasRef.current) {
+        const ctx = previewCanvasRef.current.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, 80, 80);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.beginPath();
+            ctx.arc(40, 40, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            const skin = SKINS_CONFIG[AVAILABLE_SKINS[skinIndex].id];
+            skin.draw(ctx, 40, 40, 32, -0.1, skin.primaryColor, skin.secondaryColor, skin.accentColor);
+        }
+    }
+  }, [skinIndex, gameState]);
+
+  const toggleMute = () => {
+    const newState = !isMuted;
+    setIsMuted(newState);
+    audioSys.isMuted = newState;
+    localStorage.setItem('fb_muted', newState.toString());
+  };
 
   const startGame = () => {
     if (gameRef.current) {
@@ -114,14 +143,11 @@ export default function GameCanvas() {
     if (gameRef.current) gameRef.current.setSkin(AVAILABLE_SKINS[prev].id);
   };
 
-  const currentSkin = AVAILABLE_SKINS[skinIndex];
-  const skinColor = SKIN_COLORS[currentSkin.id].main;
-
   const getMedal = (s: number) => {
-    if (s >= 40) return <svg className={`${styles.medalSvg} ${styles.medalCyber}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
-    if (s >= 30) return <svg className={`${styles.medalSvg} ${styles.medalGold}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
-    if (s >= 20) return <svg className={`${styles.medalSvg} ${styles.medalSilver}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
-    if (s >= 10) return <svg className={`${styles.medalSvg} ${styles.medalBronze}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
+    if (s >= 40) return <svg className={`${styles.medalSvg} ${styles.medalCyber}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>;
+    if (s >= 30) return <svg className={`${styles.medalSvg} ${styles.medalGold}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>;
+    if (s >= 20) return <svg className={`${styles.medalSvg} ${styles.medalSilver}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>;
+    if (s >= 10) return <svg className={`${styles.medalSvg} ${styles.medalBronze}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>;
     return <span className={styles.noMedalText}>NONE</span>;
   };
 
@@ -165,11 +191,9 @@ export default function GameCanvas() {
                   <button className={`${styles.pickerBtn} ${orbitron.className}`} onClick={prevSkin}>&lt;</button>
                   <div className={styles.skinPreviewBox}>
                     <div className={styles.skinPreviewInner}>
-                      <svg width="60" height="60" viewBox="-20 -20 40 40" style={{ filter: `drop-shadow(0 0 15px ${skinColor})` }}>
-                        <path d={SHAPE_PATHS[currentSkin.id]} fill={skinColor} />
-                      </svg>
+                      <canvas ref={previewCanvasRef} width={80} height={80} />
                     </div>
-                    <span className={`${styles.skinName} ${orbitron.className}`}>{currentSkin.name}</span>
+                    <span className={`${styles.skinName} ${orbitron.className}`}>{AVAILABLE_SKINS[skinIndex].name}</span>
                   </div>
                   <button className={`${styles.pickerBtn} ${orbitron.className}`} onClick={nextSkin}>&gt;</button>
                 </div>
@@ -226,6 +250,21 @@ export default function GameCanvas() {
             </div>
           </div>
           
+          {/* QUICK CONTROLS IN-GAME (SOUND & MUTE) */}
+          <div className={styles.cornerControls}>
+              <button className={styles.btnIcon} onClick={toggleMute} aria-label="Toggle Sound">
+                  {isMuted ? (
+                    <svg viewBox="0 0 24 24" className={styles.icon}>
+                      <path fill="currentColor" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" className={styles.icon}>
+                      <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                  )}
+              </button>
+          </div>
+
         </div>
       </div>
     </div>
