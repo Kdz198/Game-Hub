@@ -32,9 +32,10 @@ export class SnakeGame {
   private dy = 0;
   private nextDx = 1;
   private nextDy = 0;
-  private baseMoveInterval = 120; // ms
-  private moveInterval = 120;
+  private baseMoveInterval = 100; // ms (slightly faster base speed)
+  private moveInterval = 100;
   private moveTimer = 0;
+  private isDigesting = false;
 
   // Food
   private food: Point | null = null;
@@ -165,6 +166,7 @@ export class SnakeGame {
     this.screenFlash = 0;
     this.moveInterval = this.baseMoveInterval;
     this.moveTimer = 0;
+    this.isDigesting = false;
 
     // Start in middle
     const startX = Math.floor(this.gridCols / 2);
@@ -260,7 +262,7 @@ export class SnakeGame {
     if (!this.isGameOver) {
       this.moveTimer += dt;
       if (this.moveTimer >= this.moveInterval) {
-        this.moveTimer = 0;
+        this.moveTimer -= this.moveInterval;
         this.moveSnake();
       }
     }
@@ -294,14 +296,15 @@ export class SnakeGame {
     
     // Check wall collision
     if (newHead.x < 0 || newHead.x >= this.gridCols || newHead.y < 0 || newHead.y >= this.gridRows) {
+      this.snake.unshift(newHead); // Add to render the crash at the wall
       this.triggerGameOver();
       return;
     }
     
     // Check self collision
-    // (don't check last tail segment because it will move forward)
     for (let i = 0; i < this.snake.length - 1; i++) {
       if (this.snake[i].x === newHead.x && this.snake[i].y === newHead.y) {
+        this.snake.unshift(newHead); // Add to render the crash
         this.triggerGameOver();
         return;
       }
@@ -339,12 +342,14 @@ export class SnakeGame {
       this.spawnFood();
       
       // Speed up slightly
-      if (this.moveInterval > 50) {
+      if (this.moveInterval > 40) {
         this.moveInterval -= 2; // Increase speed
       }
+      this.isDigesting = true;
     } else {
       // Not eating, remove tail
       this.snake.pop();
+      this.isDigesting = false;
     }
   }
 
@@ -412,32 +417,69 @@ export class SnakeGame {
 
     // Draw Snake
     c.save();
-    if (this.snake.length > 0) {
-      // Draw neon trail (Line)
+    if (this.snake.length > 1) {
+      const progress = this.isGameOver ? 1.0 : (this.moveTimer / this.moveInterval);
+      
+      const head = this.snake[0];
+      const neck = this.snake[1];
+      const hx = neck.x + (head.x - neck.x) * progress;
+      const hy = neck.y + (head.y - neck.y) * progress;
+      
+      const tailIndex = this.snake.length - 1;
+      const tail = this.snake[tailIndex];
+      const tailPrev = this.snake[tailIndex - 1];
+      
+      let tx = tail.x;
+      let ty = tail.y;
+      
+      // Interpolate tail only if not digesting and not game over
+      if (!this.isDigesting && !this.isGameOver && tailPrev) {
+         tx = tail.x + (tailPrev.x - tail.x) * progress;
+         ty = tail.y + (tailPrev.y - tail.y) * progress;
+      }
+
+      // Draw neon trail
       c.beginPath();
       c.strokeStyle = '#00f0ff'; // Neon Cyan
       c.lineWidth = this.cellSize * 0.6;
       c.lineCap = 'round';
       c.lineJoin = 'round';
       
-      const head = this.snake[0];
-      c.moveTo(this.gridX + head.x * this.cellSize + this.cellSize/2, this.gridY + head.y * this.cellSize + this.cellSize/2);
+      c.moveTo(this.gridX + tx * this.cellSize + this.cellSize/2, this.gridY + ty * this.cellSize + this.cellSize/2);
       
-      for (let i=1; i<this.snake.length; i++) {
+      for (let i = tailIndex - 1; i >= 1; i--) {
         c.lineTo(this.gridX + this.snake[i].x * this.cellSize + this.cellSize/2, this.gridY + this.snake[i].y * this.cellSize + this.cellSize/2);
       }
       
+      c.lineTo(this.gridX + hx * this.cellSize + this.cellSize/2, this.gridY + hy * this.cellSize + this.cellSize/2);
+      
       c.shadowColor = '#00f0ff';
-      c.shadowBlur = 15;
+      c.shadowBlur = Math.sin(this.time * 0.01) * 5 + 15;
       c.stroke();
 
-      // Draw glowing head
+      // Draw Lightcycle Head (Triangle)
+      c.save();
       c.fillStyle = '#fff';
       c.shadowColor = '#fff';
       c.shadowBlur = 20;
+      
+      c.translate(this.gridX + hx * this.cellSize + this.cellSize/2, this.gridY + hy * this.cellSize + this.cellSize/2);
+      
+      let angle = 0;
+      if (head.x > neck.x) angle = 0;
+      else if (head.x < neck.x) angle = Math.PI;
+      else if (head.y > neck.y) angle = Math.PI / 2;
+      else if (head.y < neck.y) angle = -Math.PI / 2;
+      
+      c.rotate(angle);
+      
       c.beginPath();
-      c.arc(this.gridX + head.x * this.cellSize + this.cellSize/2, this.gridY + head.y * this.cellSize + this.cellSize/2, this.cellSize * 0.4, 0, Math.PI*2);
+      c.moveTo(this.cellSize * 0.5, 0);
+      c.lineTo(-this.cellSize * 0.3, this.cellSize * 0.4);
+      c.lineTo(-this.cellSize * 0.3, -this.cellSize * 0.4);
+      c.closePath();
       c.fill();
+      c.restore();
     }
     c.restore();
 
