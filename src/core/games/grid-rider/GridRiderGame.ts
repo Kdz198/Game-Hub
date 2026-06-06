@@ -839,6 +839,9 @@ export class GridRiderGame {
     let segmentCurveAccum = 0;
     let segmentHillAccum = 0;
 
+    let minY = h;
+    const segmentVisible = new Array(DRAW_DISTANCE).fill(true);
+
     // Reset coordinates database for visible segments
     for (let i = 0; i < DRAW_DISTANCE; i++) {
       const idx = (playerSegmentIndex + i) % this.segments.length;
@@ -867,19 +870,25 @@ export class GridRiderGame {
       seg.screen.x = px;
       seg.screen.y = py;
       seg.screen.w = pw;
+
+      // Hill culling check: if a further segment Y is below/equal to a closer crest Y (larger Y), it is hidden
+      if (i > 0) {
+        if (py >= minY) {
+          segmentVisible[i] = false;
+        } else {
+          segmentVisible[i] = true;
+          minY = py;
+        }
+      }
     }
 
-    // Now, render road segments from furthest back (DRAW_DISTANCE - 1) to closest (0)
+    // Now, render road segments from furthest back (DRAW_DISTANCE - 1) to closest (1)
     // To prevent overlap issues and keep z-order correct
-    let maxy = h; // back-face culling for hills
-
     for (let i = DRAW_DISTANCE - 1; i > 0; i--) {
+      if (!segmentVisible[i]) continue;
+
       const curr = this.segments[(playerSegmentIndex + i) % this.segments.length];
       const prev = this.segments[(playerSegmentIndex + i - 1) % this.segments.length];
-
-      // Don't render behind camera or overlaps
-      if (curr.screen.y >= maxy) continue;
-      maxy = curr.screen.y;
 
       // Draw grass and road surfaces
       c.save();
