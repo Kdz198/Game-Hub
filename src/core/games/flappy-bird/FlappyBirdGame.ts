@@ -143,10 +143,10 @@ class AudioSystem {
             return;
         }
         switch (state) {
-            case 'MENU': this.bgmAudio.volume = 0.15; break;
-            case 'PLAYING': this.bgmAudio.volume = 0.3; break;
-            case 'PAUSED': this.bgmAudio.volume = 0.08; break;
-            case 'GAME_OVER': this.bgmAudio.volume = 0.05; break;
+            case 'MENU': this.bgmAudio.volume = 0.4; break;
+            case 'PLAYING': this.bgmAudio.volume = 0.7; break;
+            case 'PAUSED': this.bgmAudio.volume = 0.2; break;
+            case 'GAME_OVER': this.bgmAudio.volume = 0.15; break;
         }
         if (this.bgmAudio.paused) {
             this.bgmAudio.play().catch(e => console.log("BGM autoplay blocked until interaction"));
