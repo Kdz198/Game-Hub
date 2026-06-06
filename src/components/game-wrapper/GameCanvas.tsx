@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { FlappyBirdGame, BirdSkin, SKIN_COLORS, ANIMAL_PATHS, ANIMAL_EYES } from "@/core/games/flappy-bird/FlappyBirdGame";
+import { FlappyBirdGame, BirdSkin, SKIN_COLORS, SHAPE_PATHS } from "@/core/games/flappy-bird/FlappyBirdGame";
 import styles from "./GameCanvas.module.css";
 import { Orbitron, Rajdhani } from "next/font/google";
 
@@ -10,10 +10,10 @@ const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["500", "700"] });
 type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER';
 
 const AVAILABLE_SKINS: { id: BirdSkin; name: string }[] = [
-  { id: 'cyber-bird', name: 'CYBER BIRD' },
-  { id: 'neon-cat', name: 'NEON CAT' },
-  { id: 'toxic-bat', name: 'TOXIC BAT' },
-  { id: 'plasma-fox', name: 'PLASMA FOX' },
+  { id: 'cyber-arrow', name: 'CYBER ARROW' },
+  { id: 'neon-box', name: 'NEON BOX' },
+  { id: 'toxic-diamond', name: 'TOXIC DIAMOND' },
+  { id: 'plasma-star', name: 'PLASMA STAR' },
 ];
 
 export default function GameCanvas() {
@@ -165,11 +165,8 @@ export default function GameCanvas() {
                   <button className={`${styles.pickerBtn} ${orbitron.className}`} onClick={prevSkin}>&lt;</button>
                   <div className={styles.skinPreviewBox}>
                     <div className={styles.skinPreviewInner}>
-                      <svg width="60" height="60" viewBox="-20 -20 40 40" style={{ filter: `drop-shadow(0 0 12px ${SKIN_COLORS[currentSkin.id].glow})` }}>
-                        <path d={ANIMAL_PATHS[currentSkin.id]} fill="#000000" />
-                        <path d={ANIMAL_PATHS[currentSkin.id]} fill={skinColor} opacity="0.5" />
-                        <path d={ANIMAL_PATHS[currentSkin.id]} fill="none" stroke={skinColor} strokeWidth="3" strokeLinejoin="round" />
-                        <circle cx={ANIMAL_EYES[currentSkin.id].x} cy={ANIMAL_EYES[currentSkin.id].y} r="2.5" fill="#fff" />
+                      <svg width="60" height="60" viewBox="-20 -20 40 40" style={{ filter: `drop-shadow(0 0 15px ${skinColor})` }}>
+                        <path d={SHAPE_PATHS[currentSkin.id]} fill={skinColor} />
                       </svg>
                     </div>
                     <span className={`${styles.skinName} ${orbitron.className}`}>{currentSkin.name}</span>

@@ -8,27 +8,20 @@ const PIPE_SPAWN_RATE = 1800; // ms
 const PIPE_WIDTH = 70;
 const PIPE_GAP = 170;
 
-export type BirdSkin = 'cyber-bird' | 'neon-cat' | 'toxic-bat' | 'plasma-fox';
+export type BirdSkin = 'cyber-arrow' | 'neon-box' | 'toxic-diamond' | 'plasma-star';
 
 export const SKIN_COLORS = {
-  'cyber-bird': { main: '#00f0ff', glow: 'rgba(0, 240, 255, 0.8)' },
-  'neon-cat': { main: '#ff00ff', glow: 'rgba(255, 0, 255, 0.8)' },
-  'toxic-bat': { main: '#39ff14', glow: 'rgba(57, 255, 20, 0.8)' },
-  'plasma-fox': { main: '#ffeb3b', glow: 'rgba(255, 235, 59, 0.8)' },
+  'cyber-arrow': { main: '#00f0ff', glow: 'rgba(0, 240, 255, 0.8)' },
+  'neon-box': { main: '#ff00ff', glow: 'rgba(255, 0, 255, 0.8)' },
+  'toxic-diamond': { main: '#39ff14', glow: 'rgba(57, 255, 20, 0.8)' },
+  'plasma-star': { main: '#ffeb3b', glow: 'rgba(255, 235, 59, 0.8)' },
 };
 
-export const ANIMAL_PATHS: Record<BirdSkin, string> = {
-  'cyber-bird': 'M 16 0 L 6 -6 L -10 -6 L -16 -12 L -12 0 L -16 12 L -6 4 L 0 6 Z',
-  'neon-cat': 'M 12 4 L 6 -10 L 2 -6 L -6 -10 L -10 -2 L -10 8 L -4 12 L 6 12 Z',
-  'toxic-bat': 'M 10 0 L 4 -12 L -2 -4 L -14 -10 L -8 2 L -14 12 L -2 4 L 4 12 Z',
-  'plasma-fox': 'M 16 2 L 8 -12 L 0 -6 L -10 -10 L -12 2 L -6 12 L 2 10 Z'
-};
-
-export const ANIMAL_EYES: Record<BirdSkin, {x: number, y: number}> = {
-  'cyber-bird': {x: 6, y: -2},
-  'neon-cat': {x: 4, y: -2},
-  'toxic-bat': {x: 2, y: -1},
-  'plasma-fox': {x: 4, y: -1}
+export const SHAPE_PATHS: Record<BirdSkin, string> = {
+  'cyber-arrow': 'M 15 0 L -15 -15 L -15 15 Z',
+  'neon-box': 'M -12 -12 L 12 -12 L 12 12 L -12 12 Z',
+  'toxic-diamond': 'M 16 0 L 0 -14 L -16 0 L 0 14 Z',
+  'plasma-star': 'M 15 0 L 4 -4 L 0 -15 L -4 -4 L -15 0 L -4 4 L 0 15 L 4 4 Z'
 };
 
 interface Particle {
@@ -78,7 +71,7 @@ export class FlappyBirdGame {
   
   private lastPipeSpawn: number = 0;
   private bgOffset: number = 0;
-  private currentSkin: BirdSkin = 'cyber-bird';
+  private currentSkin: BirdSkin = 'cyber-arrow';
 
   private stars: {x: number, y: number, size: number, speed: number}[] = [];
 
@@ -496,7 +489,7 @@ export class FlappyBirdGame {
       this.ctx.stroke();
     }
 
-    // Draw Bird (Neon Animal Holograms)
+    // Draw Bird (Solid Neon Geometric Shapes)
     if (!this.isGameOver) {
       this.ctx.save();
       this.ctx.translate(this.width / 3, this.bird.y);
@@ -506,35 +499,14 @@ export class FlappyBirdGame {
       this.ctx.scale(scaleFactor, scaleFactor);
       
       const skinColor = SKIN_COLORS[this.currentSkin].main;
-      const skinGlow = SKIN_COLORS[this.currentSkin].glow;
 
-      const path = new Path2D(ANIMAL_PATHS[this.currentSkin]);
+      const path = new Path2D(SHAPE_PATHS[this.currentSkin]);
       
-      // Deep dark base (Solid Black for contrast against space)
-      this.ctx.fillStyle = '#000000'; 
-      this.ctx.fill(path);
-
-      // Holographic inner glow (Brighter to pop out)
+      // Pure Solid Neon Fill
       this.ctx.fillStyle = skinColor;
-      this.ctx.globalAlpha = 0.5;
-      this.ctx.fill(path);
-      this.ctx.globalAlpha = 1.0;
-
-      // Sharp Neon Outline
-      this.ctx.shadowColor = skinGlow;
+      this.ctx.shadowColor = skinColor;
       this.ctx.shadowBlur = 20;
-      this.ctx.strokeStyle = skinColor;
-      this.ctx.lineWidth = 3;
-      this.ctx.stroke();
-
-      // Eye
-      const eye = ANIMAL_EYES[this.currentSkin];
-      this.ctx.shadowBlur = 10;
-      this.ctx.shadowColor = '#ffffff';
-      this.ctx.fillStyle = '#ffffff';
-      this.ctx.beginPath();
-      this.ctx.arc(eye.x, eye.y, 2.5, 0, Math.PI * 2);
-      this.ctx.fill();
+      this.ctx.fill(path);
 
       this.ctx.restore();
     }
