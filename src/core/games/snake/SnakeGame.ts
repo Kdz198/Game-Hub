@@ -36,6 +36,9 @@ export class SnakeGame {
   private moveInterval = 100;
   private moveTimer = 0;
   private isDigesting = false;
+  
+  // Auto Play
+  public isAutoPlay = false;
 
   // Food
   private food: Point | null = null;
@@ -263,6 +266,7 @@ export class SnakeGame {
       this.moveTimer += dt;
       if (this.moveTimer >= this.moveInterval) {
         this.moveTimer -= this.moveInterval;
+        if (this.isAutoPlay) this.calculateAutoMove();
         this.moveSnake();
       }
     }
@@ -285,6 +289,52 @@ export class SnakeGame {
       ft.life -= dt * 0.0015;
       if (ft.life <= 0) this.floatingTexts.splice(i, 1);
     }
+  }
+
+  private calculateAutoMove() {
+    if (!this.food) return;
+
+    const head = this.snake[0];
+    const dirs = [
+      { dx: 0, dy: -1 }, // Up
+      { dx: 0, dy: 1 },  // Down
+      { dx: -1, dy: 0 }, // Left
+      { dx: 1, dy: 0 }   // Right
+    ];
+
+    let bestDir = { dx: this.dx, dy: this.dy }; // Default to current dir
+    let minDistance = Infinity;
+
+    for (let d of dirs) {
+      // Cannot reverse directly
+      if (d.dx === -this.dx && d.dy === -this.dy && this.snake.length > 1) continue;
+
+      const nx = head.x + d.dx;
+      const ny = head.y + d.dy;
+
+      // Check wall
+      if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
+
+      // Check self collision (ignoring the very last tail segment as it moves)
+      let hitSelf = false;
+      for (let i = 0; i < this.snake.length - 1; i++) {
+        if (this.snake[i].x === nx && this.snake[i].y === ny) {
+          hitSelf = true;
+          break;
+        }
+      }
+      if (hitSelf) continue;
+
+      // Manhattan distance to food
+      const dist = Math.abs(nx - this.food.x) + Math.abs(ny - this.food.y);
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestDir = d;
+      }
+    }
+
+    this.nextDx = bestDir.dx;
+    this.nextDy = bestDir.dy;
   }
 
   private moveSnake() {

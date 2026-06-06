@@ -52,15 +52,17 @@ export default function SnakeCanvas() {
     };
   }, []);
 
-  const startGame = () => {
+  const startGame = (auto: boolean = false) => {
     if (gameRef.current) {
+      gameRef.current.isAutoPlay = auto;
       gameRef.current.start();
       setGameState('PLAYING');
     }
   };
 
-  const restartGame = () => {
+  const restartGame = (auto: boolean = false) => {
     if (gameRef.current) {
+      gameRef.current.isAutoPlay = auto;
       gameRef.current.start();
       setGameState('PLAYING');
     }
@@ -87,7 +89,10 @@ export default function SnakeCanvas() {
         {gameState === 'START' && (
           <div className={styles.overlay}>
             <h1 className={styles.overlayTitle}>TRON SNAKE</h1>
-            <button className={styles.playButton} onClick={startGame}>INITIALIZE</button>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button className={styles.playButton} onClick={() => startGame(false)}>INITIALIZE</button>
+              <button className={styles.playButton} onClick={() => startGame(true)} style={{ background: '#00f0ff' }}>AUTO PLAY</button>
+            </div>
           </div>
         )}
 
@@ -98,7 +103,10 @@ export default function SnakeCanvas() {
               FINAL SCORE
               <span>{score}</span>
             </div>
-            <button className={styles.playButton} onClick={restartGame}>RETRY RUN</button>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button className={styles.playButton} onClick={() => restartGame(false)}>RETRY RUN</button>
+              <button className={styles.playButton} onClick={() => restartGame(true)} style={{ background: '#00f0ff' }}>AUTO PLAY</button>
+            </div>
           </div>
         )}
       </div>
