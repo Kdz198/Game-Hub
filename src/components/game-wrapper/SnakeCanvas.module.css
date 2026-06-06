@@ -82,9 +82,14 @@
 }
 
 .bestDisplay {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(57, 255, 20, 0.3);
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .bestLabel {
@@ -168,25 +173,23 @@
 /* SETTINGS UI */
 .settingsButton {
   background: transparent;
-  border: 1px solid rgba(0, 240, 255, 0.3);
+  border: none;
   color: #00f0ff;
-  font-size: 1.5rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 2px;
   cursor: pointer;
   transition: all 0.3s ease;
   pointer-events: auto;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  align-self: center;
 }
 
 .settingsButton:hover {
-  background: rgba(0, 240, 255, 0.2);
-  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
-  transform: rotate(90deg);
+  color: #fff;
+  text-shadow: 0 0 15px #00f0ff;
+  transform: scale(1.05);
 }
 
 .settingsModal {

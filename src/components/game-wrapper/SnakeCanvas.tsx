@@ -81,7 +81,7 @@ export default function SnakeCanvas() {
             onClick={() => setIsSettingsOpen(true)}
             aria-label="Settings"
           >
-            ⚙️
+            [ SYS_CONFIG ]
           </button>
 
           <div className={styles.bestDisplay}>
