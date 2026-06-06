@@ -73,6 +73,10 @@ export class BlockBlastGame {
 
   private particles: any[] = [];
   private floatingTexts: any[] = [];
+  
+  // Screen shake
+  private shakeTime = 0;
+  private shakeMag = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -96,15 +100,15 @@ export class BlockBlastGame {
 
   private calculateLayout() {
     // Leave room at top for HUD, bottom for shapes dock
-    const availableWidth = this.canvas.width * 0.9;
-    const availableHeight = this.canvas.height * 0.6; // 60% of height for grid
+    const availableWidth = this.canvas.width * 0.95;
+    const availableHeight = this.canvas.height * 0.65;
     
     this.cellSize = Math.floor(Math.min(availableWidth / this.gridCols, availableHeight / this.gridRows));
     
     // Center grid
     this.gridX = (this.canvas.width - (this.cellSize * this.gridCols)) / 2;
-    this.gridY = (this.canvas.height * 0.4) - ((this.cellSize * this.gridRows) / 2); 
-    // Grid placed slightly higher than center
+    // Push it down slightly to clear HUD
+    this.gridY = (this.canvas.height * 0.48) - ((this.cellSize * this.gridRows) / 2); 
   }
 
   private attachEvents() {
@@ -246,6 +250,7 @@ export class BlockBlastGame {
           this.placeShape(shape, gridPos.col, gridPos.row);
           this.availableShapes[this.draggedShapeIndex] = null;
           this.refillShapes();
+          this.checkGameOver();
         }
       }
       this.draggedShapeIndex = -1;
@@ -361,22 +366,67 @@ export class BlockBlastGame {
       const lineScore = linesCleared * 100 * linesCleared;
       this.score += lineScore;
       
+      this.triggerScreenShake(linesCleared * 3, 200); // 3px shake per line cleared
       this.spawnFloatingText(`${linesCleared} LINE${linesCleared>1?'S':''}! +${lineScore}`, this.canvas.width/2, this.gridY + this.gridRows*this.cellSize/2, '#fff');
 
       if (this.onScore) this.onScore(this.score);
     }
   }
 
+  private getClearedLinesSimulation(shape: ShapeDef, startCol: number, startRow: number) {
+    const rowsToClear: number[] = [];
+    const colsToClear: number[] = [];
+
+    // Temporarily place shape
+    for (let b of shape.blocks) {
+      this.grid[startRow + b.y][startCol + b.x] = shape.color;
+    }
+
+    // Check rows
+    for (let r=0; r<this.gridRows; r++) {
+      let full = true;
+      for (let c=0; c<this.gridCols; c++) {
+        if (this.grid[r][c] === null) { full = false; break; }
+      }
+      if (full) rowsToClear.push(r);
+    }
+
+    // Check columns
+    for (let c=0; c<this.gridCols; c++) {
+      let full = true;
+      for (let r=0; r<this.gridRows; r++) {
+        if (this.grid[r][c] === null) { full = false; break; }
+      }
+      if (full) colsToClear.push(c);
+    }
+
+    // Remove temporary shape
+    for (let b of shape.blocks) {
+      this.grid[startRow + b.y][startCol + b.x] = null;
+    }
+
+    return { rowsToClear, colsToClear };
+  }
+
   private spawnParticles(x: number, y: number, color: string) {
-    for (let i = 0; i < 8; i++) {
+    // Advanced Explosion Particles
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 10 + 5;
       this.particles.push({
         x, y,
-        vx: (Math.random() - 0.5) * 8,
-        vy: (Math.random() - 0.5) * 8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
         life: 1.0,
-        color: color
+        color: color,
+        size: Math.random() * 6 + 4
       });
     }
+  }
+
+  private triggerScreenShake(magnitude: number, duration: number) {
+    this.shakeMag = magnitude;
+    this.shakeTime = duration;
   }
 
   private spawnFloatingText(text: string, x: number, y: number, color: string) {
@@ -386,12 +436,19 @@ export class BlockBlastGame {
   }
 
   private update(dt: number) {
+    if (this.shakeTime > 0) {
+      this.shakeTime -= dt;
+      if (this.shakeTime < 0) this.shakeTime = 0;
+    }
+
     // Update particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       let p = this.particles[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.life -= dt * 0.002;
+      p.vx *= 0.92; // Friction
+      p.vy *= 0.92;
+      p.life -= dt * 0.0015;
       if (p.life <= 0) this.particles.splice(i, 1);
     }
 
@@ -407,6 +464,13 @@ export class BlockBlastGame {
   private draw() {
     const c = this.ctx;
     c.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    c.save();
+    if (this.shakeTime > 0) {
+      const sx = (Math.random() - 0.5) * this.shakeMag;
+      const sy = (Math.random() - 0.5) * this.shakeMag;
+      c.translate(sx, sy);
+    }
 
     // Draw Grid Background
     c.save();
@@ -450,12 +514,34 @@ export class BlockBlastGame {
         // Draw shadow/preview
         const gridPos = this.getGridPositionFromMouse(shape, this.mouseX, this.mouseY);
         if (this.isValidPlacement(shape, gridPos.col, gridPos.row)) {
+           // Simulate cleared lines for predictive hover
+           const { rowsToClear, colsToClear } = this.getClearedLinesSimulation(shape, gridPos.col, gridPos.row);
+
            c.save();
-           c.globalAlpha = 0.3;
+           // Highlight rows
+           rowsToClear.forEach(r => {
+             c.fillStyle = 'rgba(255, 255, 255, 0.2)';
+             c.fillRect(this.gridX, this.gridY + r*this.cellSize, this.cellSize * this.gridCols, this.cellSize);
+           });
+           // Highlight cols
+           colsToClear.forEach(col => {
+             c.fillStyle = 'rgba(255, 255, 255, 0.2)';
+             c.fillRect(this.gridX + col*this.cellSize, this.gridY, this.cellSize, this.cellSize * this.gridRows);
+           });
+           
+           c.globalAlpha = 0.4;
            for (let b of shape.blocks) {
               const px = this.gridX + (gridPos.col + b.x) * this.cellSize;
               const py = this.gridY + (gridPos.row + b.y) * this.cellSize;
               this.drawBlock(c, px, py, this.cellSize, shape.color);
+              
+              // Extra glow if part of a cleared line
+              if (rowsToClear.includes(gridPos.row + b.y) || colsToClear.includes(gridPos.col + b.x)) {
+                 c.shadowBlur = 20;
+                 c.shadowColor = '#fff';
+                 c.fillStyle = '#fff';
+                 c.fillRect(px, py, this.cellSize, this.cellSize);
+              }
            }
            c.restore();
         }
@@ -468,21 +554,26 @@ export class BlockBlastGame {
     for (let p of this.particles) {
       c.fillStyle = p.color;
       c.globalAlpha = p.life;
-      c.fillRect(p.x, p.y, 4, 4);
+      c.shadowColor = p.color;
+      c.shadowBlur = 10;
+      c.fillRect(p.x, p.y, p.size, p.size);
     }
     c.restore();
 
     // Draw Floating Texts
     c.save();
     c.textAlign = 'center';
-    c.font = 'bold 24px "Orbitron", sans-serif';
+    c.font = 'bold 28px "Orbitron", sans-serif';
     for (let ft of this.floatingTexts) {
       c.fillStyle = ft.color;
       c.globalAlpha = ft.life;
       c.shadowColor = ft.color;
-      c.shadowBlur = 10;
+      c.shadowBlur = 15;
       c.fillText(ft.text, ft.x, ft.y);
     }
+    c.restore();
+
+    // Restore shake translation
     c.restore();
   }
 

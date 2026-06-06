@@ -5,21 +5,23 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: var(--bg-primary);
+  background-color: #050510;
   overflow: hidden;
 }
 
 .gameWrapper {
   position: relative;
   width: 100%;
-  max-width: 600px;
   height: 100%;
-  max-height: 900px;
-  background: var(--bg-secondary);
-  box-shadow: 0 0 50px rgba(0, 240, 255, 0.1);
+  /* Cyberpunk background grid */
+  background-color: #050510;
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(255, 0, 127, 0.1) 0%, transparent 60%);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  background-position: center center;
   overflow: hidden;
-  border-left: 1px solid var(--glass-border);
-  border-right: 1px solid var(--glass-border);
 }
 
 .gameContainer {
