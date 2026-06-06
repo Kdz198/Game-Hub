@@ -24,8 +24,8 @@ export default function Home() {
       description: "Sắp xếp các khối hình học đa chiều năng lượng cao để phá vỡ cấu trúc không gian.",
       icon: "🧊",
       neonColor: "#ff007f", // Neon Pink
-      status: "MAINTENANCE",
-      players: "0"
+      status: "ONLINE",
+      players: "2,514"
     },
     {
       id: "co-tuong",
