@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import { FlappyBirdGame, BirdSkin, SKIN_COLORS, ANIMAL_PATHS, ANIMAL_EYES } from "@/core/games/flappy-bird/FlappyBirdGame";
 import styles from "./GameCanvas.module.css";
-import { Orbitron } from "next/font/google";
-import Link from "next/link";
+import { Orbitron, Rajdhani } from "next/font/google";
 
-const orbitron = Orbitron({ subsets: ["latin"] });
+const orbitron = Orbitron({ subsets: ["latin"], weight: ["400", "700", "900"] });
+const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["500", "700"] });
 
-type GameState = 'MENU' | 'PLAYING' | 'GAME_OVER';
+type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER';
 
 const AVAILABLE_SKINS: { id: BirdSkin; name: string }[] = [
   { id: 'cyber-bird', name: 'CYBER BIRD' },
@@ -26,17 +26,12 @@ export default function GameCanvas() {
   const [skinIndex, setSkinIndex] = useState(0);
 
   useEffect(() => {
-    // Load best score on mount
     setBestScore(parseInt(localStorage.getItem('fb_best') || '0'));
   }, []);
 
   useEffect(() => {
     if (!canvasRef.current) return;
-
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    
     const wrapper = canvas.parentElement;
     if (wrapper) {
       canvas.width = wrapper.clientWidth;
@@ -46,9 +41,7 @@ export default function GameCanvas() {
     const game = new FlappyBirdGame(canvas);
     
     const handleResize = () => {
-      if (wrapper) {
-        game.resize(wrapper.clientWidth, wrapper.clientHeight);
-      }
+      if (wrapper) game.resize(wrapper.clientWidth, wrapper.clientHeight);
     };
     window.addEventListener('resize', handleResize);
     
@@ -60,11 +53,9 @@ export default function GameCanvas() {
     };
 
     game.setSkin(AVAILABLE_SKINS[skinIndex].id);
-    game.idle(); // Draw background and idle ship
-    
-    // Auto start game loop to render particles/stars even in menu
+    game.idle();
     game.start(); 
-    game.isStarted = false; // keep it idle
+    game.isStarted = false;
 
     gameRef.current = game;
 
@@ -76,6 +67,36 @@ export default function GameCanvas() {
 
   const startGame = () => {
     if (gameRef.current) {
+      if (gameRef.current.isPaused) {
+        gameRef.current.resume();
+      }
+      if (gameState === 'GAME_OVER') {
+        gameRef.current.reset();
+        gameRef.current.idle();
+      }
+      gameRef.current.start();
+      setGameState('PLAYING');
+    }
+  };
+
+  const pauseGame = () => {
+    if (gameRef.current && gameState === 'PLAYING') {
+      gameRef.current.pause();
+      setGameState('PAUSED');
+    }
+  };
+
+  const resumeGame = () => {
+    if (gameRef.current && gameState === 'PAUSED') {
+      gameRef.current.resume();
+      setGameState('PLAYING');
+    }
+  };
+
+  const restartGame = () => {
+    if (gameRef.current) {
+      gameRef.current.reset();
+      gameRef.current.idle();
       gameRef.current.start();
       setGameState('PLAYING');
     }
@@ -84,143 +105,131 @@ export default function GameCanvas() {
   const nextSkin = () => {
     const next = (skinIndex + 1) % AVAILABLE_SKINS.length;
     setSkinIndex(next);
-    if (gameRef.current) {
-      gameRef.current.setSkin(AVAILABLE_SKINS[next].id);
-    }
+    if (gameRef.current) gameRef.current.setSkin(AVAILABLE_SKINS[next].id);
   };
 
   const prevSkin = () => {
     const prev = (skinIndex - 1 + AVAILABLE_SKINS.length) % AVAILABLE_SKINS.length;
     setSkinIndex(prev);
-    if (gameRef.current) {
-      gameRef.current.setSkin(AVAILABLE_SKINS[prev].id);
-    }
+    if (gameRef.current) gameRef.current.setSkin(AVAILABLE_SKINS[prev].id);
   };
 
   const currentSkin = AVAILABLE_SKINS[skinIndex];
   const skinColor = SKIN_COLORS[currentSkin.id].main;
 
+  const getMedal = (s: number) => {
+    if (s >= 40) return <svg className={`${styles.medalSvg} ${styles.medalCyber}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
+    if (s >= 30) return <svg className={`${styles.medalSvg} ${styles.medalGold}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
+    if (s >= 20) return <svg className={`${styles.medalSvg} ${styles.medalSilver}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
+    if (s >= 10) return <svg className={`${styles.medalSvg} ${styles.medalBronze}`} viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
+    return <span className={styles.noMedalText}>NONE</span>;
+  };
+
   return (
-    <div className={`${styles.canvasContainer} ${orbitron.className}`}>
+    <div className={`${styles.canvasContainer} ${rajdhani.className}`}>
       <div className={styles.gameWrapper}>
-        <canvas ref={canvasRef} className={styles.gameCanvas} tabIndex={0} />
-        
-        {/* HTML UI OVERLAYS */}
-        
-        {/* Top left back button in menu/game over */}
-        {gameState !== 'PLAYING' && (
-           <Link href="/" className={styles.homeBtn}>
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-           </Link>
-        )}
+        <div className={styles.gameContainer}>
+          <canvas ref={canvasRef} className={styles.gameCanvas} tabIndex={0} />
 
-        {gameState === 'MENU' && (
-          <div className={styles.menuPanel}>
-            <div className={styles.titleBox}>
-              <h1 className={styles.gameTitle}>NEON</h1>
-              <h1 className={styles.gameTitlePink}>FLAPPER</h1>
+          {/* HUD */}
+          <div className={`${styles.hud} ${gameState === 'PLAYING' ? styles.hudActive : ''} ${orbitron.className}`}>
+            <div className={styles.scoreDisplay}>
+              <span className={styles.label}>SCORE</span>
+              <span className={styles.scoreValueText}>{score}</span>
+            </div>
+            <div className={styles.hudRight}>
+              <div className={styles.highScoreHud}>
+                <span className={styles.label}>BEST</span>
+                <span className={styles.highScoreValueText}>{bestScore}</span>
+              </div>
+              <button className={styles.btnIcon} onClick={pauseGame} aria-label="Pause game">
+                <svg viewBox="0 0 24 24" className={styles.icon}>
+                  <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* MENU OVERLAY */}
+          <div className={`${styles.overlay} ${gameState === 'MENU' ? styles.overlayActive : ''}`}>
+            <div className={styles.glassPanel}>
+              <div className={`${styles.gameTitle} ${orbitron.className}`}>
+                <span className={styles.neonTextBlue}>NEON</span>
+                <span className={styles.neonTextPink}>FLAPPER</span>
+              </div>
               <p className={styles.subtitle}>RETRO CYBERPUNK ARCADE</p>
-            </div>
 
-            <div className={styles.shipSelectorCard}>
-              <div className={styles.selectorLabel}>SELECT YOUR SHIP</div>
-              <div className={styles.carousel}>
-                <button className={styles.arrowBtn} onClick={prevSkin}>&lt;</button>
-                <div className={styles.shipPreviewBox}>
-                  <svg 
-                    width="60" 
-                    height="60" 
-                    viewBox="-20 -20 40 40" 
-                    style={{
-                      filter: `drop-shadow(0 0 12px ${SKIN_COLORS[currentSkin.id].glow})`
-                    }}
-                  >
-                    {/* Animal base */}
-                    <path 
-                      d={ANIMAL_PATHS[currentSkin.id]} 
-                      fill="#000000" 
-                    />
-                    {/* Animal inner glow */}
-                    <path 
-                      d={ANIMAL_PATHS[currentSkin.id]} 
-                      fill={skinColor} 
-                      opacity="0.5"
-                    />
-                    {/* Animal outline */}
-                    <path 
-                      d={ANIMAL_PATHS[currentSkin.id]} 
-                      fill="none" 
-                      stroke={skinColor} 
-                      strokeWidth="3"
-                      strokeLinejoin="round"
-                    />
-                    {/* Eye */}
-                    <circle 
-                      cx={ANIMAL_EYES[currentSkin.id].x} 
-                      cy={ANIMAL_EYES[currentSkin.id].y} 
-                      r="2.5" 
-                      fill="#fff" 
-                    />
-                  </svg>
-                  <div className={styles.shipName}>{currentSkin.name}</div>
+              <div className={styles.skinSelectorContainer}>
+                <h3 className={orbitron.className}>SELECT YOUR SHIP</h3>
+                <div className={styles.skinPicker}>
+                  <button className={`${styles.pickerBtn} ${orbitron.className}`} onClick={prevSkin}>&lt;</button>
+                  <div className={styles.skinPreviewBox}>
+                    <div className={styles.skinPreviewInner}>
+                      <svg width="60" height="60" viewBox="-20 -20 40 40" style={{ filter: `drop-shadow(0 0 12px ${SKIN_COLORS[currentSkin.id].glow})` }}>
+                        <path d={ANIMAL_PATHS[currentSkin.id]} fill="#000000" />
+                        <path d={ANIMAL_PATHS[currentSkin.id]} fill={skinColor} opacity="0.5" />
+                        <path d={ANIMAL_PATHS[currentSkin.id]} fill="none" stroke={skinColor} strokeWidth="3" strokeLinejoin="round" />
+                        <circle cx={ANIMAL_EYES[currentSkin.id].x} cy={ANIMAL_EYES[currentSkin.id].y} r="2.5" fill="#fff" />
+                      </svg>
+                    </div>
+                    <span className={`${styles.skinName} ${orbitron.className}`}>{currentSkin.name}</span>
+                  </div>
+                  <button className={`${styles.pickerBtn} ${orbitron.className}`} onClick={nextSkin}>&gt;</button>
                 </div>
-                <button className={styles.arrowBtn} onClick={nextSkin}>&gt;</button>
+              </div>
+
+              <div className={`${styles.statsOverview} ${orbitron.className}`}>
+                <p>SYSTEM RECORD: <span className={styles.neonTextPink}>{bestScore}</span></p>
+              </div>
+
+              <button className={`${styles.btn} ${styles.btnPrimary} ${orbitron.className}`} onClick={startGame}>LAUNCH SYSTEM</button>
+              <p className={styles.controlsHint}>Press <span className={`${styles.key} ${orbitron.className}`}>SPACE</span> or <span className={`${styles.key} ${orbitron.className}`}>CLICK</span> to jump</p>
+            </div>
+          </div>
+
+          {/* PAUSE OVERLAY */}
+          <div className={`${styles.overlay} ${gameState === 'PAUSED' ? styles.overlayActive : ''}`}>
+            <div className={styles.glassPanel}>
+              <h2 className={`${styles.neonTextBlue} ${orbitron.className}`}>SYSTEM PAUSED</h2>
+              <p className={styles.pauseDetails}>Current Score: <span className={orbitron.className}>{score}</span></p>
+              <div className={styles.buttonGroup}>
+                <button className={`${styles.btn} ${styles.btnPrimary} ${orbitron.className}`} onClick={resumeGame}>RESUME</button>
+                <button className={`${styles.btn} ${styles.btnSecondary} ${orbitron.className}`} onClick={restartGame}>RESTART</button>
               </div>
             </div>
-
-            <div className={styles.recordText}>
-              SYSTEM RECORD: <span className={styles.recordNumber}>{bestScore}</span>
-            </div>
-
-            <button className={styles.launchBtn} onClick={startGame}>
-              LAUNCH SYSTEM
-            </button>
-
-            <div className={styles.instruction}>
-              Press <span className={styles.key}>SPACE</span> or <span className={styles.key}>CLICK/TAP</span> to jump
-            </div>
           </div>
-        )}
 
-        {gameState === 'PLAYING' && (
-          <div className={styles.hudTop}>
-            <div className={styles.hudBox}>
-              <span className={styles.hudLabel}>SCORE</span>
-              <div className={styles.hudValue}>{score}</div>
-            </div>
-            <div className={styles.hudBox}>
-              <span className={styles.hudLabel}>BEST</span>
-              <div className={styles.hudValuePink}>{bestScore}</div>
-            </div>
-          </div>
-        )}
+          {/* GAME OVER OVERLAY */}
+          <div className={`${styles.overlay} ${gameState === 'GAME_OVER' ? styles.overlayActive : ''}`}>
+            <div className={`${styles.glassPanel} ${styles.gameOverPanel}`}>
+              <h2 className={`${styles.neonTextRed} ${styles.blink} ${orbitron.className}`}>SYSTEM CRASH</h2>
+              <p className={styles.gameOverSubtitle}>CONNECTION TERMINATED</p>
 
-        {gameState === 'GAME_OVER' && (
-          <div className={styles.crashOverlay}>
-            <div className={styles.crashModal}>
-              <h2 className={styles.crashTitle}>SYSTEM CRASH</h2>
-              <p className={styles.crashSub}>CONNECTION TERMINATED</p>
-              
-              <div className={styles.statsBox}>
-                <div className={styles.statRow}>
+              <div className={styles.scoreBoard}>
+                <div className={`${styles.scoreBoardRow} ${orbitron.className}`}>
                   <span>SCORE</span>
-                  <span className={styles.statScore}>{score}</span>
+                  <span className={`${styles.scoreValue} ${styles.neonTextBlue}`}>{score}</span>
                 </div>
-                <div className={styles.statRow}>
+                <div className={`${styles.scoreBoardRow} ${orbitron.className}`}>
                   <span>RECORD</span>
-                  <span className={styles.statRecord}>{bestScore}</span>
+                  <span className={`${styles.scoreValue} ${styles.neonTextPink}`}>{bestScore}</span>
+                </div>
+                <div className={`${styles.medalSection} ${orbitron.className}`}>
+                  <span>MEDAL</span>
+                  <div className={styles.medalSlot}>
+                    {getMedal(score)}
+                  </div>
                 </div>
               </div>
-              
-              <button className={styles.retryBtn} onClick={startGame}>
-                RETRY RUN
-              </button>
-              <button className={styles.menuBtn} onClick={() => setGameState('MENU')}>
-                MAIN MENU
-              </button>
+
+              <div className={styles.buttonGroup}>
+                <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnGlow} ${orbitron.className}`} onClick={restartGame}>RETRY RUN</button>
+                <button className={`${styles.btn} ${styles.btnSecondary} ${orbitron.className}`} onClick={() => { setGameState('MENU'); gameRef.current?.reset(); gameRef.current?.idle(); }}>MAIN MENU</button>
+              </div>
             </div>
           </div>
-        )}
+          
+        </div>
       </div>
     </div>
   );

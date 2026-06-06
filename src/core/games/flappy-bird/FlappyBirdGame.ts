@@ -74,6 +74,7 @@ export class FlappyBirdGame {
   private bestScore: number = 0;
   public isGameOver: boolean = false;
   public isStarted: boolean = false;
+  public isPaused: boolean = false;
   
   private lastPipeSpawn: number = 0;
   private bgOffset: number = 0;
@@ -147,6 +148,16 @@ export class FlappyBirdGame {
     this.loop.start();
   }
 
+  public pause() {
+    this.isPaused = true;
+    this.loop.stop();
+  }
+
+  public resume() {
+    this.isPaused = false;
+    this.loop.start();
+  }
+
   // Called to just render idle state
   public idle() {
     this.reset();
@@ -170,6 +181,7 @@ export class FlappyBirdGame {
     this.score = 0;
     this.isGameOver = false;
     this.isStarted = false;
+    this.isPaused = false;
     this.lastPipeSpawn = 0;
     if (this.onScore) this.onScore(0);
   }
@@ -236,11 +248,7 @@ export class FlappyBirdGame {
       return;
     }
 
-    // Bird physics
-    if (hasAction) {
-      this.bird.velocity = JUMP_VELOCITY;
-      this.createJumpEffect();
-    }
+    this.handleJump(hasAction);
     
     this.bird.velocity += GRAVITY * deltaTime;
     this.bird.y += this.bird.velocity * deltaTime;
@@ -314,6 +322,15 @@ export class FlappyBirdGame {
       if (pipe.x + PIPE_WIDTH < 0) {
         this.pipes.splice(i, 1);
       }
+    }
+  }
+
+  private handleJump(hasAction: boolean) {
+    if (this.isGameOver || this.isPaused) return;
+
+    if (hasAction) {
+      this.bird.velocity = JUMP_VELOCITY;
+      this.createJumpEffect();
     }
   }
 
