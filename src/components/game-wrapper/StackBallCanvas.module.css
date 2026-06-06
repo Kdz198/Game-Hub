@@ -1,0 +1,361 @@
+.wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #030108;
+  user-select: none;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.backBtn {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border-radius: 4px;
+  transition: all 0.25s ease;
+  z-index: 10;
+}
+
+.backBtn:hover {
+  color: #00f0ff;
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.08);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+/* ── HUD Styles ───────────────────────────────────────────────── */
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.hudVisible {
+  opacity: 1;
+}
+
+.hudTop {
+  display: flex;
+  justify-content: space-between;
+  max-width: 500px;
+  width: 100%;
+  margin: 64px auto 0 auto; /* space below back button */
+}
+
+.hudItem, .levelBox, .scoreBox, .bestBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(25c, 25c, 35c, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  border-radius: 6px;
+  min-width: 80px;
+}
+
+.hudLabel {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 4px;
+}
+
+.hudValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+/* ── Progress Bar ─────────────────────────────────────────────── */
+
+.progressContainer {
+  position: absolute;
+  top: 150px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 80%;
+  max-width: 380px;
+}
+
+.levelLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 20px;
+  text-align: center;
+}
+
+.progressBarBg {
+  flex-grow: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progressBarFill {
+  height: 100%;
+  background: #00f0ff;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+  transition: width 0.1s linear;
+}
+
+/* ── Fever Combo Meter ────────────────────────────────────────── */
+
+.feverContainer {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 320px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  padding: 10px 14px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.feverActive {
+  opacity: 1;
+}
+
+.feverLabelBox {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.feverLabel {
+  color: #ff5500;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(255, 85, 0, 0.4);
+}
+
+.feverPercent {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.feverBarBg {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.feverBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffaa00, #ff4500);
+  width: 0%;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(255, 69, 0, 0.5);
+  transition: width 0.15s ease-out;
+}
+
+.feverMaxed {
+  background: linear-gradient(90deg, #ff4500, #ff0055);
+  box-shadow: 0 0 14px rgba(255, 0, 85, 0.85);
+  animation: feverPulse 0.4s infinite alternate;
+}
+
+@keyframes feverPulse {
+  0% { opacity: 0.8; }
+  100% { opacity: 1; filter: brightness(1.2); }
+}
+
+.instructions {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+}
+
+/* ── Menu / Overlays ──────────────────────────────────────────── */
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(3, 1, 8, 0.65);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.glassPanel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  padding: 40px 48px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.title {
+  font-size: 40px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.45);
+  background: linear-gradient(180deg, #ffffff 30%, #a3b8cc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.redText {
+  text-shadow: 0 0 20px rgba(255, 51, 51, 0.5);
+  background: linear-gradient(180deg, #ffffff 30%, #ff5252 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.greenText {
+  text-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+  background: linear-gradient(180deg, #ffffff 30%, #6aff52 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 32px 0;
+}
+
+.gameRules {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+  margin-bottom: 40px;
+  width: 100%;
+}
+
+.ruleItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.ruleIcon {
+  font-size: 20px;
+}
+
+.scoreStats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.statLine {
+  display: flex;
+  justify-content: space-between;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 15px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.statLine span:last-child {
+  font-weight: 700;
+  color: #00f0ff;
+  font-size: 18px;
+}
+
+/* ── Cyber Buttons ────────────────────────────────────────────── */
+
+.cyberButton {
+  background: #00f0ff;
+  border: none;
+  color: #020108;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 14px 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+  transition: all 0.2s ease;
+  width: 100%;
+  text-transform: uppercase;
+}
+
+.cyberButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.75);
+  filter: brightness(1.1);
+}
+
+.cyberButton:active {
+  transform: translateY(1px);
+}
+
+.greenBtn {
+  background: #39ff14;
+  box-shadow: 0 0 20px rgba(57, 255, 20, 0.4);
+}
+
+.greenBtn:hover {
+  box-shadow: 0 0 30px rgba(57, 255, 20, 0.75);
+}
