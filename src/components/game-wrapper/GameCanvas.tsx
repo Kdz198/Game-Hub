@@ -70,6 +70,11 @@ export default function GameCanvas() {
     };
   }, []);
 
+  // Update BGM when gameState changes
+  useEffect(() => {
+      audioSys.updateBgm(gameState);
+  }, [gameState, isMuted]);
+
   // Update preview canvas when skin changes
   useEffect(() => {
     if (previewCanvasRef.current) {
@@ -91,6 +96,7 @@ export default function GameCanvas() {
     const newState = !isMuted;
     setIsMuted(newState);
     audioSys.isMuted = newState;
+    audioSys.updateBgm(gameState);
     localStorage.setItem('fb_muted', newState.toString());
   };
 

@@ -123,13 +123,33 @@ export const SKINS_CONFIG: Record<BirdSkin, any> = {
 class AudioSystem {
     private ctx: AudioContext | null = null;
     public isMuted = false;
+    public bgmAudio: HTMLAudioElement | null = null;
     
     public init() {
         if (!this.ctx && typeof window !== 'undefined') {
             this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.bgmAudio = new Audio('/bgm.mp3');
+            this.bgmAudio.loop = true;
         }
         if (this.ctx?.state === 'suspended') {
             this.ctx.resume();
+        }
+    }
+
+    public updateBgm(state: 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER') {
+        if (!this.bgmAudio) return;
+        if (this.isMuted) {
+            this.bgmAudio.pause();
+            return;
+        }
+        switch (state) {
+            case 'MENU': this.bgmAudio.volume = 0.15; break;
+            case 'PLAYING': this.bgmAudio.volume = 0.3; break;
+            case 'PAUSED': this.bgmAudio.volume = 0.08; break;
+            case 'GAME_OVER': this.bgmAudio.volume = 0.05; break;
+        }
+        if (this.bgmAudio.paused) {
+            this.bgmAudio.play().catch(e => console.log("BGM autoplay blocked until interaction"));
         }
     }
     
