@@ -834,11 +834,11 @@ export class GridRiderGame {
     const horizon = h / 2;
     const playerSegmentIndex = Math.floor(this.playerZ / SEGMENT_LENGTH);
     const playerPercent = (this.playerZ % SEGMENT_LENGTH) / SEGMENT_LENGTH;
+    const playerSeg = this.segments[playerSegmentIndex % this.segments.length];
+    const playerY = playerSeg.world.y + playerPercent * playerSeg.hill;
 
     let dx = 0;
-    let dy = 0;
     let segmentCurveAccum = 0;
-    let segmentHillAccum = 0;
 
     let minY = h;
     const segmentVisible = new Array(DRAW_DISTANCE).fill(true);
@@ -858,14 +858,11 @@ export class GridRiderGame {
       seg.screen.scale = scale;
 
       segmentCurveAccum += seg.curve;
-      segmentHillAccum += seg.hill;
-
       dx += segmentCurveAccum;
-      dy += segmentHillAccum;
 
       // Project to 2D
       const px = w / 2 + (seg.world.x - this.playerX * ROAD_WIDTH + dx) * scale * (w / 2);
-      const py = horizon - (seg.world.y - CAMERA_HEIGHT + dy) * scale * (h / 2);
+      const py = horizon - (seg.world.y - playerY - CAMERA_HEIGHT) * scale * (h / 2);
       const pw = ROAD_WIDTH * scale * (w / 2);
 
       seg.screen.x = px;
