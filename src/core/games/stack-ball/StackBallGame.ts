@@ -19,6 +19,8 @@ interface Shard {
   darkColor: string;
   points: { x: number; y: number }[]; // 2D polygon shape of the shard
   life: number;
+  type?: 'neon' | 'magma' | 'matrix' | 'saturn' | 'disco' | 'plasma';
+  decayRate?: number;
 }
 
 interface PlatformSegment {
@@ -45,8 +47,12 @@ interface VisualParticle {
   size: number;
   life: number;
   decay: number;
-  type: 'ember' | 'spark' | 'smoke' | 'flash' | 'shockwave';
+  type: 'ember' | 'spark' | 'smoke' | 'flash' | 'shockwave' | 'binary' | 'star' | 'lava' | 'confetti' | 'lightning' | 'laser';
   maxSize?: number;
+  text?: string;
+  angle?: number;
+  points?: { x: number; y: number }[];
+  laserAngle?: number;
 }
 
 interface FloatingText {
@@ -376,51 +382,283 @@ export class StackBallGame {
     // Spawn active skin/fever particles
     if (!this.isGameOver && !this.isCompleted) {
       if (this.isFeverMode) {
-        // Fever fire trail
-        for (let i = 0; i < 2; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 0.02 + Math.random() * 0.05;
-          this.particles.push({
-            x: (Math.random() - 0.5) * 12,
-            y: this.ballY - 4 - Math.random() * 8,
-            vx: Math.cos(angle) * speed,
-            vy: -0.03 - Math.random() * 0.04,
-            color: Math.random() > 0.4 ? '#ff4500' : '#ffaa00',
-            size: 4 + Math.random() * 4,
-            life: 1.0,
-            decay: 0.0025,
-            type: 'ember'
-          });
+        // Fever Mode: Supercharged VFX trails per skin
+        if (this.activeSkin === 'magma') {
+          // Raging firestorm: embers, lava drips, and smoke
+          for (let i = 0; i < 3; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.03 + Math.random() * 0.06;
+            this.particles.push({
+              x: (Math.random() - 0.5) * 14,
+              y: this.ballY - 4 - Math.random() * 10,
+              vx: Math.cos(angle) * speed,
+              vy: -0.04 - Math.random() * 0.05,
+              color: Math.random() > 0.45 ? '#ff4c00' : '#ffaa00',
+              size: 5 + Math.random() * 4,
+              life: 1.0,
+              decay: 0.002,
+              type: 'ember'
+            });
+          }
+          if (Math.random() < 0.35) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 10,
+              y: this.ballY - 2,
+              vx: (Math.random() - 0.5) * 0.02,
+              vy: -0.08 - Math.random() * 0.05,
+              color: '#ff2200',
+              size: 3 + Math.random() * 2,
+              life: 1.0,
+              decay: 0.003,
+              type: 'lava'
+            });
+          }
+          if (Math.random() < 0.25) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 16,
+              y: this.ballY + 8,
+              vx: (Math.random() - 0.5) * 0.03,
+              vy: 0.02 + Math.random() * 0.03,
+              color: 'rgba(30, 30, 35, 0.45)',
+              size: 6,
+              maxSize: 24,
+              life: 1.0,
+              decay: 0.002,
+              type: 'smoke'
+            });
+          }
+        } else if (this.activeSkin === 'matrix') {
+          // Hacker digital rain: green binary codes streaming down
+          for (let i = 0; i < 2; i++) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 36,
+              y: this.ballY + 12 - Math.random() * 24,
+              vx: (Math.random() - 0.5) * 0.02,
+              vy: -0.06 - Math.random() * 0.06,
+              color: '#39ff14',
+              size: 10 + Math.random() * 4,
+              life: 1.0,
+              decay: 0.0025,
+              type: 'binary',
+              text: Math.random() > 0.5 ? '1' : '0'
+            });
+          }
+        } else if (this.activeSkin === 'saturn') {
+          // Nebula singularity: golden orbital dust and expanding rings
+          for (let i = 0; i < 2; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 16 + Math.random() * 8;
+            this.particles.push({
+              x: Math.cos(angle) * dist,
+              y: this.ballY + Math.sin(angle) * dist * 0.28,
+              vx: -Math.sin(angle) * 0.07,
+              vy: Math.cos(angle) * 0.07 * 0.28,
+              color: '#e6b85c',
+              size: 3 + Math.random() * 3,
+              life: 1.0,
+              decay: 0.003,
+              type: 'spark'
+            });
+          }
+          if (Math.random() < 0.12) {
+            this.particles.push({
+              x: 0,
+              y: this.ballY,
+              vx: 0,
+              vy: 0,
+              color: 'rgba(230, 184, 92, 0.6)',
+              size: 8,
+              maxSize: 55,
+              life: 1.0,
+              decay: 0.005,
+              type: 'shockwave'
+            });
+          }
+        } else if (this.activeSkin === 'disco') {
+          // Rainbow party: confetti and flashing glints
+          const rainbowColors = ['#ff0055', '#ffaa00', '#39ff14', '#00f0ff', '#bd00ff', '#ffffff'];
+          for (let i = 0; i < 2; i++) {
+            const col = rainbowColors[Math.floor(Math.random() * rainbowColors.length)];
+            this.particles.push({
+              x: (Math.random() - 0.5) * 20,
+              y: this.ballY - Math.random() * 12,
+              vx: (Math.random() - 0.5) * 0.06,
+              vy: -0.02 - Math.random() * 0.04,
+              color: col,
+              size: 5 + Math.random() * 3,
+              life: 1.0,
+              decay: 0.002,
+              type: 'confetti',
+              angle: Math.random() * Math.PI * 2
+            });
+          }
+          if (Math.random() < 0.25) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 24,
+              y: this.ballY + (Math.random() - 0.5) * 24,
+              vx: 0,
+              vy: 0,
+              color: '#ffffff',
+              size: 8 + Math.random() * 6,
+              life: 1.0,
+              decay: 0.005,
+              type: 'star'
+            });
+          }
+        } else if (this.activeSkin === 'plasma') {
+          // Electromagnetic storm: violet sparks and lightning lines
+          for (let i = 0; i < 2; i++) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 24,
+              y: this.ballY + (Math.random() - 0.5) * 24,
+              vx: (Math.random() - 0.5) * 0.08,
+              vy: (Math.random() - 0.5) * 0.08,
+              color: '#bd00ff',
+              size: 2.5 + Math.random() * 2,
+              life: 1.0,
+              decay: 0.004,
+              type: 'spark'
+            });
+          }
+          if (Math.random() < 0.15) {
+            // Jagged discharge arc around the ball
+            const points = [{ x: 0, y: 0 }];
+            const ang = Math.random() * Math.PI * 2;
+            const dist = 20 + Math.random() * 16;
+            points.push({
+              x: Math.cos(ang) * (dist * 0.5) + (Math.random() - 0.5) * 8,
+              y: Math.sin(ang) * (dist * 0.5) * 0.28 + (Math.random() - 0.5) * 4
+            });
+            points.push({
+              x: Math.cos(ang) * dist,
+              y: Math.sin(ang) * dist * 0.28
+            });
+            this.particles.push({
+              x: 0,
+              y: this.ballY,
+              vx: 0,
+              vy: 0,
+              color: '#ffffff',
+              size: 1.5,
+              life: 1.0,
+              decay: 0.012,
+              type: 'lightning',
+              points
+            });
+          }
+        } else {
+          // Default Neon Fever Mode: glowing cyan sparks and ring pulses
+          for (let i = 0; i < 2; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.03 + Math.random() * 0.05;
+            this.particles.push({
+              x: (Math.random() - 0.5) * 14,
+              y: this.ballY - 4 - Math.random() * 8,
+              vx: Math.cos(angle) * speed,
+              vy: -0.03 - Math.random() * 0.04,
+              color: '#00f0ff',
+              size: 3 + Math.random() * 3,
+              life: 1.0,
+              decay: 0.003,
+              type: 'spark'
+            });
+          }
         }
-      } else if (this.activeSkin === 'magma') {
-        // Magma ember rising particles
-        if (Math.random() < 0.22) {
-          this.particles.push({
-            x: (Math.random() - 0.5) * 12,
-            y: this.ballY + (Math.random() - 0.5) * 8,
-            vx: (Math.random() - 0.5) * 0.02,
-            vy: 0.02 + Math.random() * 0.03,
-            color: '#ffaa00',
-            size: 2 + Math.random() * 2,
-            life: 1.0,
-            decay: 0.003,
-            type: 'ember'
-          });
-        }
-      } else if (this.activeSkin === 'plasma') {
-        // Plasma electricity sparks
-        if (Math.random() < 0.15) {
-          this.particles.push({
-            x: (Math.random() - 0.5) * 16,
-            y: this.ballY + (Math.random() - 0.5) * 16,
-            vx: (Math.random() - 0.5) * 0.04,
-            vy: (Math.random() - 0.5) * 0.04,
-            color: '#e600ff',
-            size: 1.5 + Math.random() * 2,
-            life: 1.0,
-            decay: 0.006,
-            type: 'spark'
-          });
+      } else {
+        // Normal Mode: Idle particle/VFX emitters per skin
+        if (this.activeSkin === 'neon') {
+          // Ambient cyan sparks
+          if (Math.random() < 0.12) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 12,
+              y: this.ballY + (Math.random() - 0.5) * 8,
+              vx: (Math.random() - 0.5) * 0.02,
+              vy: -0.01 - Math.random() * 0.01,
+              color: '#00f0ff',
+              size: 2 + Math.random() * 1.5,
+              life: 1.0,
+              decay: 0.004,
+              type: 'spark'
+            });
+          }
+        } else if (this.activeSkin === 'magma') {
+          // Magma ember rising particles
+          if (Math.random() < 0.22) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 12,
+              y: this.ballY + (Math.random() - 0.5) * 8,
+              vx: (Math.random() - 0.5) * 0.02,
+              vy: 0.02 + Math.random() * 0.03,
+              color: '#ffaa00',
+              size: 2 + Math.random() * 2,
+              life: 1.0,
+              decay: 0.003,
+              type: 'ember'
+            });
+          }
+        } else if (this.activeSkin === 'matrix') {
+          // Glitching digital bits popping up
+          if (Math.random() < 0.18) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 20,
+              y: this.ballY + (Math.random() - 0.5) * 12,
+              vx: 0,
+              vy: 0.01 + Math.random() * 0.02,
+              color: '#39ff14',
+              size: 8 + Math.random() * 3,
+              life: 1.0,
+              decay: 0.004,
+              type: 'binary',
+              text: Math.random() > 0.5 ? '1' : '0'
+            });
+          }
+        } else if (this.activeSkin === 'saturn') {
+          // Golden stardust orbiting planet
+          if (Math.random() < 0.25) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 16 + Math.random() * 4;
+            this.particles.push({
+              x: Math.cos(angle) * dist,
+              y: this.ballY + Math.sin(angle) * dist * 0.28,
+              vx: -Math.sin(angle) * 0.03,
+              vy: Math.cos(angle) * 0.03 * 0.28,
+              color: '#e6b85c',
+              size: 1.5 + Math.random() * 2,
+              life: 1.0,
+              decay: 0.004,
+              type: 'spark'
+            });
+          }
+        } else if (this.activeSkin === 'disco') {
+          // Facet sparkling glints
+          if (Math.random() < 0.20) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 16,
+              y: this.ballY + (Math.random() - 0.5) * 16,
+              vx: 0,
+              vy: 0,
+              color: '#ffffff',
+              size: 4 + Math.random() * 4,
+              life: 1.0,
+              decay: 0.008,
+              type: 'star'
+            });
+          }
+        } else if (this.activeSkin === 'plasma') {
+          // Plasma electricity sparks
+          if (Math.random() < 0.15) {
+            this.particles.push({
+              x: (Math.random() - 0.5) * 16,
+              y: this.ballY + (Math.random() - 0.5) * 16,
+              vx: (Math.random() - 0.5) * 0.04,
+              vy: (Math.random() - 0.5) * 0.04,
+              color: '#e600ff',
+              size: 1.5 + Math.random() * 2,
+              life: 1.0,
+              decay: 0.006,
+              type: 'spark'
+            });
+          }
         }
       }
     }
@@ -618,12 +856,31 @@ export class StackBallGame {
       const vy = (Math.random() * 0.1) + 0.08; // upward burst
       const vz = Math.sin(midAngle) * speed;
 
-      // Color mapping
+      // Color mapping based on active skin
       let color = palette.safe;
       let darkColor = palette.safeDark;
+      
       if (seg.type === 'hazard') {
         color = '#1c1c24';
         darkColor = '#0b0b10';
+      } else {
+        if (this.activeSkin === 'magma') {
+          color = '#ff4c00';
+          darkColor = '#8c1a00';
+        } else if (this.activeSkin === 'matrix') {
+          color = '#39ff14';
+          darkColor = '#003300';
+        } else if (this.activeSkin === 'saturn') {
+          color = '#e6b85c';
+          darkColor = '#664d1a';
+        } else if (this.activeSkin === 'disco') {
+          const rainbowColors = ['#ff0055', '#ffaa00', '#39ff14', '#00f0ff', '#bd00ff'];
+          color = rainbowColors[Math.floor(Math.random() * rainbowColors.length)];
+          darkColor = '#1a1a1a';
+        } else if (this.activeSkin === 'plasma') {
+          color = '#bd00ff';
+          darkColor = '#3c004d';
+        }
       }
 
       // Generate polygon points for shard drawing
@@ -648,7 +905,9 @@ export class StackBallGame {
         color,
         darkColor,
         points: [p1, p2, p3, p4],
-        life: 1.0
+        life: 1.0,
+        type: seg.type === 'safe' ? this.activeSkin : 'neon',
+        decayRate: seg.type === 'hazard' ? 0.002 : (this.activeSkin === 'matrix' ? 0.003 : (this.activeSkin === 'magma' ? 0.0025 : 0.0016))
       });
     });
   }
@@ -702,7 +961,86 @@ export class StackBallGame {
       s.rotZ += s.vRotZ * dt;
 
       // Shard decay
-      s.life -= 0.0016 * dt;
+      const decay = s.decayRate || 0.0016;
+      s.life -= decay * dt;
+
+      // Spawn secondary trail particles from the flying shards
+      if (s.life > 0.15) {
+        if (s.type === 'magma' && Math.random() < 0.06) {
+          // Dripping hot lava from the flying magma chunk
+          this.particles.push({
+            x: s.x,
+            y: s.y,
+            vx: s.vx * 0.2 + (Math.random() - 0.5) * 0.02,
+            vy: s.vy * 0.2 - 0.03 - Math.random() * 0.03,
+            color: '#ff4c00',
+            size: 3 + Math.random() * 3,
+            life: 0.8,
+            decay: 0.003,
+            type: 'lava'
+          });
+        } else if (s.type === 'matrix' && Math.random() < 0.08) {
+          // Green digital glitch trail
+          this.particles.push({
+            x: s.x + (Math.random() - 0.5) * 8,
+            y: s.y,
+            vx: (Math.random() - 0.5) * 0.01,
+            vy: -0.02 - Math.random() * 0.03,
+            color: '#39ff14',
+            size: 8 + Math.random() * 3,
+            life: 0.9,
+            decay: 0.003,
+            type: 'binary',
+            text: Math.random() > 0.5 ? '1' : '0'
+          });
+        } else if (s.type === 'saturn' && Math.random() < 0.08) {
+          // Stardust trailing the cosmic shards
+          this.particles.push({
+            x: s.x,
+            y: s.y,
+            vx: (Math.random() - 0.5) * 0.02,
+            vy: (Math.random() - 0.5) * 0.02,
+            color: '#e6b85c',
+            size: 1.5 + Math.random() * 2,
+            life: 0.8,
+            decay: 0.004,
+            type: 'spark'
+          });
+        } else if (s.type === 'disco') {
+          // Disco shards cycle color rapidly (flashing strobe effect)
+          const rainbowColors = ['#ff0055', '#ffaa00', '#39ff14', '#00f0ff', '#bd00ff'];
+          s.color = rainbowColors[Math.floor((this.gameTime + i * 50) / 80) % rainbowColors.length];
+          if (Math.random() < 0.05) {
+            this.particles.push({
+              x: s.x,
+              y: s.y,
+              vx: s.vx * 0.5,
+              vy: s.vy * 0.5,
+              color: '#ffffff',
+              size: 4 + Math.random() * 3,
+              life: 0.7,
+              decay: 0.005,
+              type: 'star'
+            });
+          }
+        } else if (s.type === 'plasma') {
+          // Electro sparks crackle from flying plasma shard
+          if (Math.random() < 0.07) {
+            this.particles.push({
+              x: s.x,
+              y: s.y,
+              vx: (Math.random() - 0.5) * 0.05,
+              vy: (Math.random() - 0.5) * 0.05,
+              color: '#bd00ff',
+              size: 2 + Math.random() * 2,
+              life: 0.8,
+              decay: 0.005,
+              type: 'spark'
+            });
+          }
+        }
+      }
+
       if (s.life <= 0) {
         this.shards.splice(i, 1);
       }
@@ -976,6 +1314,27 @@ export class StackBallGame {
       const screenY = ballScreenY - (s.y - this.cameraY);
       if (screenY < -50 || screenY > h + 50) return;
 
+      // Draw lightning connection back to pole for Plasma shards
+      if (s.type === 'plasma' && s.life > 0.4 && Math.random() < 0.15) {
+        c.save();
+        c.strokeStyle = '#bd00ff';
+        c.lineWidth = 1.2 * s.life;
+        c.shadowBlur = 6;
+        c.shadowColor = '#bd00ff';
+        c.beginPath();
+        c.moveTo(cx + s.x, screenY);
+        const segments = 3;
+        for (let j = 1; j < segments; j++) {
+          const t = j / segments;
+          const jx = cx + s.x * (1 - t) + (Math.random() - 0.5) * 8;
+          const jy = screenY + (Math.random() - 0.5) * 6;
+          c.lineTo(jx, jy);
+        }
+        c.lineTo(cx, screenY);
+        c.stroke();
+        c.restore();
+      }
+
       c.save();
       c.translate(cx + s.x, screenY);
       c.rotate(s.rotZ);
@@ -1028,6 +1387,77 @@ export class StackBallGame {
         c.beginPath();
         c.ellipse(cx + p.x, screenY, currentSize, currentSize * 0.28, 0, 0, Math.PI * 2);
         c.fill();
+      } else if (p.type === 'binary') {
+        c.font = `bold ${p.size * p.life}px 'Courier New', monospace`;
+        c.fillStyle = p.color;
+        c.shadowColor = p.color;
+        c.shadowBlur = 4;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(p.text || '0', cx + p.x, screenY);
+      } else if (p.type === 'star') {
+        c.strokeStyle = p.color;
+        c.lineWidth = 1.8 * p.life;
+        c.shadowBlur = 8;
+        c.shadowColor = p.color;
+        c.beginPath();
+        const r = p.size * p.life;
+        c.moveTo(cx + p.x - r, screenY);
+        c.lineTo(cx + p.x + r, screenY);
+        c.moveTo(cx + p.x, screenY - r);
+        c.lineTo(cx + p.x, screenY + r);
+        c.stroke();
+        // Small inner glow
+        c.fillStyle = '#ffffff';
+        c.beginPath();
+        c.arc(cx + p.x, screenY, r * 0.3, 0, Math.PI * 2);
+        c.fill();
+      } else if (p.type === 'lava') {
+        c.fillStyle = p.color;
+        c.beginPath();
+        const r = p.size * p.life;
+        // Elongated drip shape pointing downwards
+        c.ellipse(cx + p.x, screenY, r * 0.65, r * 1.35, 0, 0, Math.PI * 2);
+        c.fill();
+      } else if (p.type === 'confetti') {
+        c.fillStyle = p.color;
+        c.save();
+        c.translate(cx + p.x, screenY);
+        c.rotate(p.angle || 0);
+        const size = p.size * p.life;
+        c.fillRect(-size / 2, -size / 2, size, size);
+        c.restore();
+      } else if (p.type === 'lightning') {
+        if (p.points && p.points.length > 0) {
+          c.strokeStyle = p.color;
+          c.lineWidth = p.size * p.life;
+          c.shadowColor = p.color;
+          c.shadowBlur = 10;
+          c.beginPath();
+          p.points.forEach((pt, idx) => {
+            if (idx === 0) c.moveTo(cx + p.x + pt.x, screenY + pt.y);
+            else c.lineTo(cx + p.x + pt.x, screenY + pt.y);
+          });
+          c.stroke();
+        }
+      } else if (p.type === 'smoke') {
+        c.fillStyle = p.color;
+        c.beginPath();
+        const currentSize = p.size + (p.maxSize! - p.size) * (1 - p.life);
+        c.arc(cx + p.x, screenY, currentSize, 0, Math.PI * 2);
+        c.fill();
+      } else if (p.type === 'laser') {
+        c.strokeStyle = p.color;
+        c.lineWidth = p.size * p.life;
+        c.shadowColor = p.color;
+        c.shadowBlur = 12;
+        c.beginPath();
+        c.moveTo(cx + p.x, screenY);
+        const len = 350;
+        const lx = cx + p.x + Math.cos(p.laserAngle || 0) * len;
+        const ly = screenY + Math.sin(p.laserAngle || 0) * len;
+        c.lineTo(lx, ly);
+        c.stroke();
       } else {
         // Sparks or Embers
         c.fillStyle = p.color;
@@ -1072,24 +1502,47 @@ export class StackBallGame {
 
     c.save();
 
-    // 1. Fever/Fireball Trail
+    // 1. Fever/Fireball Trail (Skin-specific colors and shapes)
     if (this.isFeverMode) {
+      c.save();
       c.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 8; i++) {
-        const trailY = sy + (i * 10);
-        const trailR = this.ballRadius * (1 - i * 0.12);
-        c.fillStyle = `rgba(255, 69, 0, ${0.55 - i * 0.07})`;
-        c.beginPath();
-        c.arc(cx + (Math.random() - 0.5) * 10, trailY, trailR, 0, Math.PI * 2);
-        c.fill();
+        const trailY = sy + (i * 9);
+        const trailR = this.ballRadius * (1 - i * 0.11);
+        
+        let color = `rgba(255, 69, 0, ${0.55 - i * 0.07})`; // magma / default
+        if (this.activeSkin === 'matrix') {
+          color = `rgba(57, 255, 20, ${0.55 - i * 0.07})`;
+        } else if (this.activeSkin === 'saturn') {
+          color = `rgba(230, 184, 92, ${0.55 - i * 0.07})`;
+        } else if (this.activeSkin === 'disco') {
+          const hue = (this.gameTime * 0.3 + i * 40) % 360;
+          color = `hsla(${hue}, 90%, 65%, ${0.55 - i * 0.07})`;
+        } else if (this.activeSkin === 'plasma') {
+          color = `rgba(189, 0, 255, ${0.55 - i * 0.07})`;
+        } else if (this.activeSkin === 'neon') {
+          color = `rgba(0, 240, 255, ${0.55 - i * 0.07})`;
+        }
+
+        c.fillStyle = color;
+        
+        if (this.activeSkin === 'matrix') {
+          // Matrix square digit trail
+          c.fillRect(cx + (Math.random() - 0.5) * 8 - trailR, trailY - trailR, trailR * 2, trailR * 2);
+        } else {
+          c.beginPath();
+          c.arc(cx + (Math.random() - 0.5) * 8, trailY, trailR, 0, Math.PI * 2);
+          c.fill();
+        }
       }
       c.restore();
-      c.save();
     }
 
     // Shadow & glow matching fever state
     c.shadowBlur = this.isFeverMode ? 35 : 12;
-    c.shadowColor = this.isFeverMode ? '#ff4500' : 'rgba(0, 240, 255, 0.45)';
+    c.shadowColor = this.isFeverMode 
+      ? (this.activeSkin === 'matrix' ? '#39ff14' : this.activeSkin === 'plasma' ? '#bd00ff' : this.activeSkin === 'saturn' ? '#e6b85c' : this.activeSkin === 'disco' ? '#ff00ff' : '#ff4500')
+      : (this.activeSkin === 'matrix' ? '#39ff14' : this.activeSkin === 'plasma' ? '#bd00ff' : this.activeSkin === 'saturn' ? '#e6b85c' : this.activeSkin === 'disco' ? '#ff00ff' : 'rgba(0, 240, 255, 0.45)');
 
     // Render active skin
     switch (this.activeSkin) {
@@ -1118,6 +1571,35 @@ export class StackBallGame {
   }
 
   private drawNeonSkin(c: CanvasRenderingContext2D, cx: number, sy: number) {
+    c.save();
+    
+    // Draw Neon Fever Aura
+    if (this.isFeverMode) {
+      c.globalCompositeOperation = 'lighter';
+      c.shadowBlur = 25;
+      c.shadowColor = '#00f0ff';
+      
+      // Expanding energy waves
+      const waveCount = 3;
+      for (let i = 0; i < waveCount; i++) {
+        const t = ((this.gameTime * 0.0015 + i / waveCount) % 1);
+        c.strokeStyle = `rgba(0, 240, 255, ${0.4 * (1 - t)})`;
+        c.lineWidth = 2;
+        c.beginPath();
+        c.ellipse(cx, sy, this.ballRadius * (1 + t * 1.8), this.ballRadius * 0.3 * (1 + t * 1.8), 0, 0, Math.PI * 2);
+        c.stroke();
+      }
+      
+      // Outer fire flares
+      for (let i = 0; i < 5; i++) {
+        const radius = this.ballRadius * (1.1 + Math.random() * 0.4);
+        c.fillStyle = `rgba(0, 180, 255, ${0.15 + Math.random() * 0.15})`;
+        c.beginPath();
+        c.arc(cx + (Math.random() - 0.5) * 8, sy + (Math.random() - 0.5) * 8, radius, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+
     const ballGrad = c.createRadialGradient(
       cx - this.ballRadius * 0.3,
       sy - this.ballRadius * 0.3,
@@ -1128,8 +1610,8 @@ export class StackBallGame {
     );
     if (this.isFeverMode) {
       ballGrad.addColorStop(0, '#ffffff');
-      ballGrad.addColorStop(0.3, '#ffaa00');
-      ballGrad.addColorStop(1, '#ff1100');
+      ballGrad.addColorStop(0.3, '#00f0ff');
+      ballGrad.addColorStop(1, '#003366');
     } else {
       ballGrad.addColorStop(0, '#ffffff');
       ballGrad.addColorStop(0.3, '#00f0ff');
@@ -1140,14 +1622,62 @@ export class StackBallGame {
     c.arc(cx, sy, this.ballRadius, 0, Math.PI * 2);
     c.fill();
 
-    // specular reflection
-    c.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    // 3D Orbital neon ring
+    c.save();
+    c.translate(cx, sy);
+    c.rotate(Math.PI * 0.12 + Math.sin(this.gameTime * 0.001) * 0.05);
+    c.strokeStyle = '#00f0ff';
+    c.lineWidth = 1.6;
+    c.shadowBlur = 6;
+    c.shadowColor = '#00f0ff';
+    c.beginPath();
+    const rx = this.ballRadius * 1.5;
+    const ry = this.ballRadius * 0.4;
+    c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+    c.stroke();
+
+    // Orbiting neon dot
+    const ringAngle = this.gameTime * 0.0025;
+    const px = Math.cos(ringAngle) * rx;
+    const py = Math.sin(ringAngle) * ry;
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.arc(px, py, 3.5, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    // Specular highlight
+    c.fillStyle = 'rgba(255, 255, 255, 0.35)';
     c.beginPath();
     c.ellipse(cx - 4, sy - 5, 5, 3, Math.PI * 0.2, 0, Math.PI * 2);
     c.fill();
+    
+    c.restore();
   }
 
   private drawMagmaSkin(c: CanvasRenderingContext2D, cx: number, sy: number) {
+    c.save();
+
+    // Magma Fever Mode: raging solar flares and lava gases
+    if (this.isFeverMode) {
+      c.globalCompositeOperation = 'lighter';
+      c.shadowBlur = 30;
+      c.shadowColor = '#ff4500';
+
+      // Fiery plasma gas layers
+      for (let i = 0; i < 6; i++) {
+        const radius = this.ballRadius * (1.2 + Math.random() * 0.5);
+        const grad = c.createRadialGradient(cx, sy, this.ballRadius * 0.2, cx, sy, radius);
+        grad.addColorStop(0, 'rgba(255, 220, 0, 0.45)');
+        grad.addColorStop(0.5, 'rgba(255, 69, 0, 0.2)');
+        grad.addColorStop(1, 'rgba(120, 0, 0, 0)');
+        c.fillStyle = grad;
+        c.beginPath();
+        c.arc(cx + (Math.random() - 0.5) * 8, sy + (Math.random() - 0.5) * 8, radius, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+
     const ballGrad = c.createRadialGradient(
       cx - this.ballRadius * 0.2,
       sy - this.ballRadius * 0.2,
@@ -1156,51 +1686,62 @@ export class StackBallGame {
       sy,
       this.ballRadius
     );
-    ballGrad.addColorStop(0, '#ffff88');
-    ballGrad.addColorStop(0.35, '#ff5500');
-    ballGrad.addColorStop(0.8, '#aa1100');
-    ballGrad.addColorStop(1, '#330000');
+    if (this.isFeverMode) {
+      ballGrad.addColorStop(0, '#ffffff');
+      ballGrad.addColorStop(0.3, '#ffaa00');
+      ballGrad.addColorStop(0.7, '#ff3300');
+      ballGrad.addColorStop(1, '#660000');
+    } else {
+      ballGrad.addColorStop(0, '#ffff88');
+      ballGrad.addColorStop(0.35, '#ff5500');
+      ballGrad.addColorStop(0.8, '#aa1100');
+      ballGrad.addColorStop(1, '#330000');
+    }
     
     c.fillStyle = ballGrad;
     c.beginPath();
     c.arc(cx, sy, this.ballRadius, 0, Math.PI * 2);
     c.fill();
 
+    // Specular highlight
     c.fillStyle = 'rgba(255, 255, 255, 0.25)';
     c.beginPath();
     c.ellipse(cx - 3, sy - 4, 4, 2, Math.PI * 0.2, 0, Math.PI * 2);
     c.fill();
     
-    // Draw magma surface cracks
-    c.strokeStyle = 'rgba(255, 200, 0, 0.6)';
-    c.lineWidth = 1.2;
+    // Draw animated shifting cracks
+    const crackOffset = Math.sin(this.gameTime * 0.002) * 1.5;
+    c.strokeStyle = this.isFeverMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 200, 0, 0.7)';
+    c.lineWidth = 1.3;
     c.beginPath();
-    c.moveTo(cx - 8, sy + 2);
-    c.lineTo(cx - 2, sy - 2);
-    c.lineTo(cx + 4, sy + 3);
-    c.moveTo(cx - 3, sy - 6);
-    c.lineTo(cx + 2, sy - 1);
-    c.lineTo(cx + 8, sy - 4);
+    c.moveTo(cx - 8 + crackOffset, sy + 2);
+    c.lineTo(cx - 2 + crackOffset * 0.5, sy - 2);
+    c.lineTo(cx + 4 + crackOffset, sy + 3);
+    c.moveTo(cx - 3 - crackOffset, sy - 6);
+    c.lineTo(cx + 2 - crackOffset * 0.5, sy - 1);
+    c.lineTo(cx + 8 - crackOffset, sy - 4);
     c.stroke();
+
+    c.restore();
   }
 
   private drawMatrixSkin(c: CanvasRenderingContext2D, cx: number, sy: number) {
     c.save();
     c.translate(cx, sy);
-    
+
     const angle = this.gameTime * 0.0016;
     const size = this.ballRadius * 1.15;
-    
+
     // 3D Cube Vertices
     const vertices = [
-      { x: -size, y: -size, z: -size },
-      { x: size, y: -size, z: -size },
-      { x: size, y: size, z: -size },
-      { x: -size, y: size, z: -size },
-      { x: -size, y: -size, z: size },
-      { x: size, y: -size, z: size },
-      { x: size, y: size, z: size },
-      { x: -size, y: size, z: size },
+      { x: -size, y: -size, z: -size }, // 0
+      { x: size, y: -size, z: -size },  // 1
+      { x: size, y: size, z: -size },   // 2
+      { x: -size, y: size, z: -size },  // 3
+      { x: -size, y: -size, z: size },  // 4
+      { x: size, y: -size, z: size },   // 5
+      { x: size, y: size, z: size },    // 6
+      { x: -size, y: size, z: size },   // 7
     ];
 
     // Orthographic rotations
@@ -1210,39 +1751,120 @@ export class StackBallGame {
     const sinX = Math.sin(angle * 0.75);
 
     const projected = vertices.map(v => {
-      let x1 = v.x * cosY - v.z * sinY;
-      let z1 = v.z * cosY + v.x * sinY;
-      let y2 = v.y * cosX - z1 * sinX;
-      return { x: x1, y: y2 };
+      const x1 = v.x * cosY - v.z * sinY;
+      const z1 = v.z * cosY + v.x * sinY;
+      const y2 = v.y * cosX - z1 * sinX;
+      const z2 = z1 * cosX + v.y * sinX;
+      return { x: x1, y: y2, z: z2 };
     });
 
-    const edges = [
-      [0, 1], [1, 2], [2, 3], [3, 0],
-      [4, 5], [5, 6], [6, 7], [7, 4],
-      [0, 4], [1, 5], [2, 6], [3, 7]
+    // Winding faces
+    const faces = [
+      { indices: [0, 1, 2, 3], color: 'rgba(5, 32, 5, 0.82)' }, // Back
+      { indices: [4, 5, 6, 7], color: 'rgba(15, 65, 15, 0.88)' }, // Front
+      { indices: [0, 1, 5, 4], color: 'rgba(10, 48, 10, 0.85)' }, // Top
+      { indices: [2, 3, 7, 6], color: 'rgba(10, 48, 10, 0.85)' }, // Bottom
+      { indices: [0, 3, 7, 4], color: 'rgba(8, 42, 8, 0.84)' }, // Left
+      { indices: [1, 2, 6, 5], color: 'rgba(12, 52, 12, 0.86)' }  // Right
     ];
 
-    c.strokeStyle = '#39ff14'; // matrix neon green
+    // Calculate Z depths
+    const facesWithZ = faces.map(face => {
+      const avgZ = face.indices.reduce((sum, idx) => sum + projected[idx].z, 0) / 4;
+      return { ...face, avgZ };
+    });
+
+    // Painter's algorithm: sort ascending by Z (furthest first)
+    facesWithZ.sort((a, b) => a.avgZ - b.avgZ);
+
+    c.strokeStyle = '#39ff14'; // Matrix green
     c.shadowColor = '#39ff14';
     c.shadowBlur = this.isFeverMode ? 35 : 10;
     c.lineWidth = 1.8;
 
-    c.fillStyle = 'rgba(0, 35, 0, 0.4)';
-    c.beginPath();
-    c.arc(0, 0, this.ballRadius, 0, Math.PI * 2);
-    c.fill();
-
-    edges.forEach(edge => {
+    // Draw cube faces
+    facesWithZ.forEach(face => {
       c.beginPath();
-      c.moveTo(projected[edge[0]].x, projected[edge[0]].y);
-      c.lineTo(projected[edge[1]].x, projected[edge[1]].y);
+      face.indices.forEach((idx, i) => {
+        const pt = projected[idx];
+        if (i === 0) c.moveTo(pt.x, pt.y);
+        else c.lineTo(pt.x, pt.y);
+      });
+      c.closePath();
+      c.fillStyle = face.color;
+      c.fill();
       c.stroke();
+
+      // Draw cyber matrix glyphs inside visible faces
+      if (face.avgZ > 0) {
+        const faceCX = face.indices.reduce((sum, idx) => sum + projected[idx].x, 0) / 4;
+        const faceCY = face.indices.reduce((sum, idx) => sum + projected[idx].y, 0) / 4;
+        
+        c.save();
+        c.fillStyle = '#ffffff';
+        c.font = 'bold 9px monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.shadowBlur = 4;
+        c.shadowColor = '#39ff14';
+        c.fillText(Math.random() > 0.5 ? '1' : '0', faceCX, faceCY);
+        c.restore();
+      }
     });
+
+    // Matrix Fever Glitch Effect
+    if (this.isFeverMode) {
+      c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 4; i++) {
+        c.fillStyle = 'rgba(57, 255, 20, 0.22)';
+        c.fillRect(
+          (Math.random() - 0.5) * 35,
+          (Math.random() - 0.5) * 35,
+          8 + Math.random() * 12,
+          8 + Math.random() * 12
+        );
+      }
+    }
 
     c.restore();
   }
 
   private drawSaturnSkin(c: CanvasRenderingContext2D, cx: number, sy: number) {
+    c.save();
+
+    // Saturn Nebula Singularity Accretion Disk (Fever Mode)
+    if (this.isFeverMode) {
+      c.globalCompositeOperation = 'lighter';
+      c.shadowBlur = 30;
+      c.shadowColor = '#e6b85c';
+
+      // Large orbiting golden accretion disk
+      c.save();
+      c.translate(cx, sy);
+      c.rotate(Math.PI * 0.12);
+      const diskGrad = c.createRadialGradient(0, 0, this.ballRadius, 0, 0, this.ballRadius * 3.3);
+      diskGrad.addColorStop(0, 'rgba(255, 235, 150, 0.48)');
+      diskGrad.addColorStop(0.4, 'rgba(230, 184, 92, 0.25)');
+      diskGrad.addColorStop(1, 'rgba(100, 70, 20, 0)');
+      c.fillStyle = diskGrad;
+      c.beginPath();
+      c.ellipse(0, 0, this.ballRadius * 3.3, this.ballRadius * 0.85, 0, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+
+      // Polar jet streams shooting up and down
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 2.5;
+      c.shadowColor = '#e6b85c';
+      c.shadowBlur = 10;
+      c.beginPath();
+      c.moveTo(cx, sy - this.ballRadius);
+      c.lineTo(cx, sy - this.ballRadius * 3);
+      c.moveTo(cx, sy + this.ballRadius);
+      c.lineTo(cx, sy + this.ballRadius * 3);
+      c.stroke();
+    }
+
     const planetGrad = c.createRadialGradient(
       cx - this.ballRadius * 0.3,
       sy - this.ballRadius * 0.3,
@@ -1251,22 +1873,43 @@ export class StackBallGame {
       sy,
       this.ballRadius
     );
-    planetGrad.addColorStop(0, '#fff3cc');
-    planetGrad.addColorStop(0.4, '#e6b85c');
-    planetGrad.addColorStop(0.8, '#b37d1a');
-    planetGrad.addColorStop(1, '#4d3300');
+    if (this.isFeverMode) {
+      planetGrad.addColorStop(0, '#ffffff');
+      planetGrad.addColorStop(0.3, '#ffeb99');
+      planetGrad.addColorStop(0.7, '#e6b85c');
+      planetGrad.addColorStop(1, '#5c4314');
+    } else {
+      planetGrad.addColorStop(0, '#fff3cc');
+      planetGrad.addColorStop(0.4, '#e6b85c');
+      planetGrad.addColorStop(0.8, '#b37d1a');
+      planetGrad.addColorStop(1, '#4d3300');
+    }
     c.fillStyle = planetGrad;
     c.beginPath();
     c.arc(cx, sy, this.ballRadius, 0, Math.PI * 2);
     c.fill();
 
-    // Tilted Saturn Ring
+    // Draw Saturn gas bands
+    c.save();
+    c.beginPath();
+    c.arc(cx, sy, this.ballRadius, 0, Math.PI * 2);
+    c.clip(); // clip to planet sphere
+    c.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+    c.lineWidth = 2.2;
+    for (let offset = -8; offset <= 8; offset += 4) {
+      c.beginPath();
+      c.ellipse(cx, sy + offset, this.ballRadius * 1.2, this.ballRadius * 0.18, Math.PI * 0.05, 0, Math.PI * 2);
+      c.stroke();
+    }
+    c.restore();
+
+    // Tilted Ring System
     c.save();
     c.translate(cx, sy);
     c.rotate(Math.PI * 0.12);
     
-    c.strokeStyle = 'rgba(230, 184, 92, 0.85)';
-    c.lineWidth = 4;
+    c.strokeStyle = this.isFeverMode ? 'rgba(255, 235, 150, 0.95)' : 'rgba(230, 184, 92, 0.85)';
+    c.lineWidth = this.isFeverMode ? 6 : 4;
     c.shadowBlur = 8;
     c.shadowColor = '#e6b85c';
     
@@ -1276,13 +1919,41 @@ export class StackBallGame {
     
     c.restore();
     
+    // Specular highlight
     c.fillStyle = 'rgba(255, 255, 255, 0.25)';
     c.beginPath();
     c.ellipse(cx - 3, sy - 4, 4, 2, Math.PI * 0.2, 0, Math.PI * 2);
     c.fill();
+
+    c.restore();
   }
 
   private drawDiscoSkin(c: CanvasRenderingContext2D, cx: number, sy: number) {
+    c.save();
+
+    // Disco Fever Laser Show
+    if (this.isFeverMode) {
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      const laserCount = 6;
+      const angleOffset = this.gameTime * 0.002;
+      for (let i = 0; i < laserCount; i++) {
+        const angle = angleOffset + (Math.PI * 2 / laserCount) * i;
+        const color = `hsl(${(this.gameTime * 0.45 + i * 60) % 360}, 90%, 65%)`;
+        c.strokeStyle = color;
+        c.lineWidth = 2 + Math.sin(this.gameTime * 0.005 + i) * 1;
+        c.shadowColor = color;
+        c.shadowBlur = 15;
+        
+        c.beginPath();
+        c.moveTo(cx, sy);
+        const len = 400;
+        c.lineTo(cx + Math.cos(angle) * len, sy + Math.sin(angle) * len);
+        c.stroke();
+      }
+      c.restore();
+    }
+
     const ballGrad = c.createRadialGradient(
       cx - this.ballRadius * 0.4,
       sy - this.ballRadius * 0.4,
@@ -1314,11 +1985,13 @@ export class StackBallGame {
       for (let col = 0; col < cols; col++) {
         const fx = cx - this.ballRadius + col * step;
         
-        const hue = (this.gameTime * 0.35 + r * 30 + col * 20) % 360;
-        c.fillStyle = `hsla(${hue}, 80%, 75%, 0.38)`;
+        // Dynamic shimmer facets
+        const timeFactor = this.isFeverMode ? 0.85 : 0.25;
+        const hue = (this.gameTime * timeFactor + r * 30 + col * 20) % 360;
+        c.fillStyle = `hsla(${hue}, 85%, ${this.isFeverMode ? '80%' : '72%'}, 0.45)`;
         c.fillRect(fx, fy, step - 0.8, step - 0.8);
 
-        c.fillStyle = 'rgba(255, 255, 255, 0.65)';
+        c.fillStyle = 'rgba(255, 255, 255, 0.7)';
         c.fillRect(fx + 1.2, fy + 1.2, 1.8, 1.8);
       }
     }
@@ -1329,9 +2002,38 @@ export class StackBallGame {
     c.beginPath();
     c.ellipse(cx - 4, sy - 5, 5, 3, Math.PI * 0.2, 0, Math.PI * 2);
     c.fill();
+
+    c.restore();
   }
 
   private drawPlasmaSkin(c: CanvasRenderingContext2D, cx: number, sy: number) {
+    c.save();
+
+    // Plasma Fever: pulsating plasma lightning storms
+    if (this.isFeverMode) {
+      c.globalCompositeOperation = 'lighter';
+      c.shadowBlur = 30;
+      c.shadowColor = '#e600ff';
+      
+      // Pulsating field
+      const fieldRadius = this.ballRadius * (1.3 + Math.sin(this.gameTime * 0.015) * 0.2);
+      const fieldGrad = c.createRadialGradient(cx, sy, this.ballRadius, cx, sy, fieldRadius);
+      fieldGrad.addColorStop(0, 'rgba(230, 0, 255, 0.35)');
+      fieldGrad.addColorStop(0.5, 'rgba(150, 0, 200, 0.15)');
+      fieldGrad.addColorStop(1, 'rgba(50, 0, 100, 0)');
+      c.fillStyle = fieldGrad;
+      c.beginPath();
+      c.arc(cx, sy, fieldRadius, 0, Math.PI * 2);
+      c.fill();
+      
+      // Electric aura stroke
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1.8;
+      c.beginPath();
+      c.arc(cx, sy, fieldRadius * 0.95, 0, Math.PI * 2);
+      c.stroke();
+    }
+
     const ballGrad = c.createRadialGradient(
       cx - this.ballRadius * 0.2,
       sy - this.ballRadius * 0.2,
@@ -1340,30 +2042,37 @@ export class StackBallGame {
       sy,
       this.ballRadius
     );
-    ballGrad.addColorStop(0, '#ffffff');
-    ballGrad.addColorStop(0.3, '#cc00ff');
-    ballGrad.addColorStop(0.8, '#550080');
-    ballGrad.addColorStop(1, '#0f001f');
+    if (this.isFeverMode) {
+      ballGrad.addColorStop(0, '#ffffff');
+      ballGrad.addColorStop(0.3, '#ffb3ff');
+      ballGrad.addColorStop(0.7, '#e600ff');
+      ballGrad.addColorStop(1, '#2a0033');
+    } else {
+      ballGrad.addColorStop(0, '#ffffff');
+      ballGrad.addColorStop(0.3, '#cc00ff');
+      ballGrad.addColorStop(0.8, '#550080');
+      ballGrad.addColorStop(1, '#0f001f');
+    }
     c.fillStyle = ballGrad;
     c.beginPath();
     c.arc(cx, sy, this.ballRadius, 0, Math.PI * 2);
     c.fill();
 
     // Plasma lightning discharges
-    c.strokeStyle = '#e600ff';
-    c.lineWidth = 1.3;
+    c.strokeStyle = this.isFeverMode ? '#ffffff' : '#e600ff';
+    c.lineWidth = this.isFeverMode ? 1.8 : 1.3;
     c.shadowColor = '#e600ff';
-    c.shadowBlur = 10;
+    c.shadowBlur = this.isFeverMode ? 18 : 10;
     
-    const numArcs = 4;
+    const numArcs = this.isFeverMode ? 7 : 4;
     for (let i = 0; i < numArcs; i++) {
       const ang = Math.random() * Math.PI * 2;
-      const len = this.ballRadius * (1.1 + Math.random() * 0.38);
+      const len = this.ballRadius * (this.isFeverMode ? 1.5 + Math.random() * 0.5 : 1.1 + Math.random() * 0.38);
       
       c.beginPath();
       c.moveTo(cx, sy);
-      const midX = cx + Math.cos(ang) * (len * 0.5) + (Math.random() - 0.5) * 5;
-      const midY = sy + Math.sin(ang) * (len * 0.5) + (Math.random() - 0.5) * 5;
+      const midX = cx + Math.cos(ang) * (len * 0.5) + (Math.random() - 0.5) * 6;
+      const midY = sy + Math.sin(ang) * (len * 0.5) + (Math.random() - 0.5) * 6;
       const endX = cx + Math.cos(ang) * len;
       const endY = sy + Math.sin(ang) * len;
       
@@ -1373,11 +2082,11 @@ export class StackBallGame {
       
       c.fillStyle = '#ffffff';
       c.beginPath();
-      c.arc(endX, endY, 2, 0, Math.PI * 2);
+      c.arc(endX, endY, this.isFeverMode ? 3 : 2, 0, Math.PI * 2);
       c.fill();
     }
     
-    c.shadowBlur = 0;
+    c.restore();
   }
 
   private updateParticles(dt: number) {
@@ -1412,19 +2121,99 @@ export class StackBallGame {
   }
 
   private spawnImpactVFX(x: number, y: number, color: string) {
-    // 1. Shockwave ring
-    this.particles.push({
-      x,
-      y,
-      vx: 0,
-      vy: 0,
-      color,
-      size: 15,
-      maxSize: 135,
-      life: 1.0,
-      decay: 0.0035, // fast fade
-      type: 'shockwave'
-    });
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    
+    // 1. Shockwave ring (flattened for 3D perspective)
+    if (this.activeSkin === 'saturn') {
+      // Saturn spawns multiple concentric golden orbital rings
+      for (let r = 0; r < 2; r++) {
+        this.particles.push({
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          color: '#e6b85c',
+          size: 10 + r * 15,
+          maxSize: 120 + r * 30,
+          life: 1.0,
+          decay: 0.003 - r * 0.0005,
+          type: 'shockwave'
+        });
+      }
+    } else if (this.activeSkin === 'disco') {
+      // Disco spawns concentric rainbow colored shockwaves
+      const colors = ['#ff0055', '#39ff14', '#00f0ff'];
+      colors.forEach((col, idx) => {
+        this.particles.push({
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          color: col,
+          size: 12 + idx * 8,
+          maxSize: 110 + idx * 25,
+          life: 1.0,
+          decay: 0.003 + idx * 0.0005,
+          type: 'shockwave'
+        });
+      });
+    } else if (this.activeSkin === 'magma') {
+      // Fiery orange/red expanding wave
+      this.particles.push({
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        color: '#ff4500',
+        size: 15,
+        maxSize: 140,
+        life: 1.0,
+        decay: 0.003,
+        type: 'shockwave'
+      });
+    } else if (this.activeSkin === 'matrix') {
+      // Digital matrix green wave
+      this.particles.push({
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        color: '#39ff14',
+        size: 15,
+        maxSize: 135,
+        life: 1.0,
+        decay: 0.0035,
+        type: 'shockwave'
+      });
+    } else if (this.activeSkin === 'plasma') {
+      // Electric violet wave
+      this.particles.push({
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        color: '#bd00ff',
+        size: 15,
+        maxSize: 145,
+        life: 1.0,
+        decay: 0.003,
+        type: 'shockwave'
+      });
+    } else {
+      this.particles.push({
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        color,
+        size: 15,
+        maxSize: 135,
+        life: 1.0,
+        decay: 0.0035, // fast fade
+        type: 'shockwave'
+      });
+    }
 
     // 2. White flash impact center
     this.particles.push({
@@ -1440,22 +2229,184 @@ export class StackBallGame {
       type: 'flash'
     });
 
-    // 3. Tiny sparks shooting out
-    const numSparks = 20 + Math.floor(Math.random() * 15);
-    for (let i = 0; i < numSparks; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.12 + Math.random() * 0.28;
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: (Math.random() * 0.14) - 0.04, // slight upwards bias
-        color,
-        size: 2.5 + Math.random() * 3,
-        life: 1.0,
-        decay: 0.0015 + Math.random() * 0.002,
-        type: 'spark'
-      });
+    // 3. Custom Skin Particles
+    const numSparks = 22 + Math.floor(Math.random() * 15);
+    
+    if (this.activeSkin === 'magma') {
+      // Magma: lava drips + embers + dark smoke
+      for (let i = 0; i < numSparks; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.10 + Math.random() * 0.22;
+        
+        // Lava blob
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: (Math.random() * 0.12) + 0.04, // shoot up
+          color: Math.random() > 0.4 ? '#ff5500' : '#ffaa00',
+          size: 4 + Math.random() * 4,
+          life: 1.0,
+          decay: 0.0018 + Math.random() * 0.0015,
+          type: 'lava'
+        });
+
+        // Smoke puff
+        if (i < 8) {
+          this.particles.push({
+            x,
+            y: y + (Math.random() - 0.5) * 10,
+            vx: (Math.random() - 0.5) * 0.04,
+            vy: 0.03 + Math.random() * 0.04,
+            color: 'rgba(40, 40, 45, 0.4)',
+            size: 8,
+            maxSize: 32,
+            life: 1.0,
+            decay: 0.002,
+            type: 'smoke'
+          });
+        }
+      }
+    } else if (this.activeSkin === 'matrix') {
+      // Matrix: falling binary digits + green pixel squares
+      for (let i = 0; i < numSparks; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.08 + Math.random() * 0.16;
+        
+        // Binary digit particle
+        this.particles.push({
+          x: x + (Math.random() - 0.5) * 40,
+          y: y + (Math.random() - 0.5) * 10,
+          vx: Math.cos(angle) * speed,
+          vy: -0.02 - Math.random() * 0.04, // fall down
+          color: '#39ff14',
+          size: 12 + Math.random() * 4,
+          life: 1.0,
+          decay: 0.0016 + Math.random() * 0.0012,
+          type: 'binary',
+          text: Math.random() > 0.5 ? '1' : '0'
+        });
+
+        // Green pixel spark
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * (speed * 1.5),
+          vy: (Math.random() * 0.1) - 0.03,
+          color: '#20c20e',
+          size: 3 + Math.random() * 2,
+          life: 1.0,
+          decay: 0.002 + Math.random() * 0.0015,
+          type: 'spark'
+        });
+      }
+    } else if (this.activeSkin === 'saturn') {
+      // Saturn: golden stardust + gold stars
+      for (let i = 0; i < numSparks; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.12 + Math.random() * 0.25;
+        const isStar = Math.random() < 0.35;
+        
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: (Math.random() * 0.12) - 0.04,
+          color: isStar ? '#ffffff' : '#e6b85c',
+          size: isStar ? 5 + Math.random() * 4 : 2 + Math.random() * 3,
+          life: 1.0,
+          decay: isStar ? 0.0016 : 0.002,
+          type: isStar ? 'star' : 'spark'
+        });
+      }
+    } else if (this.activeSkin === 'disco') {
+      // Disco: rainbow confetti + sparkles
+      const rainbowColors = ['#ff0055', '#ffaa00', '#39ff14', '#00f0ff', '#bd00ff', '#ffffff'];
+      for (let i = 0; i < numSparks; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.12 + Math.random() * 0.28;
+        const col = rainbowColors[Math.floor(Math.random() * rainbowColors.length)];
+        const isStar = Math.random() < 0.25;
+        
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: (Math.random() * 0.15) - 0.05,
+          color: col,
+          size: isStar ? 6 + Math.random() * 4 : 3 + Math.random() * 4,
+          life: 1.0,
+          decay: 0.0015 + Math.random() * 0.0015,
+          type: isStar ? 'star' : 'confetti',
+          angle: Math.random() * Math.PI * 2
+        });
+      }
+    } else if (this.activeSkin === 'plasma') {
+      // Plasma: lightning segments + electric sparks
+      for (let i = 0; i < numSparks; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.15 + Math.random() * 0.3;
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: (Math.random() * 0.16) - 0.06,
+          color: '#d300ff',
+          size: 2 + Math.random() * 3,
+          life: 1.0,
+          decay: 0.002 + Math.random() * 0.002,
+          type: 'spark'
+        });
+      }
+      
+      // Spawn 3 lightning bolt paths connecting center to outer edges
+      for (let j = 0; j < 3; j++) {
+        const targetAng = (Math.PI * 2 / 3) * j + Math.random() * 0.5;
+        const dist = 100 + Math.random() * 40;
+        
+        // Generate zigzag points
+        const points = [{ x: 0, y: 0 }];
+        const segments = 4;
+        for (let s = 1; s <= segments; s++) {
+          const t = s / segments;
+          const currDist = dist * t;
+          const noise = (Math.random() - 0.5) * 16;
+          points.push({
+            x: Math.cos(targetAng) * currDist + Math.sin(targetAng) * noise,
+            y: Math.sin(targetAng) * currDist * 0.28 - Math.cos(targetAng) * noise * 0.28 // flatten
+          });
+        }
+        
+        this.particles.push({
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          color: '#ffffff',
+          size: 1.5,
+          life: 1.0,
+          decay: 0.006, // extremely fast lightning flash
+          type: 'lightning',
+          points
+        });
+      }
+    } else {
+      // Neon/Default cyan sparks
+      for (let i = 0; i < numSparks; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.12 + Math.random() * 0.28;
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: (Math.random() * 0.14) - 0.04,
+          color,
+          size: 2.5 + Math.random() * 3,
+          life: 1.0,
+          decay: 0.0015 + Math.random() * 0.002,
+          type: 'spark'
+        });
+      }
     }
   }
 
