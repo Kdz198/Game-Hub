@@ -56,6 +56,7 @@ export class SnakeGame {
   private shakeMag = 0;
   private screenFlash = 0;
   private time = 0;
+  private milestoneFlash: { text: string, life: number, scale: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -172,6 +173,7 @@ export class SnakeGame {
     this.floatingTexts = [];
     this.shakeTime = 0;
     this.screenFlash = 0;
+    this.milestoneFlash = null;
     this.moveInterval = this.baseMoveInterval;
     this.moveTimer = 0;
     this.isDigesting = false;
@@ -266,6 +268,14 @@ export class SnakeGame {
     if (this.shakeTime > 0) {
       this.shakeTime -= dt;
       if (this.shakeTime < 0) this.shakeTime = 0;
+    }
+
+    if (this.milestoneFlash) {
+      this.milestoneFlash.life -= dt * 0.001;
+      this.milestoneFlash.scale += (1.5 - this.milestoneFlash.scale) * 0.1;
+      if (this.milestoneFlash.life <= 0) {
+        this.milestoneFlash = null;
+      }
     }
 
     if (!this.isGameOver) {
@@ -446,8 +456,8 @@ export class SnakeGame {
       this.score += pts;
       if (this.onScore) this.onScore(this.score);
       
-      const fx = this.gridX + this.food.x * this.cellSize + this.cellSize/2;
-      const fy = this.gridY + this.food.y * this.cellSize + this.cellSize/2;
+      const fx = this.gridX + this.food.x * this.cellSize + this.cellSize/2 + (Math.random() - 0.5) * 15;
+      const fy = this.gridY + this.food.y * this.cellSize + this.cellSize/2 + (Math.random() - 0.5) * 15;
       
       this.audio.playEat();
       this.spawnFloatingText(`+${pts}`, fx, fy, this.foodColor);
@@ -456,9 +466,9 @@ export class SnakeGame {
       // Milestone check (every 100 points)
       if (Math.floor(this.score / 100) > Math.floor(oldScore / 100)) {
          this.audio.playMilestone();
-         this.triggerScreenShake(8, 300); // Mild shake
-         this.spawnFloatingText(`SPEED UP!`, this.canvas.width/2, this.canvas.height/2, '#ff007f', 36);
-         this.screenFlash = 0.3; // Slight flash
+         this.triggerScreenShake(15, 600); // Strong shake
+         this.milestoneFlash = { text: 'SPEED UP!', life: 2.0, scale: 0.1 };
+         this.screenFlash = 0.5; // Slight flash
       }
       
       // Burst some particles
@@ -650,6 +660,32 @@ export class SnakeGame {
       c.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to cover full screen
       c.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.5})`;
       c.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      c.restore();
+    }
+
+    // Draw Milestone Flash on top of everything
+    if (this.milestoneFlash) {
+      c.save();
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.translate(this.canvas.width / 2, this.canvas.height / 2);
+      c.scale(this.milestoneFlash.scale, this.milestoneFlash.scale);
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.font = `bold 60px "Orbitron", sans-serif`;
+      
+      const alpha = Math.min(1, this.milestoneFlash.life * 2);
+      c.globalAlpha = alpha;
+      
+      c.fillStyle = '#ff007f';
+      c.shadowColor = '#ff007f';
+      c.shadowBlur = 40;
+      
+      const pulse = Math.sin(this.time * 0.02) * 5;
+      c.fillText(this.milestoneFlash.text, 0, pulse);
+      
+      c.fillStyle = '#fff';
+      c.shadowBlur = 0;
+      c.fillText(this.milestoneFlash.text, 0, pulse);
       c.restore();
     }
 

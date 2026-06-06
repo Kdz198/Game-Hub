@@ -1,5 +1,6 @@
 export class AudioSynth {
   private ctx: AudioContext | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
   public enabled: boolean = true;
 
   constructor() {}
@@ -9,6 +10,13 @@ export class AudioSynth {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
         this.ctx = new AudioContextClass();
+        this.compressor = this.ctx.createDynamicsCompressor();
+        this.compressor.threshold.setValueAtTime(-15, this.ctx.currentTime);
+        this.compressor.knee.setValueAtTime(30, this.ctx.currentTime);
+        this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+        this.compressor.attack.setValueAtTime(0.005, this.ctx.currentTime);
+        this.compressor.release.setValueAtTime(0.1, this.ctx.currentTime);
+        this.compressor.connect(this.ctx.destination);
       }
     }
   }
@@ -24,7 +32,8 @@ export class AudioSynth {
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      if (this.compressor) gain.connect(this.compressor);
+      else gain.connect(this.ctx.destination);
       osc.start();
       osc.stop(this.ctx.currentTime + 0.001);
     }
@@ -53,7 +62,8 @@ export class AudioSynth {
       gain.gain.linearRampToValueAtTime(0, t + duration);
       
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      if (this.compressor) gain.connect(this.compressor);
+      else gain.connect(this.ctx.destination);
       
       osc.start(t);
       osc.stop(t + duration);
