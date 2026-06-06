@@ -12,7 +12,8 @@ export class GameLoop {
       this.lastTime = timestamp;
     }
 
-    const deltaTime = timestamp - this.lastTime;
+    let deltaTime = timestamp - this.lastTime;
+    if (deltaTime > 100) deltaTime = 100; // Cap at 100ms
     this.lastTime = timestamp;
 
     this.update(deltaTime);

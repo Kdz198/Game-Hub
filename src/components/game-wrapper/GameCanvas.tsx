@@ -47,11 +47,15 @@ export default function GameCanvas() {
     if (!canvasRef.current) return;
     const game = new FlappyBirdGame(canvasRef.current);
     
-    const handleResize = () => {
-      const wrapper = canvasRef.current?.parentElement;
-      if (wrapper) game.resize(wrapper.clientWidth, wrapper.clientHeight);
-    };
-    window.addEventListener('resize', handleResize);
+    const wrapper = canvasRef.current.parentElement;
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+          game.resize(entry.contentRect.width, entry.contentRect.height);
+        }
+      }
+    });
+    if (wrapper) resizeObserver.observe(wrapper);
     
     game.onScore = (s) => setScore(s);
     game.onGameOver = (s, b) => {
@@ -93,7 +97,7 @@ export default function GameCanvas() {
     gameRef.current = game;
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      if (wrapper) resizeObserver.disconnect();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('blur', handleBlur);
       game.destroy();
