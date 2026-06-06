@@ -43,9 +43,9 @@ export class AudioSynth {
     }
 
     // Pre-render sound buffers
-    this.buffers.eat       = this.renderBuffer(ctx, 0.12, this.genEat);
+    this.buffers.eat       = this.renderBuffer(ctx, 0.20, this.genEat);
     this.buffers.crash     = this.renderBuffer(ctx, 0.50, this.genCrash);
-    this.buffers.milestone = this.renderBuffer(ctx, 0.30, this.genMilestone);
+    this.buffers.milestone = this.renderBuffer(ctx, 0.35, this.genMilestone);
 
     console.log('[AUDIO] unlocked — sampleRate:', ctx.sampleRate, 'state:', ctx.state);
   }
@@ -114,22 +114,29 @@ export class AudioSynth {
 
   /* ── waveform generators (pure functions, t in seconds) ────── */
 
+  /** Retro blip: two-tone square wave beep */
   private genEat(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
-    const freq = 880 + 2000 * (t / dur);
-    return Math.sin(2 * Math.PI * freq * t) * env;
+    // Two-tone: 1000Hz for first half, 1400Hz for second half
+    const freq = t < dur * 0.5 ? 1000 : 1400;
+    const square = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
+    return square * env * 0.8;
   }
 
   private genCrash(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
-    const freq = 150 * Math.pow(0.1, t / dur);
+    const freq = 200 * Math.pow(0.05, t / dur);
     const phase = freq * t;
-    return (2 * (phase - Math.floor(phase)) - 1) * env;
+    return (2 * (phase - Math.floor(phase)) - 1) * env * 0.9;
   }
 
   private genMilestone(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
-    const freq = 440 + 880 * (t / dur);
-    return Math.sin(2 * Math.PI * freq * t) * env;
+    // Three rising tones
+    let freq = 600;
+    if (t > dur * 0.33) freq = 900;
+    if (t > dur * 0.66) freq = 1200;
+    const square = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
+    return square * env * 0.7;
   }
 }
