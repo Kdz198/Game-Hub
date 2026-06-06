@@ -2,9 +2,7 @@ export class AudioSynth {
   private ctx: AudioContext | null = null;
   public enabled: boolean = true;
 
-  constructor() {
-    // AudioContext is initialized lazily to comply with browser autoplay policies
-  }
+  constructor() {}
 
   private init() {
     if (!this.ctx) {
@@ -13,16 +11,15 @@ export class AudioSynth {
         this.ctx = new AudioContextClass();
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
   }
 
   public unlock() {
     if (!this.enabled) return;
     this.init();
     if (this.ctx) {
-      // Play a silent note immediately to unlock audio engine on mobile/desktop
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
@@ -33,72 +30,54 @@ export class AudioSynth {
     }
   }
 
-  public playEat() {
+  private scheduleSound(type: OscillatorType, freq1: number, freq2: number, duration: number, vol: number) {
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;
 
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, t);
-    osc.frequency.linearRampToValueAtTime(1200, t + 0.1);
-    
-    gain.gain.setValueAtTime(0.3, t);
-    gain.gain.linearRampToValueAtTime(0, t + 0.1);
-    
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    osc.start(t);
-    osc.stop(t + 0.1);
+    const play = () => {
+      if (!this.ctx) return;
+      // Schedule slightly in the future (20ms) to ensure the audio engine doesn't drop the frame
+      const t = this.ctx.currentTime + 0.02; 
+      
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq1, t);
+      if (freq1 !== freq2) {
+         osc.frequency.linearRampToValueAtTime(freq2, t + duration);
+      }
+      
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.linearRampToValueAtTime(0, t + duration);
+      
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      
+      osc.start(t);
+      osc.stop(t + duration);
+    };
+
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().then(play).catch(() => {});
+    } else {
+      play();
+    }
+  }
+
+  public playEat() {
+    // A slightly louder and longer square wave for retro beep
+    this.scheduleSound('square', 800, 1200, 0.15, 0.15);
   }
 
   public playCrash() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, t);
-    osc.frequency.linearRampToValueAtTime(10, t + 0.5);
-    
-    gain.gain.setValueAtTime(0.5, t);
-    gain.gain.linearRampToValueAtTime(0, t + 0.5);
-    
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    osc.start(t);
-    osc.stop(t + 0.5);
+    // Distorted drop
+    this.scheduleSound('sawtooth', 150, 10, 0.5, 0.4);
   }
 
   public playMilestone() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(400, t);
-    osc.frequency.linearRampToValueAtTime(800, t + 0.3);
-    
-    gain.gain.setValueAtTime(0.2, t);
-    gain.gain.linearRampToValueAtTime(0, t + 0.3);
-    
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    osc.start(t);
-    osc.stop(t + 0.3);
+    // Chime
+    this.scheduleSound('square', 400, 800, 0.3, 0.15);
   }
 }
