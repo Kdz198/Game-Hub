@@ -28,14 +28,14 @@ export default function Home() {
       players: "2,514"
     },
     {
-      id: "co-tuong",
-      title: "CYBER CHESS",
-      category: "TACTICAL / MULTIPLAYER",
-      description: "Đấu trí chiến thuật trên sa bàn điện tử hologram.",
-      icon: "♟️",
+      id: "snake",
+      title: "TRON SNAKE",
+      category: "ARCADE / SURVIVAL",
+      description: "Điều khiển Lightcycle thu thập Data Packets trên ma trận lưới không gian ảo.",
+      icon: "🏍️",
       neonColor: "#39ff14", // Neon Green
-      status: "COMING SOON",
-      players: "--"
+      status: "ONLINE",
+      players: "1,890"
     },
     {
       id: "racer",

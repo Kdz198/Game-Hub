@@ -1,0 +1,480 @@
+import { GameLoop } from "../../engine/GameLoop";
+
+type Point = { x: number; y: number };
+
+const COLORS = [
+  '#00f0ff', // Cyan
+  '#ff007f', // Pink
+  '#39ff14', // Green
+  '#fff01f', // Yellow
+];
+
+export class SnakeGame {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private loop: GameLoop;
+  
+  public score = 0;
+  public isGameOver = false;
+  public onGameOver?: (score: number, bestScore: number) => void;
+  public onScore?: (score: number) => void;
+
+  // Grid
+  private cellSize = 25;
+  private gridCols = 0;
+  private gridRows = 0;
+  private gridX = 0;
+  private gridY = 0;
+
+  // Snake
+  private snake: Point[] = [];
+  private dx = 1;
+  private dy = 0;
+  private nextDx = 1;
+  private nextDy = 0;
+  private baseMoveInterval = 120; // ms
+  private moveInterval = 120;
+  private moveTimer = 0;
+
+  // Food
+  private food: Point | null = null;
+  private foodColor = COLORS[0];
+  private foodPulse = 0;
+
+  // VFX
+  private particles: any[] = [];
+  private floatingTexts: any[] = [];
+  private shakeTime = 0;
+  private shakeMag = 0;
+  private screenFlash = 0;
+  private time = 0;
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D context not found");
+    this.ctx = ctx;
+
+    this.calculateLayout();
+    this.attachEvents();
+    
+    this.loop = new GameLoop(
+      this.update.bind(this),
+      this.draw.bind(this)
+    );
+  }
+
+  private calculateLayout() {
+    // Fill the screen but ensure it's divisible by cellSize
+    const maxGridWidth = this.canvas.width * 0.95;
+    const maxGridHeight = this.canvas.height * 0.75; // Leave top for HUD
+    
+    this.gridCols = Math.floor(maxGridWidth / this.cellSize);
+    this.gridRows = Math.floor(maxGridHeight / this.cellSize);
+    
+    const totalW = this.gridCols * this.cellSize;
+    const totalH = this.gridRows * this.cellSize;
+    
+    this.gridX = (this.canvas.width - totalW) / 2;
+    this.gridY = (this.canvas.height * 0.55) - (totalH / 2); 
+  }
+
+  private attachEvents() {
+    window.addEventListener('resize', this.onResize);
+    window.addEventListener('keydown', this.onKeyDown);
+    
+    // Simple swipe logic for mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    this.canvas.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, {passive: true});
+    this.canvas.addEventListener('touchend', (e) => {
+      if (this.isGameOver) return;
+      let touchEndX = e.changedTouches[0].screenX;
+      let touchEndY = e.changedTouches[0].screenY;
+      this.handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+    }, {passive: true});
+  }
+
+  public destroy() {
+    this.loop.stop();
+    window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('keydown', this.onKeyDown);
+  }
+
+  private onResize = () => {
+    // Only resize layout, don't restart game
+    // A robust game might recalculate grid and snap snake to bounds, 
+    // but for simplicity we assume canvas size is mostly static during play.
+  }
+
+  private onKeyDown = (e: KeyboardEvent) => {
+    if (this.isGameOver) return;
+    switch(e.key) {
+      case 'ArrowUp':
+      case 'w':
+      case 'W':
+        if (this.dy === 0) { this.nextDx = 0; this.nextDy = -1; }
+        break;
+      case 'ArrowDown':
+      case 's':
+      case 'S':
+        if (this.dy === 0) { this.nextDx = 0; this.nextDy = 1; }
+        break;
+      case 'ArrowLeft':
+      case 'a':
+      case 'A':
+        if (this.dx === 0) { this.nextDx = -1; this.nextDy = 0; }
+        break;
+      case 'ArrowRight':
+      case 'd':
+      case 'D':
+        if (this.dx === 0) { this.nextDx = 1; this.nextDy = 0; }
+        break;
+    }
+  }
+
+  private handleSwipe(sx: number, sy: number, ex: number, ey: number) {
+    const dx = ex - sx;
+    const dy = ey - sy;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal swipe
+      if (dx > 0 && this.dx === 0) { this.nextDx = 1; this.nextDy = 0; }
+      else if (dx < 0 && this.dx === 0) { this.nextDx = -1; this.nextDy = 0; }
+    } else {
+      // Vertical swipe
+      if (dy > 0 && this.dy === 0) { this.nextDx = 0; this.nextDy = 1; }
+      else if (dy < 0 && this.dy === 0) { this.nextDx = 0; this.nextDy = -1; }
+    }
+  }
+
+  public start() {
+    this.reset();
+    this.loop.start();
+  }
+
+  public reset() {
+    this.calculateLayout();
+    this.score = 0;
+    this.isGameOver = false;
+    this.particles = [];
+    this.floatingTexts = [];
+    this.shakeTime = 0;
+    this.screenFlash = 0;
+    this.moveInterval = this.baseMoveInterval;
+    this.moveTimer = 0;
+
+    // Start in middle
+    const startX = Math.floor(this.gridCols / 2);
+    const startY = Math.floor(this.gridRows / 2);
+    
+    this.snake = [
+      {x: startX, y: startY},
+      {x: startX - 1, y: startY},
+      {x: startX - 2, y: startY}
+    ];
+    this.dx = 1;
+    this.dy = 0;
+    this.nextDx = 1;
+    this.nextDy = 0;
+
+    this.spawnFood();
+    if (this.onScore) this.onScore(this.score);
+  }
+
+  private spawnFood() {
+    let valid = false;
+    let attempts = 0;
+    while (!valid && attempts < 100) {
+      const rx = Math.floor(Math.random() * this.gridCols);
+      const ry = Math.floor(Math.random() * this.gridRows);
+      
+      // Check if it overlaps snake
+      let overlap = this.snake.some(s => s.x === rx && s.y === ry);
+      if (!overlap) {
+        this.food = {x: rx, y: ry};
+        this.foodColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+        valid = true;
+      }
+      attempts++;
+    }
+  }
+
+  private triggerGameOver() {
+    this.isGameOver = true;
+    this.screenFlash = 1.0;
+    this.triggerScreenShake(20, 600);
+    
+    // Explode snake head
+    const head = this.snake[0];
+    const px = this.gridX + head.x * this.cellSize + this.cellSize/2;
+    const py = this.gridY + head.y * this.cellSize + this.cellSize/2;
+    for(let i=0; i<80; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 15 + 2;
+      this.particles.push({
+        x: px, y: py,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1.0,
+        color: '#ff007f', // Red/Pink death explosion
+        size: Math.random() * 6 + 2
+      });
+    }
+
+    if (this.onGameOver) {
+      const best = parseInt(localStorage.getItem('snakeBest') || '0');
+      if (this.score > best) {
+        localStorage.setItem('snakeBest', this.score.toString());
+      }
+      this.onGameOver(this.score, Math.max(best, this.score));
+    }
+  }
+
+  private triggerScreenShake(magnitude: number, duration: number) {
+    this.shakeMag = magnitude;
+    this.shakeTime = duration;
+  }
+
+  private spawnFloatingText(text: string, x: number, y: number, color: string, size: number = 24) {
+    this.floatingTexts.push({
+      text, x, y, color, life: 1.0, size
+    });
+  }
+
+  private update(dt: number) {
+    this.time += dt;
+
+    if (this.screenFlash > 0) {
+      this.screenFlash -= dt * 0.002;
+      if (this.screenFlash < 0) this.screenFlash = 0;
+    }
+
+    if (this.shakeTime > 0) {
+      this.shakeTime -= dt;
+      if (this.shakeTime < 0) this.shakeTime = 0;
+    }
+
+    if (!this.isGameOver) {
+      this.moveTimer += dt;
+      if (this.moveTimer >= this.moveInterval) {
+        this.moveTimer = 0;
+        this.moveSnake();
+      }
+    }
+
+    // Update particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      let p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.95; 
+      p.vy *= 0.95;
+      p.life -= dt * 0.0015;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+
+    // Update floating texts
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      let ft = this.floatingTexts[i];
+      ft.y -= dt * 0.05;
+      ft.life -= dt * 0.0015;
+      if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+    }
+  }
+
+  private moveSnake() {
+    this.dx = this.nextDx;
+    this.dy = this.nextDy;
+    
+    const head = this.snake[0];
+    const newHead = { x: head.x + this.dx, y: head.y + this.dy };
+    
+    // Check wall collision
+    if (newHead.x < 0 || newHead.x >= this.gridCols || newHead.y < 0 || newHead.y >= this.gridRows) {
+      this.triggerGameOver();
+      return;
+    }
+    
+    // Check self collision
+    // (don't check last tail segment because it will move forward)
+    for (let i = 0; i < this.snake.length - 1; i++) {
+      if (this.snake[i].x === newHead.x && this.snake[i].y === newHead.y) {
+        this.triggerGameOver();
+        return;
+      }
+    }
+
+    this.snake.unshift(newHead);
+
+    // Check food collision
+    if (this.food && newHead.x === this.food.x && newHead.y === this.food.y) {
+      // Eat food
+      const pts = 10;
+      this.score += pts;
+      if (this.onScore) this.onScore(this.score);
+      
+      const fx = this.gridX + this.food.x * this.cellSize + this.cellSize/2;
+      const fy = this.gridY + this.food.y * this.cellSize + this.cellSize/2;
+      
+      this.spawnFloatingText(`+${pts}`, fx, fy, this.foodColor);
+      this.triggerScreenShake(3, 100);
+      
+      // Burst some particles
+      for(let i=0; i<15; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 8 + 2;
+        this.particles.push({
+          x: fx, y: fy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1.0,
+          color: this.foodColor,
+          size: Math.random() * 4 + 2
+        });
+      }
+
+      this.spawnFood();
+      
+      // Speed up slightly
+      if (this.moveInterval > 50) {
+        this.moveInterval -= 2; // Increase speed
+      }
+    } else {
+      // Not eating, remove tail
+      this.snake.pop();
+    }
+  }
+
+  private draw() {
+    const c = this.ctx;
+    c.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    c.save();
+    if (this.shakeTime > 0) {
+      const sx = (Math.random() - 0.5) * this.shakeMag;
+      const sy = (Math.random() - 0.5) * this.shakeMag;
+      c.translate(sx, sy);
+    }
+
+    // Background Grid
+    c.save();
+    c.strokeStyle = 'rgba(0, 240, 255, 0.05)';
+    c.lineWidth = 1;
+    for (let r=0; r<=this.gridRows; r++) {
+      c.beginPath();
+      c.moveTo(this.gridX, this.gridY + r*this.cellSize);
+      c.lineTo(this.gridX + this.gridCols*this.cellSize, this.gridY + r*this.cellSize);
+      c.stroke();
+    }
+    for (let col=0; col<=this.gridCols; col++) {
+      c.beginPath();
+      c.moveTo(this.gridX + col*this.cellSize, this.gridY);
+      c.lineTo(this.gridX + col*this.cellSize, this.gridY + this.gridRows*this.cellSize);
+      c.stroke();
+    }
+    
+    // Grid Border (Arena)
+    c.strokeStyle = 'rgba(0, 240, 255, 0.3)';
+    c.lineWidth = 2;
+    c.shadowColor = '#00f0ff';
+    c.shadowBlur = 10;
+    c.strokeRect(this.gridX, this.gridY, this.gridCols*this.cellSize, this.gridRows*this.cellSize);
+    c.restore();
+
+    // Draw Food
+    if (this.food) {
+      c.save();
+      const fx = this.gridX + this.food.x * this.cellSize;
+      const fy = this.gridY + this.food.y * this.cellSize;
+      
+      this.foodPulse += 0.1;
+      const scale = (Math.sin(this.foodPulse) + 1) / 2 * 0.2 + 0.8; // 0.8 to 1.0
+      
+      c.translate(fx + this.cellSize/2, fy + this.cellSize/2);
+      c.scale(scale, scale);
+      
+      c.fillStyle = this.foodColor;
+      c.shadowColor = this.foodColor;
+      c.shadowBlur = 15;
+      
+      // Diamond shape
+      c.beginPath();
+      c.moveTo(0, -this.cellSize/3);
+      c.lineTo(this.cellSize/3, 0);
+      c.lineTo(0, this.cellSize/3);
+      c.lineTo(-this.cellSize/3, 0);
+      c.fill();
+      c.restore();
+    }
+
+    // Draw Snake
+    c.save();
+    if (this.snake.length > 0) {
+      // Draw neon trail (Line)
+      c.beginPath();
+      c.strokeStyle = '#00f0ff'; // Neon Cyan
+      c.lineWidth = this.cellSize * 0.6;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      
+      const head = this.snake[0];
+      c.moveTo(this.gridX + head.x * this.cellSize + this.cellSize/2, this.gridY + head.y * this.cellSize + this.cellSize/2);
+      
+      for (let i=1; i<this.snake.length; i++) {
+        c.lineTo(this.gridX + this.snake[i].x * this.cellSize + this.cellSize/2, this.gridY + this.snake[i].y * this.cellSize + this.cellSize/2);
+      }
+      
+      c.shadowColor = '#00f0ff';
+      c.shadowBlur = 15;
+      c.stroke();
+
+      // Draw glowing head
+      c.fillStyle = '#fff';
+      c.shadowColor = '#fff';
+      c.shadowBlur = 20;
+      c.beginPath();
+      c.arc(this.gridX + head.x * this.cellSize + this.cellSize/2, this.gridY + head.y * this.cellSize + this.cellSize/2, this.cellSize * 0.4, 0, Math.PI*2);
+      c.fill();
+    }
+    c.restore();
+
+    // Draw Particles
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (let p of this.particles) {
+      c.fillStyle = p.color;
+      c.globalAlpha = p.life;
+      c.shadowColor = p.color;
+      c.shadowBlur = 10;
+      c.fillRect(p.x, p.y, p.size, p.size);
+    }
+    c.restore();
+
+    // Draw Floating Texts
+    c.save();
+    c.textAlign = 'center';
+    for (let ft of this.floatingTexts) {
+      c.font = `bold ${ft.size}px "Orbitron", sans-serif`;
+      c.fillStyle = ft.color;
+      c.globalAlpha = ft.life;
+      c.shadowColor = ft.color;
+      c.shadowBlur = 15;
+      c.fillText(ft.text, ft.x, ft.y);
+    }
+    c.restore();
+
+    // Draw Screen Flash
+    if (this.screenFlash > 0) {
+      c.save();
+      c.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to cover full screen
+      c.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.5})`;
+      c.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      c.restore();
+    }
+
+    c.restore();
+  }
+}
