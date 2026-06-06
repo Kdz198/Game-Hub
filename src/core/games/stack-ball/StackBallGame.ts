@@ -394,8 +394,10 @@ export class StackBallGame {
 
     // Smooth camera tracking
     // Keep camera centered on the active platform
-    const activePlatformY = this.platforms[this.currentPlatformIndex].y;
-    this.targetCameraY = activePlatformY + 32;
+    if (this.currentPlatformIndex >= 0) {
+      const activePlatformY = this.platforms[this.currentPlatformIndex].y;
+      this.targetCameraY = activePlatformY + 32;
+    }
     this.cameraY += (this.targetCameraY - this.cameraY) * 0.0065 * dt;
   }
 
