@@ -22,17 +22,22 @@ export default function RootLayout({
       <body className={`${inter.className} ${styles.bodyBg}`}>
         <div className={styles.appContainer}>
           <header className={`${styles.header} glass-panel`}>
-            <div className={styles.logo}>
-              <span className={styles.logoIcon}>🎮</span>
-              <h1 className={orbitron.className}>GAME<span className={styles.neonTextPink}>HUB</span></h1>
+            <div className={styles.logoContainer}>
+              <div className={styles.logo}>
+                <h1 className={orbitron.className}>NEXUS</h1>
+              </div>
             </div>
+            
             <nav className={`${styles.nav} ${rajdhani.className}`}>
               <a href="/">HOME</a>
               <a href="/categories">GAMES</a>
               <a href="/multiplayer">ONLINE</a>
             </nav>
-            <div className={styles.userProfile}>
-              <div className={styles.avatar}></div>
+            
+            <div className={styles.profileContainer}>
+              <div className={styles.userProfile}>
+                <div className={styles.avatar}></div>
+              </div>
             </div>
           </header>
           <main className={styles.mainContent}>
