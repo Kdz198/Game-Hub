@@ -109,6 +109,7 @@ export class SnakeGame {
 
   public destroy() {
     this.loop.stop();
+    this.audio.destroy();
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
   }
