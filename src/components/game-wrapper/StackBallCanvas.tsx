@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { StackBallGame } from '@/core/games/stack-ball/StackBallGame';
+import { StackBallGame, BallSkin } from '@/core/games/stack-ball/StackBallGame';
 import styles from './StackBallCanvas.module.css';
 import Link from 'next/link';
 import { Orbitron } from 'next/font/google';
@@ -8,6 +8,23 @@ import { Orbitron } from 'next/font/google';
 const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] });
 
 type GameState = 'MENU' | 'PLAYING' | 'GAME_OVER' | 'LEVEL_COMPLETE';
+
+interface SkinOption {
+  id: BallSkin;
+  name: string;
+  icon: string;
+  desc: string;
+  color: string;
+}
+
+const SKINS: SkinOption[] = [
+  { id: 'neon', name: 'NEON ORB', icon: '🔵', desc: 'Vành đai Neon Cyan phát sáng', color: '#00f0ff' },
+  { id: 'magma', name: 'MAGMA CORE', icon: '🔥', desc: 'Dung nham nóng chảy & bụi lửa', color: '#ff4500' },
+  { id: 'matrix', name: 'MATRIX CUBE', icon: '🟩', desc: 'Khối lập phương hacker 3D xoay', color: '#39ff14' },
+  { id: 'saturn', name: 'SATURN RING', icon: '🪐', desc: 'Hành tinh vành đai trọng lực', color: '#e6b85c' },
+  { id: 'disco', name: 'DISCO GLITTER', icon: '🪩', desc: 'Kính đa diện phản chiếu đa sắc', color: '#ff00ff' },
+  { id: 'plasma', name: 'PLASMA ARC', icon: '⚡', desc: 'Năng lượng tím & tia sét điện', color: '#bd00ff' },
+];
 
 export default function StackBallCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,6 +36,7 @@ export default function StackBallCanvas() {
   const [level, setLevel] = useState(1);
   const [fever, setFever] = useState(0);
   const [progress, setProgress] = useState(0); // 0 to 100
+  const [selectedSkin, setSelectedSkin] = useState<BallSkin>('neon');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -57,8 +75,24 @@ export default function StackBallCanvas() {
     };
   }, []);
 
+  // Load saved skin on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('stackBallActiveSkin');
+    if (saved && SKINS.some(s => s.id === saved)) {
+      setSelectedSkin(saved as BallSkin);
+    }
+  }, []);
+
+  // Sync activeSkin to game instance when selectedSkin changes
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.activeSkin = selectedSkin;
+    }
+  }, [selectedSkin]);
+
   const startGame = () => {
     if (gameRef.current) {
+      gameRef.current.activeSkin = selectedSkin;
       gameRef.current.start();
       setGameState('PLAYING');
     }
@@ -66,6 +100,7 @@ export default function StackBallCanvas() {
 
   const handleRestart = () => {
     if (gameRef.current) {
+      gameRef.current.activeSkin = selectedSkin;
       gameRef.current.restart();
       setGameState('PLAYING');
     }
@@ -73,6 +108,7 @@ export default function StackBallCanvas() {
 
   const handleNextLevel = () => {
     if (gameRef.current) {
+      gameRef.current.activeSkin = selectedSkin;
       gameRef.current.nextLevel();
       setProgress(0);
       setGameState('PLAYING');
@@ -173,23 +209,55 @@ export default function StackBallCanvas() {
       {/* MENU STATE OVERLAY */}
       {gameState === 'MENU' && (
         <div className={styles.overlay}>
-          <div className={styles.glassPanel}>
+          <div className={`${styles.glassPanel} ${styles.menuPanel}`}>
             <h1 className={`${styles.title} ${orbitron.className}`}>STACK_BALL</h1>
             <p className={styles.subtitle}>THÁP NEON LỰC LY TÂM • V1.0</p>
-            <div className={styles.gameRules}>
-              <div className={styles.ruleItem}>
-                <span className={styles.ruleIcon}>🥎</span>
-                <span>Giữ chuột / phím Cách để quả bóng đâm sầm đập vỡ đĩa.</span>
+            
+            <div className={styles.panelContent}>
+              {/* Left Column: Rules */}
+              <div className={styles.rulesCol}>
+                <h3 className={`${styles.colTitle} ${orbitron.className}`}>LUẬT CHƠI</h3>
+                <div className={styles.gameRules}>
+                  <div className={styles.ruleItem}>
+                    <span className={styles.ruleIcon}>🥎</span>
+                    <span>Giữ chuột / phím Cách để quả bóng đâm sầm đập vỡ đĩa.</span>
+                  </div>
+                  <div className={styles.ruleItem}>
+                    <span className={styles.ruleIcon}>🖤</span>
+                    <span>Né các miếng đĩa màu đen, nếu đâm vào là tạch!</span>
+                  </div>
+                  <div className={styles.ruleItem}>
+                    <span className={styles.ruleIcon}>🔥</span>
+                    <span>Combo liên tục kích hoạt FEVER MODE siêu càn quét!</span>
+                  </div>
+                </div>
               </div>
-              <div className={styles.ruleItem}>
-                <span className={styles.ruleIcon}>🖤</span>
-                <span>Né các miếng đĩa màu đen, nếu đâm vào là tạch!</span>
-              </div>
-              <div className={styles.ruleItem}>
-                <span className={styles.ruleIcon}>🔥</span>
-                <span>Đập vỡ liên tiếp để kích hoạt FEVER MODE hủy diệt cả miếng đen!</span>
+
+              {/* Right Column: Skin Selection */}
+              <div className={styles.skinsCol}>
+                <h3 className={`${styles.colTitle} ${orbitron.className}`}>SKIN QUẢ BÓNG</h3>
+                <div className={styles.skinGrid}>
+                  {SKINS.map((skin) => (
+                    <button
+                      key={skin.id}
+                      className={`${styles.skinCard} ${selectedSkin === skin.id ? styles.skinCardActive : ''}`}
+                      style={{ '--skin-glow': skin.color } as any}
+                      onClick={() => {
+                        setSelectedSkin(skin.id);
+                        localStorage.setItem('stackBallActiveSkin', skin.id);
+                      }}
+                    >
+                      <span className={styles.skinIcon}>{skin.icon}</span>
+                      <div className={styles.skinInfo}>
+                        <span className={`${styles.skinName} ${orbitron.className}`}>{skin.name}</span>
+                        <span className={styles.skinDesc}>{skin.desc}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+
             <button className={`${styles.cyberButton} ${orbitron.className}`} onClick={startGame}>
               INITIALIZE_GAME
             </button>

@@ -359,3 +359,144 @@
 .greenBtn:hover {
   box-shadow: 0 0 30px rgba(57, 255, 20, 0.75);
 }
+
+/* ── Menu Layout & Skin Selector ────────────────────────────────── */
+
+.menuPanel {
+  max-width: 860px; /* wider to accommodate two columns */
+  padding: 32px 40px;
+}
+
+.panelContent {
+  display: flex;
+  gap: 32px;
+  width: 100%;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.rulesCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.skinsCol {
+  flex: 1.35;
+  display: flex;
+  flex-direction: column;
+}
+
+.colTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 2px;
+  margin: 0 0 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+
+.skinGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.skinCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  background-clip: padding-box;
+}
+
+.skinCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.skinCardActive {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--skin-glow, #00f0ff);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.1),
+              inset 0 0 8px rgba(0, 240, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.skinCardActive::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--skin-glow, #00f0ff);
+  box-shadow: 0 0 6px var(--skin-glow, #00f0ff);
+}
+
+.skinIcon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+}
+
+.skinInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.skinName {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skinCardActive .skinName {
+  color: var(--skin-glow, #ffffff);
+  text-shadow: 0 0 8px var(--skin-glow);
+}
+
+.skinDesc {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .menuPanel {
+    max-width: 95%;
+    padding: 24px;
+    overflow-y: auto;
+    max-height: 90vh;
+  }
+  .panelContent {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .skinGrid {
+    grid-template-columns: 1fr;
+  }
+}
