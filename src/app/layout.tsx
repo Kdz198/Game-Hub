@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Orbitron, Rajdhani } from "next/font/google";
 import "./globals.css";
 import styles from "./layout.module.css";
+import HeaderControls from "@/components/layout/HeaderControls";
 
 const inter = Inter({ subsets: ["latin"] });
+const orbitron = Orbitron({ subsets: ["latin"], weight: ["400", "700", "900"] });
+const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["500", "700"] });
 
 export const metadata: Metadata = {
   title: "Game Hub Premium",
@@ -17,20 +20,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} ${styles.bodyBg}`}>
         <div className={styles.appContainer}>
           <header className={`${styles.header} glass-panel`}>
             <div className={styles.logo}>
               <span className={styles.logoIcon}>🎮</span>
-              <h1>Game Hub</h1>
+              <h1 className={orbitron.className}>GAME<span className={styles.neonTextPink}>HUB</span></h1>
             </div>
-            <nav className={styles.nav}>
-              <a href="/">Trang Chủ</a>
-              <a href="/categories">Danh Mục</a>
-              <a href="/multiplayer">Multiplayer</a>
+            <nav className={`${styles.nav} ${rajdhani.className}`}>
+              <a href="/">HOME</a>
+              <a href="/categories">GAMES</a>
+              <a href="/multiplayer">ONLINE</a>
             </nav>
             <div className={styles.userProfile}>
               <div className={styles.avatar}></div>
+              <HeaderControls />
             </div>
           </header>
           <main className={styles.mainContent}>

@@ -123,6 +123,8 @@ export const SKINS_CONFIG: Record<BirdSkin, any> = {
 class AudioSystem {
     private ctx: AudioContext | null = null;
     public isMuted = false;
+    public masterBgmVolume = 1.0;
+    public masterVfxVolume = 1.0;
     public bgmAudio: HTMLAudioElement | null = null;
     
     public init() {
@@ -130,6 +132,11 @@ class AudioSystem {
             this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
             this.bgmAudio = new Audio('/bgm.mp3');
             this.bgmAudio.loop = true;
+            
+            const savedBgm = localStorage.getItem('sys_bgm_vol');
+            const savedVfx = localStorage.getItem('sys_vfx_vol');
+            if (savedBgm) this.masterBgmVolume = parseFloat(savedBgm);
+            if (savedVfx) this.masterVfxVolume = parseFloat(savedVfx);
         }
         if (this.ctx?.state === 'suspended') {
             this.ctx.resume();
@@ -138,23 +145,25 @@ class AudioSystem {
 
     public updateBgm(state: 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER') {
         if (!this.bgmAudio) return;
-        if (this.isMuted) {
+        if (this.isMuted || this.masterBgmVolume === 0) {
             this.bgmAudio.pause();
             return;
         }
+        let targetVol = 0;
         switch (state) {
-            case 'MENU': this.bgmAudio.volume = 0.4; break;
-            case 'PLAYING': this.bgmAudio.volume = 0.7; break;
-            case 'PAUSED': this.bgmAudio.volume = 0.2; break;
-            case 'GAME_OVER': this.bgmAudio.volume = 0.15; break;
+            case 'MENU': targetVol = 0.6; break;
+            case 'PLAYING': targetVol = 1.0; break;
+            case 'PAUSED': targetVol = 0.3; break;
+            case 'GAME_OVER': targetVol = 0.2; break;
         }
+        this.bgmAudio.volume = targetVol * this.masterBgmVolume;
         if (this.bgmAudio.paused) {
             this.bgmAudio.play().catch(e => console.log("BGM autoplay blocked until interaction"));
         }
     }
     
     public playFlap() {
-        if (this.isMuted || !this.ctx) return;
+        if (this.isMuted || !this.ctx || this.masterVfxVolume === 0) return;
         const osc = this.ctx.createOscillator();
         const gainNode = this.ctx.createGain();
         osc.connect(gainNode);
@@ -162,14 +171,14 @@ class AudioSystem {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(150, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.12);
-        gainNode.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.3 * this.masterVfxVolume, this.ctx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
         osc.start();
         osc.stop(this.ctx.currentTime + 0.13);
     }
 
     public playScore() {
-        if (this.isMuted || !this.ctx) return;
+        if (this.isMuted || !this.ctx || this.masterVfxVolume === 0) return;
         const osc = this.ctx.createOscillator();
         const gainNode = this.ctx.createGain();
         osc.connect(gainNode);
@@ -178,15 +187,15 @@ class AudioSystem {
         const t = this.ctx.currentTime;
         osc.frequency.setValueAtTime(523.25, t);
         osc.frequency.setValueAtTime(783.99, t + 0.08);
-        gainNode.gain.setValueAtTime(0.15, t);
-        gainNode.gain.setValueAtTime(0.15, t + 0.08);
+        gainNode.gain.setValueAtTime(0.15 * this.masterVfxVolume, t);
+        gainNode.gain.setValueAtTime(0.15 * this.masterVfxVolume, t + 0.08);
         gainNode.gain.exponentialRampToValueAtTime(0.005, t + 0.25);
         osc.start();
         osc.stop(t + 0.26);
     }
 
     public playHit() {
-        if (this.isMuted || !this.ctx) return;
+        if (this.isMuted || !this.ctx || this.masterVfxVolume === 0) return;
         const bufferSize = this.ctx.sampleRate * 0.2;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -198,7 +207,7 @@ class AudioSystem {
         filter.frequency.setValueAtTime(800, this.ctx.currentTime);
         filter.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.2);
         const gainNode = this.ctx.createGain();
-        gainNode.gain.setValueAtTime(0.4, this.ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.4 * this.masterVfxVolume, this.ctx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
         noiseNode.connect(filter);
         filter.connect(gainNode);
@@ -208,7 +217,7 @@ class AudioSystem {
     }
 
     public playGameOver() {
-        if (this.isMuted || !this.ctx) return;
+        if (this.isMuted || !this.ctx || this.masterVfxVolume === 0) return;
         const t = this.ctx.currentTime;
         const notes = [293.66, 261.63, 220.00, 174.61];
         notes.forEach((freq, index) => {
@@ -219,8 +228,8 @@ class AudioSystem {
             gainNode.connect(this.ctx.destination);
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(freq, t + index * 0.15);
-            gainNode.gain.setValueAtTime(0.1, t + index * 0.15);
-            gainNode.gain.setValueAtTime(0.1, t + index * 0.15 + 0.1);
+            gainNode.gain.setValueAtTime(0.1 * this.masterVfxVolume, t + index * 0.15);
+            gainNode.gain.setValueAtTime(0.1 * this.masterVfxVolume, t + index * 0.15 + 0.1);
             gainNode.gain.exponentialRampToValueAtTime(0.005, t + index * 0.15 + 0.15);
             osc.start(t + index * 0.15);
             osc.stop(t + index * 0.15 + 0.16);

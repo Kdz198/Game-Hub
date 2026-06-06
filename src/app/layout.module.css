@@ -2,7 +2,16 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow-y: auto;
+  overflow-y: hidden;
+}
+
+.bodyBg {
+  background-color: #030107;
+}
+
+.neonTextPink {
+  color: #ff007f;
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.6);
 }
 
 .header {
@@ -11,9 +20,13 @@
   align-items: center;
   padding: 1rem 2rem;
   margin: 1rem 2rem;
-  position: sticky;
-  top: 1rem;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
+  background: rgba(15, 10, 28, 0.4) !important;
+  border-color: rgba(0, 240, 255, 0.2) !important;
 }
 
 .logo {
@@ -27,12 +40,12 @@
 }
 
 .logo h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(90deg, #fff, var(--accent-color));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #00f0ff;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
   margin: 0;
+  letter-spacing: 1.5px;
 }
 
 .nav {
@@ -41,15 +54,21 @@
 }
 
 .nav a {
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: color 0.2s ease, text-shadow 0.2s ease;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e0e0fa;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
 }
 
 .nav a:hover {
-  color: var(--accent-color);
-  text-shadow: 0 0 8px var(--accent-color-glow);
+  color: #39ff14;
+  text-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
+}
+
+.userProfile {
+  display: flex;
+  align-items: center;
 }
 
 .userProfile .avatar {
