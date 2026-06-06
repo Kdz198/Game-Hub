@@ -164,3 +164,95 @@
   display: block;
   margin-top: 0.5rem;
 }
+
+/* SETTINGS UI */
+.settingsButton {
+  background: transparent;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: #00f0ff;
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  pointer-events: auto;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+}
+
+.settingsButton:hover {
+  background: rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+  transform: rotate(90deg);
+}
+
+.settingsModal {
+  background: rgba(5, 5, 16, 0.95);
+  border: 2px solid #00f0ff;
+  border-radius: 12px;
+  padding: 2rem 3rem;
+  min-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+  z-index: 30;
+}
+
+.settingsTitle {
+  font-family: 'Orbitron', sans-serif;
+  color: #00f0ff;
+  text-align: center;
+  font-size: 1.8rem;
+  letter-spacing: 3px;
+  margin-bottom: 1rem;
+}
+
+.settingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.toggleBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #555;
+  color: #888;
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggleBtn.toggleOn {
+  background: rgba(57, 255, 20, 0.2);
+  border-color: #39ff14;
+  color: #39ff14;
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+}
+
+.closeBtn {
+  margin-top: 1rem;
+  background: transparent;
+  border: none;
+  color: #ff007f;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: all 0.2s ease;
+}
+
+.closeBtn:hover {
+  color: #fff;
+  text-shadow: 0 0 10px #ff007f;
+}

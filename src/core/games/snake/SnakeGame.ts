@@ -291,50 +291,120 @@ export class SnakeGame {
     }
   }
 
+  private getPath(start: Point, target: Point, snakeBody: Point[]): Point[] | null {
+     const queue: {x: number, y: number, path: Point[]}[] = [{x: start.x, y: start.y, path: []}];
+     const visited = new Set<string>();
+     visited.add(`${start.x},${start.y}`);
+     
+     const bodySet = new Set<string>();
+     for (let i = 0; i < snakeBody.length - 1; i++) {
+        bodySet.add(`${snakeBody[i].x},${snakeBody[i].y}`);
+     }
+
+     const dirs = [ {dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0} ];
+
+     while (queue.length > 0) {
+        const curr = queue.shift()!;
+        if (curr.x === target.x && curr.y === target.y) return curr.path;
+
+        for (let d of dirs) {
+           const nx = curr.x + d.dx;
+           const ny = curr.y + d.dy;
+           const key = `${nx},${ny}`;
+           
+           if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows && !visited.has(key) && !bodySet.has(key)) {
+              visited.add(key);
+              queue.push({ x: nx, y: ny, path: [...curr.path, {x: nx, y: ny}] });
+           }
+        }
+     }
+     return null;
+  }
+
   private calculateAutoMove() {
     if (!this.food) return;
 
     const head = this.snake[0];
-    const dirs = [
-      { dx: 0, dy: -1 }, // Up
-      { dx: 0, dy: 1 },  // Down
-      { dx: -1, dy: 0 }, // Left
-      { dx: 1, dy: 0 }   // Right
-    ];
+    
+    // 1. Try to find shortest path to food
+    let path = this.getPath(head, this.food, this.snake);
+    
+    // 2. Survival check
+    let isPathSafe = false;
+    if (path && path.length > 0) {
+       // Simulate eating the food
+       let simSnake = [...[...path].reverse(), ...this.snake];
+       simSnake = simSnake.slice(0, this.snake.length + 1);
+       
+       const simHead = simSnake[0];
+       const simTail = simSnake[simSnake.length - 1];
+       
+       // Can we still reach our own tail from the new head?
+       const escapePath = this.getPath(simHead, simTail, simSnake);
+       if (escapePath) {
+          isPathSafe = true;
+       }
+    }
 
-    let bestDir = { dx: this.dx, dy: this.dy }; // Default to current dir
-    let minDistance = Infinity;
+    if (isPathSafe && path && path.length > 0) {
+       this.nextDx = path[0].x - head.x;
+       this.nextDy = path[0].y - head.y;
+       return;
+    }
+
+    // 3. Stalling / Desperation mode (Chase tail)
+    const dirs = [ {dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0} ];
+    let bestDir = null;
+    let maxDist = -1;
 
     for (let d of dirs) {
-      // Cannot reverse directly
       if (d.dx === -this.dx && d.dy === -this.dy && this.snake.length > 1) continue;
-
       const nx = head.x + d.dx;
       const ny = head.y + d.dy;
 
-      // Check wall
       if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
-
-      // Check self collision (ignoring the very last tail segment as it moves)
+      
       let hitSelf = false;
       for (let i = 0; i < this.snake.length - 1; i++) {
         if (this.snake[i].x === nx && this.snake[i].y === ny) {
-          hitSelf = true;
-          break;
+          hitSelf = true; break;
         }
       }
       if (hitSelf) continue;
 
-      // Manhattan distance to food
-      const dist = Math.abs(nx - this.food.x) + Math.abs(ny - this.food.y);
-      if (dist < minDistance) {
-        minDistance = dist;
-        bestDir = d;
+      let simSnake = [{x: nx, y: ny}, ...this.snake];
+      simSnake.pop(); // didn't eat
+      
+      const escapePath = this.getPath(simSnake[0], simSnake[simSnake.length-1], simSnake);
+      const escapeDist = escapePath ? escapePath.length : 0;
+      
+      if (escapePath && escapeDist > maxDist) {
+         maxDist = escapeDist;
+         bestDir = d;
       }
     }
 
-    this.nextDx = bestDir.dx;
-    this.nextDy = bestDir.dy;
+    if (bestDir) {
+       this.nextDx = bestDir.dx;
+       this.nextDy = bestDir.dy;
+    } else {
+       // Literally trapped, pick any valid move to delay death
+       for (let d of dirs) {
+         if (d.dx === -this.dx && d.dy === -this.dy && this.snake.length > 1) continue;
+         const nx = head.x + d.dx;
+         const ny = head.y + d.dy;
+         if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
+         let hitSelf = false;
+         for (let i = 0; i < this.snake.length - 1; i++) {
+           if (this.snake[i].x === nx && this.snake[i].y === ny) { hitSelf = true; break; }
+         }
+         if (!hitSelf) {
+            this.nextDx = d.dx;
+            this.nextDy = d.dy;
+            return;
+         }
+       }
+    }
   }
 
   private moveSnake() {

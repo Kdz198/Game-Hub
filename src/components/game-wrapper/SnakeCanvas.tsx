@@ -15,13 +15,16 @@ export default function SnakeCanvas() {
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
 
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
+
   // Initialize Canvas and Game
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    // Set canvas to native resolution for sharp rendering
     const resizeCanvas = () => {
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
@@ -30,11 +33,9 @@ export default function SnakeCanvas() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Initialize Game
     const game = new SnakeGame(canvas);
     gameRef.current = game;
 
-    // Listeners
     game.onScore = (s) => setScore(s);
     game.onGameOver = (s, b) => {
       setScore(s);
@@ -42,7 +43,6 @@ export default function SnakeCanvas() {
       setGameState('GAME_OVER');
     };
 
-    // Load best score
     const best = localStorage.getItem('snakeBest');
     if (best) setBestScore(parseInt(best));
 
@@ -52,19 +52,18 @@ export default function SnakeCanvas() {
     };
   }, []);
 
-  const startGame = (auto: boolean = false) => {
+  // Update game settings when toggled
+  useEffect(() => {
     if (gameRef.current) {
-      gameRef.current.isAutoPlay = auto;
-      gameRef.current.start();
-      setGameState('PLAYING');
+      gameRef.current.isAutoPlay = autoPlay;
     }
-  };
+  }, [autoPlay]);
 
-  const restartGame = (auto: boolean = false) => {
+  const startGame = () => {
     if (gameRef.current) {
-      gameRef.current.isAutoPlay = auto;
       gameRef.current.start();
       setGameState('PLAYING');
+      setIsSettingsOpen(false);
     }
   };
 
@@ -76,6 +75,15 @@ export default function SnakeCanvas() {
             <span className={styles.scoreLabel}>SCORE</span>
             <span className={styles.scoreValue}>{score}</span>
           </div>
+          
+          <button 
+            className={styles.settingsButton} 
+            onClick={() => setIsSettingsOpen(true)}
+            aria-label="Settings"
+          >
+            ⚙️
+          </button>
+
           <div className={styles.bestDisplay}>
             <span className={styles.bestLabel}>BEST</span>
             <span className={styles.bestValue}>{bestScore}</span>
@@ -86,26 +94,52 @@ export default function SnakeCanvas() {
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
         </div>
 
-        {gameState === 'START' && (
+        {gameState === 'START' && !isSettingsOpen && (
           <div className={styles.overlay}>
             <h1 className={styles.overlayTitle}>TRON SNAKE</h1>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button className={styles.playButton} onClick={() => startGame(false)}>INITIALIZE</button>
-              <button className={styles.playButton} onClick={() => startGame(true)} style={{ background: '#00f0ff' }}>AUTO PLAY</button>
-            </div>
+            <button className={styles.playButton} onClick={startGame}>INITIALIZE</button>
           </div>
         )}
 
-        {gameState === 'GAME_OVER' && (
+        {gameState === 'GAME_OVER' && !isSettingsOpen && (
           <div className={styles.overlay}>
             <h1 className={`${styles.overlayTitle} ${styles.gameOverTitle}`}>SYSTEM CRASH</h1>
             <div className={styles.overlayScore}>
               FINAL SCORE
               <span>{score}</span>
             </div>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button className={styles.playButton} onClick={() => restartGame(false)}>RETRY RUN</button>
-              <button className={styles.playButton} onClick={() => restartGame(true)} style={{ background: '#00f0ff' }}>AUTO PLAY</button>
+            <button className={styles.playButton} onClick={startGame}>RETRY RUN</button>
+          </div>
+        )}
+
+        {isSettingsOpen && (
+          <div className={styles.overlay}>
+            <div className={styles.settingsModal}>
+              <h2 className={styles.settingsTitle}>SETTINGS</h2>
+              
+              <div className={styles.settingRow}>
+                <span>SOUND EFFECTS</span>
+                <button 
+                  className={`${styles.toggleBtn} ${soundOn ? styles.toggleOn : ''}`}
+                  onClick={() => setSoundOn(!soundOn)}
+                >
+                  {soundOn ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div className={styles.settingRow}>
+                <span>AUTO PLAY BOT</span>
+                <button 
+                  className={`${styles.toggleBtn} ${autoPlay ? styles.toggleOn : ''}`}
+                  onClick={() => setAutoPlay(!autoPlay)}
+                >
+                  {autoPlay ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <button className={styles.closeBtn} onClick={() => setIsSettingsOpen(false)}>
+                [ CLOSE ]
+              </button>
             </div>
           </div>
         )}
