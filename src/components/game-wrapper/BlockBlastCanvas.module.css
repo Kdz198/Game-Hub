@@ -43,22 +43,23 @@
 .hud {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
   width: 100%;
+  max-width: 600px; /* Constrain width to hover right above the grid */
   padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(-20px);
   transition: all 0.4s ease;
   z-index: 10;
 }
 
 .hudActive {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
 }
 
 .scoreDisplay {

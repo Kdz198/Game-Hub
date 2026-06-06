@@ -52,6 +52,7 @@ export class BlockBlastGame {
   
   public score = 0;
   public isGameOver = false;
+  private time = 0;
   
   // Layout params
   private gridCols = 8;
@@ -99,16 +100,25 @@ export class BlockBlastGame {
   }
 
   private calculateLayout() {
-    // Leave room at top for HUD, bottom for shapes dock
-    const availableWidth = this.canvas.width * 0.95;
-    const availableHeight = this.canvas.height * 0.65;
+    const hudHeight = 120; // Space at top for HUD
+    const dockHeight = 160; // Space at bottom for shapes dock
+    const maxGridHeight = this.canvas.height - hudHeight - dockHeight; 
+    const maxGridWidth = this.canvas.width - 40; 
     
-    this.cellSize = Math.floor(Math.min(availableWidth / this.gridCols, availableHeight / this.gridRows));
+    this.cellSize = Math.floor(Math.min(maxGridWidth / this.gridCols, maxGridHeight / this.gridRows));
     
-    // Center grid
-    this.gridX = (this.canvas.width - (this.cellSize * this.gridCols)) / 2;
-    // Push it down slightly to clear HUD
-    this.gridY = (this.canvas.height * 0.48) - ((this.cellSize * this.gridRows) / 2); 
+    // Capping the cell size so it doesn't get too large on wide screens, but big enough
+    if (this.cellSize > 75) this.cellSize = 75;
+    if (this.cellSize < 30) this.cellSize = 30; 
+    
+    const totalGridWidth = this.cellSize * this.gridCols;
+    const totalGridHeight = this.cellSize * this.gridRows;
+
+    this.gridX = (this.canvas.width - totalGridWidth) / 2;
+    
+    // Center it vertically within the available mid space
+    const availableMidSpace = this.canvas.height - hudHeight - dockHeight;
+    this.gridY = hudHeight + (availableMidSpace - totalGridHeight) / 2;
   }
 
   private attachEvents() {
@@ -184,9 +194,11 @@ export class BlockBlastGame {
   }
 
   private getDockPosition(index: number) {
-    const dockY = this.canvas.height - 120;
-    const spacing = this.canvas.width / 3;
-    const dockX = (index * spacing) + (spacing / 2);
+    const totalGridWidth = this.cellSize * this.gridCols;
+    // Place dock slightly below the grid
+    const dockY = this.gridY + totalGridWidth + 80;
+    const spacing = totalGridWidth / 3;
+    const dockX = this.gridX + (index * spacing) + (spacing / 2);
     return { x: dockX, y: dockY };
   }
 
@@ -307,6 +319,9 @@ export class BlockBlastGame {
     const placeScore = shape.blocks.length * 10;
     this.score += placeScore;
     this.spawnFloatingText(`+${placeScore}`, this.mouseX, this.mouseY, shape.color);
+    
+    // Realtime score update for UI
+    if (this.onScore) this.onScore(this.score);
 
     this.checkLines();
   }
@@ -436,6 +451,8 @@ export class BlockBlastGame {
   }
 
   private update(dt: number) {
+    this.time += dt;
+
     if (this.shakeTime > 0) {
       this.shakeTime -= dt;
       if (this.shakeTime < 0) this.shakeTime = 0;
@@ -518,15 +535,24 @@ export class BlockBlastGame {
            const { rowsToClear, colsToClear } = this.getClearedLinesSimulation(shape, gridPos.col, gridPos.row);
 
            c.save();
+           const pulseAlpha = (Math.sin(this.time * 0.01) + 1) / 2 * 0.3 + 0.15; // 0.15 to 0.45
+           c.fillStyle = `rgba(255, 0, 80, ${pulseAlpha})`; // Neon red/pink warning
+           c.strokeStyle = 'rgba(255, 0, 80, 0.8)';
+           c.lineWidth = 2;
+           c.shadowColor = '#ff0050';
+           c.shadowBlur = 15;
+
            // Highlight rows
            rowsToClear.forEach(r => {
-             c.fillStyle = 'rgba(255, 255, 255, 0.2)';
-             c.fillRect(this.gridX, this.gridY + r*this.cellSize, this.cellSize * this.gridCols, this.cellSize);
+             const ry = this.gridY + r * this.cellSize;
+             c.fillRect(this.gridX, ry, this.cellSize * this.gridCols, this.cellSize);
+             c.strokeRect(this.gridX, ry, this.cellSize * this.gridCols, this.cellSize);
            });
            // Highlight cols
            colsToClear.forEach(col => {
-             c.fillStyle = 'rgba(255, 255, 255, 0.2)';
-             c.fillRect(this.gridX + col*this.cellSize, this.gridY, this.cellSize, this.cellSize * this.gridRows);
+             const cx = this.gridX + col * this.cellSize;
+             c.fillRect(cx, this.gridY, this.cellSize, this.cellSize * this.gridRows);
+             c.strokeRect(cx, this.gridY, this.cellSize, this.cellSize * this.gridRows);
            });
            
            c.globalAlpha = 0.4;
@@ -539,7 +565,7 @@ export class BlockBlastGame {
               if (rowsToClear.includes(gridPos.row + b.y) || colsToClear.includes(gridPos.col + b.x)) {
                  c.shadowBlur = 20;
                  c.shadowColor = '#fff';
-                 c.fillStyle = '#fff';
+                 c.fillStyle = 'rgba(255,255,255,0.8)';
                  c.fillRect(px, py, this.cellSize, this.cellSize);
               }
            }
