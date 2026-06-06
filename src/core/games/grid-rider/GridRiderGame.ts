@@ -4,8 +4,8 @@ import { AudioSynth } from "../../utils/AudioSynth";
 /* ── Types ──────────────────────────────────────────────────────── */
 
 interface SpriteInfo {
-  x: number; // Offset from road center (-2.0 to 2.0)
-  type: 'palm' | 'light' | 'gate' | 'barrier' | 'sign_checkpoint';
+  x: number; // Offset from road center
+  type: 'palm' | 'light' | 'gate' | 'barrier' | 'sign_checkpoint' | 'building';
   width: number;
   height: number;
   color: string;
@@ -234,50 +234,31 @@ export class GridRiderGame {
 
         // Add roadside sprites randomly
         if (index > 15 && index < TRACK_SEGMENTS - 20) {
-          if (index % 12 === 0) {
-            // Palm trees on the left/right
+          // Buildings corridor: place a building every 6 segments on both sides
+          if (index % 6 === 0) {
+            const leftColor = index % 12 === 0 ? '#ff00f0' : '#00f0ff';
+            const rightColor = index % 12 === 0 ? '#00f0ff' : '#ff00f0';
+            
             segment.sprites.push({
-              x: -1.7 - Math.random() * 0.4,
-              type: 'palm',
-              width: 280,
-              height: 380,
-              color: '#ff00f0',
+              x: -2.3, // Situated just past the rumble strips
+              type: 'building',
+              width: 550 + (Math.sin(index) * 200), // Variable width
+              height: 1500 + (Math.cos(index * 2) * 700), // Variable height
+              color: leftColor,
             });
             segment.sprites.push({
-              x: 1.7 + Math.random() * 0.4,
-              type: 'palm',
-              width: 280,
-              height: 380,
-              color: '#00f0ff',
-            });
-          }
-
-          if (index % 30 === 0) {
-            // Cyber lights overhead arches/gates
-            segment.sprites.push({
-              x: 0,
-              type: 'gate',
-              width: 2400,
-              height: 1200,
-              color: '#fff01f',
+              x: 2.3, // Situated just past the rumble strips
+              type: 'building',
+              width: 550 + (Math.cos(index) * 200),
+              height: 1500 + (Math.sin(index * 2) * 700),
+              color: rightColor,
             });
           }
 
-          // Road obstacles (barriers) at specific spots
-          if (index % 47 === 0) {
+          // Neon lampposts placed every 18 segments
+          if (index % 18 === 9) {
             segment.sprites.push({
-              x: Math.random() > 0.5 ? 0.45 : -0.45,
-              type: 'barrier',
-              width: 140,
-              height: 120,
-              color: '#ff3333',
-            });
-          }
-
-          // Neon lampposts
-          if (index % 18 === 0) {
-            segment.sprites.push({
-              x: index % 36 === 0 ? -1.4 : 1.4,
+              x: index % 36 === 9 ? -1.4 : 1.4,
               type: 'light',
               width: 120,
               height: 400,
@@ -288,13 +269,13 @@ export class GridRiderGame {
           // No speed boost pads (endless drive mode)
         }
 
-        // Add checkpoint banners
+        // Add checkpoint billboards at the side of the road
         if (index > 0 && index % 200 === 0 && index < TRACK_SEGMENTS - 50) {
           segment.sprites.push({
-            x: 0,
+            x: 1.6,
             type: 'sign_checkpoint',
-            width: 2800,
-            height: 1400,
+            width: 600,
+            height: 1200,
             color: '#00f0ff',
           });
         }
@@ -976,41 +957,63 @@ export class GridRiderGame {
     c.save();
     c.translate(sx, sy);
 
-    if (sprite.type === 'palm') {
-      // Draw neon cyber palm tree
-      c.shadowColor = sprite.color;
-      c.shadowBlur = 15;
-      c.fillStyle = '#110022';
+    if (sprite.type === 'building') {
+      // Draw 3D neon cyber building/skyscraper corridor
+      c.save();
+      
+      c.fillStyle = '#06030c';
       c.strokeStyle = sprite.color;
-      c.lineWidth = 2;
-
-      // Trunk
-      c.beginPath();
-      c.moveTo(-width * 0.1, 0);
-      c.quadraticCurveTo(-width * 0.05, -height * 0.5, 0, -height);
-      c.lineTo(width * 0.05, -height);
-      c.quadraticCurveTo(width * 0.05, -height * 0.5, width * 0.1, 0);
-      c.closePath();
-      c.fill();
-      c.stroke();
-
-      // Leaves (neon arcs)
-      c.fillStyle = sprite.color;
-      const leaves = 5;
-      for (let i = 0; i < leaves; i++) {
-        const angle = (i / (leaves - 1)) * Math.PI - Math.PI; // -180 to 0 deg
-        c.beginPath();
-        c.moveTo(0, -height);
-        c.quadraticCurveTo(
-          Math.cos(angle) * width * 0.6,
-          -height + Math.sin(angle) * height * 0.25,
-          Math.cos(angle) * width * 0.9,
-          -height + Math.sin(angle) * height * 0.1 - 20
-        );
-        c.lineTo(0, -height);
-        c.stroke();
+      c.lineWidth = 1.5;
+      
+      const leftSide = sprite.x < 0;
+      const bx = leftSide ? -width : 0;
+      
+      // Draw building block
+      c.fillRect(bx, -height, width, height);
+      c.strokeRect(bx, -height, width, height);
+      
+      // Draw neon windows
+      c.fillStyle = 'rgba(255, 240, 31, 0.45)'; // glowing yellow windows
+      c.shadowColor = '#fff01f';
+      c.shadowBlur = 4;
+      
+      const rows = 6;
+      const cols = 4;
+      const winW = width * 0.12;
+      const winH = height * 0.08;
+      const gapX = width * 0.08;
+      const gapY = height * 0.06;
+      
+      for (let r = 0; r < rows; r++) {
+        for (let col = 0; col < cols; col++) {
+          const litSeed = Math.sin(sprite.width + r * 12 + col * 34) * 0.5 + 0.5;
+          if (litSeed > 0.4) {
+            const wx = bx + gapX + col * (winW + gapX);
+            const wy = -height + gapY + r * (winH + gapY);
+            c.fillRect(wx, wy, winW, winH);
+          }
+        }
       }
-    } 
+      
+      // Draw neon antenna on some buildings
+      const hasAntenna = (sprite.width % 3 === 0);
+      if (hasAntenna) {
+        c.strokeStyle = sprite.color;
+        c.beginPath();
+        c.moveTo(bx + width / 2, -height);
+        c.lineTo(bx + width / 2, -height - height * 0.15);
+        c.stroke();
+        
+        c.fillStyle = '#ff3333';
+        c.shadowColor = '#ff3333';
+        c.shadowBlur = 8;
+        c.beginPath();
+        c.arc(bx + width / 2, -height - height * 0.15, 3, 0, Math.PI * 2);
+        c.fill();
+      }
+      
+      c.restore();
+    }
     else if (sprite.type === 'light') {
       // Neon street light pole
       c.strokeStyle = '#00f0ff';
@@ -1035,88 +1038,43 @@ export class GridRiderGame {
       c.lineTo(reach + width * 0.5, 0);
       c.closePath();
       c.fill();
-    } 
-    else if (sprite.type === 'gate') {
-      // Large overhead Cyber Arch Gate spanning the road
-      c.shadowColor = sprite.color;
-      c.shadowBlur = 20;
-      c.strokeStyle = sprite.color;
-      c.lineWidth = 4;
-      c.fillStyle = 'rgba(255, 0, 240, 0.05)';
-
-      // Gate outline
-      c.beginPath();
-      c.moveTo(-width * 0.5, 0);
-      c.lineTo(-width * 0.45, -height);
-      c.lineTo(width * 0.45, -height);
-      c.lineTo(width * 0.5, 0);
-      c.stroke();
-
-      // Inner glow panel
-      c.beginPath();
-      c.moveTo(-width * 0.45, 0);
-      c.lineTo(-width * 0.41, -height * 0.9);
-      c.lineTo(width * 0.41, -height * 0.9);
-      c.lineTo(width * 0.45, 0);
-      c.closePath();
-      c.fill();
-
-      // "NEXUS" sign on checkpoint gate
-      if (sprite.color === '#00f0ff') {
-        c.font = `bold ${Math.max(8, Math.floor(18 * seg.screen.scale * 3))}px "Orbitron", sans-serif`;
-        c.fillStyle = '#fff';
-        c.shadowColor = '#fff';
-        c.shadowBlur = 10;
-        c.textAlign = 'center';
-        c.fillText("NEXUS DRIVE", 0, -height * 0.93);
-      }
     }
     else if (sprite.type === 'sign_checkpoint') {
-      // Neon Checkpoint overhead Banner
-      c.shadowColor = sprite.color;
-      c.shadowBlur = 25;
+      // Roadside neon billboard instead of overhead arch
+      c.save();
+      const leftSide = sprite.x < 0;
+      
+      c.fillStyle = '#110022';
       c.strokeStyle = sprite.color;
-      c.lineWidth = 4;
-      c.fillStyle = 'rgba(0,0,0,0.8)';
-
-      c.beginPath();
-      c.moveTo(-width * 0.5, 0);
-      c.lineTo(-width * 0.45, -height);
-      c.lineTo(width * 0.45, -height);
-      c.lineTo(width * 0.5, 0);
-      c.stroke();
-
-      // Header board
-      c.fillStyle = '#110022';
-      c.fillRect(-width * 0.35, -height * 0.9, width * 0.7, height * 0.25);
-      c.strokeRect(-width * 0.35, -height * 0.9, width * 0.7, height * 0.25);
-
-      c.fillStyle = '#00f0ff';
-      c.font = `bold ${Math.max(10, Math.floor(22 * seg.screen.scale * 4))}px "Orbitron", sans-serif`;
-      c.textAlign = 'center';
-      c.fillText("CHECKPOINT", 0, -height * 0.73);
-    }
-    else if (sprite.type === 'barrier') {
-      // Red hazard barrier cones
-      c.fillStyle = '#110022';
-      c.strokeStyle = '#ff3333';
-      c.lineWidth = 2.5;
-      c.shadowColor = '#ff3333';
+      c.lineWidth = 3;
+      c.shadowColor = sprite.color;
       c.shadowBlur = 15;
-
+      
+      // Billboard sign board
+      const wWidth = width * 0.6;
+      const wHeight = height * 0.4;
+      const bx = leftSide ? -wWidth : 0;
+      
+      // Sign post
       c.beginPath();
-      c.moveTo(-width * 0.5, 0);
-      c.lineTo(-width * 0.3, -height);
-      c.lineTo(width * 0.3, -height);
-      c.lineTo(width * 0.5, 0);
-      c.closePath();
-      c.fill();
+      c.moveTo(bx + wWidth / 2, 0);
+      c.lineTo(bx + wWidth / 2, -height);
       c.stroke();
-
-      // Hazard stripes
-      c.fillStyle = '#ff3333';
-      c.fillRect(-width * 0.2, -height * 0.7, width * 0.4, height * 0.15);
-      c.fillRect(-width * 0.3, -height * 0.35, width * 0.6, height * 0.15);
+      
+      // Board
+      c.fillRect(bx, -height, wWidth, wHeight);
+      c.strokeRect(bx, -height, wWidth, wHeight);
+      
+      // Text
+      c.fillStyle = '#ffffff';
+      c.shadowColor = '#ffffff';
+      c.shadowBlur = 6;
+      c.font = `bold ${Math.max(6, Math.floor(14 * seg.screen.scale * 3.5))}px "Orbitron", sans-serif`;
+      c.textAlign = 'center';
+      c.fillText("CHECK", bx + wWidth / 2, -height + wHeight * 0.45);
+      c.fillText("POINT", bx + wWidth / 2, -height + wHeight * 0.85);
+      
+      c.restore();
     }
 
     c.restore();
@@ -1141,10 +1099,25 @@ export class GridRiderGame {
 
     const neonTheme = car.color; // Use the AI car's specific light color
 
+    // Dynamic metallic paint colors based on car color
+    let paintDark = '#08080c';
+    let paintMid = '#14141c';
+    
+    if (neonTheme === '#ff9900') {
+      paintDark = '#331a00';
+      paintMid = '#804c00';
+    } else if (neonTheme === '#fff01f') {
+      paintDark = '#333000';
+      paintMid = '#807800';
+    } else if (neonTheme === '#39ff14') {
+      paintDark = '#062600';
+      paintMid = '#146000';
+    }
+
     // Metallic AI body shading gradient
     const bodyGrad = c.createLinearGradient(0, -height, 0, 0);
-    bodyGrad.addColorStop(0, '#161622');
-    bodyGrad.addColorStop(0.5, '#0e0e16');
+    bodyGrad.addColorStop(0, paintMid);
+    bodyGrad.addColorStop(0.5, paintDark);
     bodyGrad.addColorStop(1, '#05050a');
 
     // 1. Rear Tires
@@ -1249,12 +1222,27 @@ export class GridRiderGame {
     c.shadowBlur = 10;
     c.fillRect(-width * 0.36, -height * 0.32, width * 0.72, height * 0.05);
 
-    // 7. Exhaust circles
+    // 7. Glowing License Plate
+    c.fillStyle = '#fff01f';
+    c.fillRect(-width * 0.07, -height * 0.19, width * 0.14, height * 0.1);
+    c.fillStyle = '#000';
+    c.font = `bold ${Math.max(4, Math.floor(7 * scale * 2))}px "Orbitron", sans-serif`;
+    c.textAlign = 'center';
+    c.fillText("CPU", 0, -height * 0.12);
+
+    // 8. Exhaust circles
     c.shadowBlur = 0;
     c.fillStyle = '#111';
     c.beginPath();
-    c.arc(-width * 0.18, -height * 0.1, 3.5, 0, Math.PI * 2);
-    c.arc(width * 0.18, -height * 0.1, 3.5, 0, Math.PI * 2);
+    c.arc(-width * 0.2, -height * 0.09, 3.5, 0, Math.PI * 2);
+    c.arc(width * 0.2, -height * 0.09, 3.5, 0, Math.PI * 2);
+    c.fill();
+
+    // exhaust glow interior
+    c.fillStyle = '#ff5500';
+    c.beginPath();
+    c.arc(-width * 0.2, -height * 0.09, 1.5, 0, Math.PI * 2);
+    c.arc(width * 0.2, -height * 0.09, 1.5, 0, Math.PI * 2);
     c.fill();
 
     c.restore();
