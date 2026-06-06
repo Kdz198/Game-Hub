@@ -500,3 +500,86 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Floating Skin Selector (Top-Right) ─────────────────────────── */
+
+.floatingSkinSelector {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  padding: 6px 14px;
+  border-radius: 6px;
+  z-index: 10;
+  pointer-events: auto; /* enables clicks */
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.floatingSkinSelector:hover {
+  border-color: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 240, 255, 0.1);
+}
+
+.hudPickerBtn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.hudPickerBtn:hover {
+  color: #00f0ff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  transform: scale(1.15);
+}
+
+.hudPickerBtn:active {
+  transform: scale(0.95);
+}
+
+.hudSkinDisplay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 130px;
+  user-select: none;
+}
+
+.hudSkinIcon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hudSkinInfo {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 1px;
+}
+
+.hudSkinTitle {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 1.5px;
+  font-weight: 700;
+}
+
+.hudSkinName {
+  font-size: 10px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+}

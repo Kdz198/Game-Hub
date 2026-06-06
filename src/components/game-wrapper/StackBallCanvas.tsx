@@ -53,6 +53,15 @@ export default function StackBallCanvas() {
     const game = new StackBallGame(canvas);
     gameRef.current = game;
 
+    // Load active skin from localStorage immediately
+    const saved = localStorage.getItem('stackBallActiveSkin') as BallSkin;
+    if (saved && SKINS.some(s => s.id === saved)) {
+      game.activeSkin = saved;
+      setSelectedSkin(saved);
+    } else {
+      game.activeSkin = 'neon';
+    }
+
     setBestScore(game.bestScore);
 
     game.onScore = (s) => setScore(s);
@@ -69,18 +78,14 @@ export default function StackBallCanvas() {
       setGameState('LEVEL_COMPLETE');
     };
 
+    // Auto-start game immediately on mount
+    game.start();
+    setGameState('PLAYING');
+
     return () => {
       game.destroy();
       window.removeEventListener('resize', resize);
     };
-  }, []);
-
-  // Load saved skin on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('stackBallActiveSkin');
-    if (saved && SKINS.some(s => s.id === saved)) {
-      setSelectedSkin(saved as BallSkin);
-    }
   }, []);
 
   // Sync activeSkin to game instance when selectedSkin changes
@@ -90,12 +95,20 @@ export default function StackBallCanvas() {
     }
   }, [selectedSkin]);
 
-  const startGame = () => {
-    if (gameRef.current) {
-      gameRef.current.activeSkin = selectedSkin;
-      gameRef.current.start();
-      setGameState('PLAYING');
-    }
+  const nextSkin = () => {
+    const currentIndex = SKINS.findIndex(s => s.id === selectedSkin);
+    const nextIndex = (currentIndex + 1) % SKINS.length;
+    const nextSkinId = SKINS[nextIndex].id;
+    setSelectedSkin(nextSkinId);
+    localStorage.setItem('stackBallActiveSkin', nextSkinId);
+  };
+
+  const prevSkin = () => {
+    const currentIndex = SKINS.findIndex(s => s.id === selectedSkin);
+    const prevIndex = (currentIndex - 1 + SKINS.length) % SKINS.length;
+    const prevSkinId = SKINS[prevIndex].id;
+    setSelectedSkin(prevSkinId);
+    localStorage.setItem('stackBallActiveSkin', prevSkinId);
   };
 
   const handleRestart = () => {
@@ -163,12 +176,31 @@ export default function StackBallCanvas() {
         [ BACK_TO_NEXUS ]
       </Link>
 
+      {/* Floating Skin Selector (Top-Right) */}
+      <div className={styles.floatingSkinSelector}>
+        <button className={styles.hudPickerBtn} onClick={prevSkin} aria-label="Previous Skin">&lt;</button>
+        <div className={styles.hudSkinDisplay}>
+          <span className={styles.hudSkinIcon}>{SKINS.find(s => s.id === selectedSkin)?.icon}</span>
+          <div className={styles.hudSkinInfo}>
+            <span className={`${styles.hudSkinTitle} ${orbitron.className}`}>BALL SKIN</span>
+            <span className={`${styles.hudSkinName} ${orbitron.className}`}>{SKINS.find(s => s.id === selectedSkin)?.name}</span>
+          </div>
+        </div>
+        <button className={styles.hudPickerBtn} onClick={nextSkin} aria-label="Next Skin">&gt;</button>
+      </div>
+
       <canvas
         ref={canvasRef}
         className={styles.canvas}
         onMouseDown={handlePressStart}
         onMouseUp={handlePressEnd}
         onMouseLeave={handlePressEnd}
+        onMouseDownCapture={(e) => {
+          // If clicking on floating skin selector, stop propagation so we don't trigger game smash
+          if ((e.target as HTMLElement).closest(`.${styles.floatingSkinSelector}`)) {
+            e.stopPropagation();
+          }
+        }}
         onTouchStart={handlePressStart}
         onTouchEnd={handlePressEnd}
       />
@@ -206,64 +238,7 @@ export default function StackBallCanvas() {
         </div>
       </div>
 
-      {/* MENU STATE OVERLAY */}
-      {gameState === 'MENU' && (
-        <div className={styles.overlay}>
-          <div className={`${styles.glassPanel} ${styles.menuPanel}`}>
-            <h1 className={`${styles.title} ${orbitron.className}`}>STACK_BALL</h1>
-            <p className={styles.subtitle}>THÁP NEON LỰC LY TÂM • V1.0</p>
-            
-            <div className={styles.panelContent}>
-              {/* Left Column: Rules */}
-              <div className={styles.rulesCol}>
-                <h3 className={`${styles.colTitle} ${orbitron.className}`}>LUẬT CHƠI</h3>
-                <div className={styles.gameRules}>
-                  <div className={styles.ruleItem}>
-                    <span className={styles.ruleIcon}>🥎</span>
-                    <span>Giữ chuột / phím Cách để quả bóng đâm sầm đập vỡ đĩa.</span>
-                  </div>
-                  <div className={styles.ruleItem}>
-                    <span className={styles.ruleIcon}>🖤</span>
-                    <span>Né các miếng đĩa màu đen, nếu đâm vào là tạch!</span>
-                  </div>
-                  <div className={styles.ruleItem}>
-                    <span className={styles.ruleIcon}>🔥</span>
-                    <span>Combo liên tục kích hoạt FEVER MODE siêu càn quét!</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Right Column: Skin Selection */}
-              <div className={styles.skinsCol}>
-                <h3 className={`${styles.colTitle} ${orbitron.className}`}>SKIN QUẢ BÓNG</h3>
-                <div className={styles.skinGrid}>
-                  {SKINS.map((skin) => (
-                    <button
-                      key={skin.id}
-                      className={`${styles.skinCard} ${selectedSkin === skin.id ? styles.skinCardActive : ''}`}
-                      style={{ '--skin-glow': skin.color } as any}
-                      onClick={() => {
-                        setSelectedSkin(skin.id);
-                        localStorage.setItem('stackBallActiveSkin', skin.id);
-                      }}
-                    >
-                      <span className={styles.skinIcon}>{skin.icon}</span>
-                      <div className={styles.skinInfo}>
-                        <span className={`${styles.skinName} ${orbitron.className}`}>{skin.name}</span>
-                        <span className={styles.skinDesc}>{skin.desc}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <button className={`${styles.cyberButton} ${orbitron.className}`} onClick={startGame}>
-              INITIALIZE_GAME
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* GAME OVER OVERLAY */}
       {gameState === 'GAME_OVER' && (
