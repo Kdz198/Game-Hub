@@ -141,7 +141,7 @@ export class BlockBlastGame {
   }
 
   public start() {
-    this.reset(true);
+    this.reset();
     this.loop.start();
   }
 
