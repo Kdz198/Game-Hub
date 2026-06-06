@@ -1230,7 +1230,7 @@ export class GridRiderGame {
 
     // Center player car at bottom of screen
     const carX = w / 2;
-    const carY = h - 35;
+    const carY = h - 60;
     
     // Add small rumble wiggle based on speed
     const rumble = (Math.random() - 0.5) * (this.playerSpeed / this.maxSpeed) * 2.5;
@@ -1257,7 +1257,7 @@ export class GridRiderGame {
 
     c.shadowColor = neonTheme;
     c.shadowBlur = 25;
-    c.fillStyle = '#080010';
+    c.fillStyle = '#1c003d';
     c.strokeStyle = neonTheme;
     c.lineWidth = 3.5;
 

@@ -39,8 +39,9 @@ export default function GridRiderCanvas() {
     if (!canvas) return;
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
     };
     resize();
     window.addEventListener('resize', resize);
