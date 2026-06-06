@@ -42,7 +42,8 @@
   max-width: 600px;
   padding: 1.5rem;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 3rem;
   align-items: flex-start;
   pointer-events: none;
   opacity: 0;
@@ -171,25 +172,30 @@
 }
 
 /* SETTINGS UI */
-.settingsButton {
-  background: transparent;
-  border: none;
+.cornerSettingsBtn {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.3);
   color: #00f0ff;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 1rem;
-  font-weight: bold;
-  letter-spacing: 2px;
+  width: 45px;
+  height: 45px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   cursor: pointer;
+  z-index: 25;
   transition: all 0.3s ease;
-  pointer-events: auto;
-  text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
-  align-self: center;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
 }
 
-.settingsButton:hover {
+.cornerSettingsBtn:hover {
+  background: rgba(0, 240, 255, 0.2);
   color: #fff;
-  text-shadow: 0 0 15px #00f0ff;
-  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+  transform: rotate(90deg);
 }
 
 .settingsModal {

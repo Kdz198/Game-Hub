@@ -436,6 +436,7 @@ export class SnakeGame {
     if (this.food && newHead.x === this.food.x && newHead.y === this.food.y) {
       // Eat food
       const pts = 10;
+      const oldScore = this.score;
       this.score += pts;
       if (this.onScore) this.onScore(this.score);
       
@@ -444,6 +445,13 @@ export class SnakeGame {
       
       this.spawnFloatingText(`+${pts}`, fx, fy, this.foodColor);
       this.triggerScreenShake(3, 100);
+
+      // Milestone check (every 100 points)
+      if (Math.floor(this.score / 100) > Math.floor(oldScore / 100)) {
+         this.triggerScreenShake(8, 300); // Mild shake
+         this.spawnFloatingText(`SPEED UP!`, this.canvas.width/2, this.canvas.height/2, '#ff007f', 36);
+         this.screenFlash = 0.3; // Slight flash
+      }
       
       // Burst some particles
       for(let i=0; i<15; i++) {
