@@ -92,7 +92,8 @@ export class GridRiderGame {
   // Game metrics (UI bindable)
   public score = 0;
   public bestScore = 0;
-  public timeLeft = GAME_DURATION;
+  public timeElapsed = 0;
+  public shield = 100;
   public speed = 0; // Current speed (miles per hour display: 0 to 180)
   public distance = 0; // Total distance traveled (meters)
   public isGameOver = false;
@@ -106,6 +107,7 @@ export class GridRiderGame {
   // Callbacks
   public onScore?: (score: number) => void;
   public onTime?: (time: number) => void;
+  public onShield?: (shield: number) => void;
   public onSpeed?: (speed: number) => void;
   public onDistance?: (dist: number) => void;
   public onGameOver?: (score: number, best: number, completed: boolean) => void;
@@ -119,12 +121,11 @@ export class GridRiderGame {
   private playerX = 0; // Relative to road center (-1 to 1 is road surface)
   private playerZ = 0; // Position along track (0 to trackLength)
   private playerSpeed = 0; // Real Z speed (0 to maxSpeed)
-  private maxSpeed = 12000; // Z units per second
-  private boostSpeed = 17500; // Speed on boost pad
-  private accel = 5000;      // Acceleration Z units / s^2
-  private decel = -4000;     // Natural deceleration / braking
-  private offRoadDrag = -10000; // High friction off-road
-  private offRoadLimit = 3500;  // Max speed allowed off-road
+  private maxSpeed = 9000; // Z units per second (slightly reduced for better control)
+  private accel = 3800;      // Acceleration Z units / s^2 (smoother build-up)
+  private decel = -3000;     // Natural deceleration / braking
+  private offRoadDrag = -9000; // High friction off-road
+  private offRoadLimit = 2500;  // Max speed allowed off-road
 
   // Horizon & Background
   private backgroundOffset = 0; // For parallax scrolling of mountains/sky
@@ -139,7 +140,6 @@ export class GridRiderGame {
   private screenFlash = 0;
   private shakeTime = 0;
   private shakeMag = 0;
-  private boostTimer = 0; // Super boost timer
 
   // Touch overlays buttons configuration (used on mobile)
   private touchSteer = 0; // -1 to 1 (left to right)
@@ -285,14 +285,7 @@ export class GridRiderGame {
             });
           }
 
-          // Speed boost pads on the road surface
-          if (index % 63 === 0 && index < TRACK_SEGMENTS - 50) {
-            segment.boostPad = {
-              x: (Math.random() - 0.5) * 1.2, // Random lane
-              width: 350,
-              active: true,
-            };
-          }
+          // No speed boost pads (endless drive mode)
         }
 
         // Add checkpoint banners
@@ -362,7 +355,8 @@ export class GridRiderGame {
 
   private reset() {
     this.score = 0;
-    this.timeLeft = GAME_DURATION;
+    this.timeElapsed = 0;
+    this.shield = 100;
     this.playerX = 0;
     this.playerZ = 0;
     this.playerSpeed = 0;
@@ -372,7 +366,6 @@ export class GridRiderGame {
     this.isCompleted = false;
     this.gameTime = 0;
     this.checkpointIndex = 1;
-    this.boostTimer = 0;
     this.screenFlash = 0;
     this.shakeTime = 0;
     this.backgroundOffset = 0;
@@ -380,18 +373,12 @@ export class GridRiderGame {
     this.particles = [];
     
     this.spawnAICars();
-    this.resetBoostPads();
 
     if (this.onScore) this.onScore(0);
-    if (this.onTime) this.onTime(GAME_DURATION);
+    if (this.onTime) this.onTime(0);
+    if (this.onShield) this.onShield(100);
     if (this.onSpeed) this.onSpeed(0);
     if (this.onDistance) this.onDistance(0);
-  }
-
-  private resetBoostPads() {
-    for (const seg of this.segments) {
-      if (seg.boostPad) seg.boostPad.active = true;
-    }
   }
 
   /* ── Core Loop Update ───────────────────────────────────────── */
@@ -409,10 +396,6 @@ export class GridRiderGame {
       this.shakeTime -= dt;
       if (this.shakeTime < 0) this.shakeTime = 0;
     }
-    if (this.boostTimer > 0) {
-      this.boostTimer -= dtSec;
-      if (this.boostTimer < 0) this.boostTimer = 0;
-    }
 
     if (this.isGameOver || this.isCompleted) {
       // Minimal updates
@@ -423,13 +406,9 @@ export class GridRiderGame {
       return;
     }
 
-    // Time countdown
-    this.timeLeft = Math.max(0, this.timeLeft - dtSec);
-    if (this.onTime) this.onTime(this.timeLeft);
-    if (this.timeLeft <= 0) {
-      this.triggerGameOver(false);
-      return;
-    }
+    // Time counts up for endless runner
+    this.timeElapsed += dtSec;
+    if (this.onTime) this.onTime(this.timeElapsed);
 
     // Capture controls
     const steerLeft = this.keys['ArrowLeft'] || this.keys['KeyA'] || (this.touchSteer < -0.2);
@@ -459,7 +438,7 @@ export class GridRiderGame {
     const isOffRoad = Math.abs(this.playerX) > 1.0;
 
     // Speed calculation
-    const currentMaxSpeed = this.boostTimer > 0 ? this.boostSpeed : (isOffRoad ? this.offRoadLimit : this.maxSpeed);
+    const currentMaxSpeed = isOffRoad ? this.offRoadLimit : this.maxSpeed;
 
     if (accelerate) {
       this.playerSpeed += this.accel * dtSec;
@@ -496,16 +475,15 @@ export class GridRiderGame {
     if (this.playerZ >= this.trackLength) {
       // Loop track
       this.playerZ -= this.trackLength;
-      this.resetBoostPads();
       this.checkpointIndex = 1;
-      this.triggerCheckpoint("VÒNG MỚI! +15 GIÂY");
+      this.triggerCheckpoint("VÒNG MỚI! +25% GIÁP");
     }
 
     // Checkpoint detection inside the track
     const currentCheckpoint = Math.floor(this.playerZ / (200 * SEGMENT_LENGTH)) + 1;
     if (currentCheckpoint > this.checkpointIndex && currentCheckpoint <= 3) {
       this.checkpointIndex = currentCheckpoint;
-      this.triggerCheckpoint(`CHECKPOINT ${this.checkpointIndex - 1}! +15 GIÂY`);
+      this.triggerCheckpoint(`CHECKPOINT ${this.checkpointIndex - 1}! +25% GIÁP`);
     }
 
     // Parallax backgrounds offsets
@@ -526,9 +504,10 @@ export class GridRiderGame {
   }
 
   private triggerCheckpoint(msg: string) {
-    this.timeLeft += 15;
+    this.shield = Math.min(100, this.shield + 25);
     this.audio.playMilestone();
     this.screenFlash = 0.25;
+    if (this.onShield) this.onShield(this.shield);
     if (this.onCheckpoint) this.onCheckpoint(msg);
   }
 
@@ -540,7 +519,7 @@ export class GridRiderGame {
     // Exhaust ports are at +/- 0.2 * width = +/- 48px, Y is h - 110 - 13 = h - 123
     const leftOffset = -48 + tilt * 0.3;
     const rightOffset = 48 + tilt * 0.3;
-    const isBoosting = this.boostTimer > 0;
+    const isBoosting = false;
 
     const baseColor = isBoosting ? '#00f0ff' : '#ff007f';
     const spawnY = this.canvas.height - 123;
@@ -659,24 +638,6 @@ export class GridRiderGame {
             }
           }
         }
-
-        // 3. Check Speed Boost Pads
-        if (seg.boostPad && seg.boostPad.active) {
-          const xDiff = Math.abs(this.playerX - seg.boostPad.x);
-          if (xDiff < 0.35) {
-            // Pick up boost pad
-            seg.boostPad.active = false;
-            this.boostTimer = 1.8; // 1.8 seconds of super boost
-            this.playerSpeed = this.boostSpeed;
-            this.audio.playEat(); // Boost chime sound
-            this.screenFlash = 0.3;
-            this.triggerShake(6, 250);
-            
-            // Score bonus
-            this.score += 250;
-            if (this.onScore) this.onScore(this.score);
-          }
-        }
       }
     }
   }
@@ -686,6 +647,15 @@ export class GridRiderGame {
     this.playerSpeed = 2200; // Slow down heavily
     this.triggerShake(12, 450);
     this.screenFlash = 0.25;
+
+    // Deduct shield (energy)
+    this.shield = Math.max(0, this.shield - 20);
+    if (this.onShield) this.onShield(this.shield);
+
+    if (this.shield <= 0) {
+      this.triggerGameOver(false);
+      return;
+    }
     
     // Negative visual feedback (centered on new car y-level)
     this.particles.push({
@@ -759,12 +729,10 @@ export class GridRiderGame {
     // 4. Draw Player's Cyber Sports Car
     this.drawPlayerCar(c, w, h);
 
-    // 5. Draw screen flashing (red crash overlay or white boost flash)
+    // 5. Draw screen flashing (red crash overlay)
     if (this.screenFlash > 0) {
       c.save();
-      c.fillStyle = this.boostTimer > 0.1 
-        ? `rgba(0, 240, 255, ${this.screenFlash * 0.35})` // boost cyan flash
-        : `rgba(255, 51, 51, ${this.screenFlash * 0.35})`; // damage red flash
+      c.fillStyle = `rgba(255, 51, 51, ${this.screenFlash * 0.35})`; // damage red flash
       c.fillRect(0, 0, w, h);
       c.restore();
     }
@@ -965,28 +933,6 @@ export class GridRiderGame {
           c.lineTo(curr.screen.x + curr.screen.w * laneRatio - laneW2, curr.screen.y);
           c.fill();
         }
-      }
-
-      // 5. Draw speed boost pads on the road surface
-      if (curr.boostPad && curr.boostPad.active) {
-        c.fillStyle = COLORS.boostBlue;
-        c.shadowColor = COLORS.boostBlue;
-        c.shadowBlur = 15;
-        const padX1 = curr.screen.x + curr.screen.w * curr.boostPad.x;
-        const padW1 = curr.screen.w * 0.15;
-        const padH1 = Math.max(3, curr.screen.w * 0.06);
-
-        // Chevron arrow pointing forward
-        c.beginPath();
-        c.moveTo(padX1 - padW1, curr.screen.y);
-        c.lineTo(padX1, curr.screen.y - padH1);
-        c.lineTo(padX1 + padW1, curr.screen.y);
-        c.lineTo(padX1 + padW1 * 0.4, curr.screen.y);
-        c.lineTo(padX1, curr.screen.y - padH1 * 0.4);
-        c.lineTo(padX1 - padW1 * 0.4, curr.screen.y);
-        c.closePath();
-        c.fill();
-        c.shadowBlur = 0;
       }
 
       c.restore();
@@ -1193,38 +1139,123 @@ export class GridRiderGame {
     c.save();
     c.translate(sx, sy);
 
-    c.shadowColor = car.color;
-    c.shadowBlur = 15;
-    c.fillStyle = '#0f001b';
-    c.strokeStyle = car.color;
-    c.lineWidth = 2;
+    const neonTheme = car.color; // Use the AI car's specific light color
 
-    // Drawing AI car chassis vector box
+    // Metallic AI body shading gradient
+    const bodyGrad = c.createLinearGradient(0, -height, 0, 0);
+    bodyGrad.addColorStop(0, '#161622');
+    bodyGrad.addColorStop(0.5, '#0e0e16');
+    bodyGrad.addColorStop(1, '#05050a');
+
+    // 1. Rear Tires
+    c.fillStyle = '#06020c';
+    c.fillRect(-width * 0.44, -height * 0.08, width * 0.12, height * 0.32);
+    c.fillRect(width * 0.32, -height * 0.08, width * 0.12, height * 0.32);
+    
+    // Tire rims
+    c.strokeStyle = neonTheme;
+    c.lineWidth = 1.5;
     c.beginPath();
-    c.moveTo(-width * 0.5, 0);
-    c.lineTo(-width * 0.45, -height * 0.5);
-    c.lineTo(-width * 0.35, -height * 0.95);
-    c.lineTo(width * 0.35, -height * 0.95);
-    c.lineTo(width * 0.45, -height * 0.5);
-    c.lineTo(width * 0.5, 0);
+    c.ellipse(-width * 0.38, height * 0.08, width * 0.03, height * 0.11, 0, 0, Math.PI * 2);
+    c.ellipse(width * 0.38, height * 0.08, width * 0.03, height * 0.11, 0, 0, Math.PI * 2);
+    c.stroke();
+
+    // 2. Diffuser Fins
+    c.fillStyle = '#020005';
+    c.fillRect(-width * 0.2, 0, width * 0.4, height * 0.1);
+    c.fillStyle = neonTheme;
+    c.fillRect(-width * 0.1, 0, 1.5, height * 0.1);
+    c.fillRect(width * 0.1, 0, 1.5, height * 0.1);
+
+    // 3. Main Bumper Panel
+    c.shadowColor = neonTheme;
+    c.shadowBlur = 8;
+    c.fillStyle = bodyGrad;
+    c.strokeStyle = neonTheme;
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(-width * 0.44, 0);
+    c.lineTo(-width * 0.42, -height * 0.4);
+    c.lineTo(width * 0.42, -height * 0.4);
+    c.lineTo(width * 0.44, 0);
     c.closePath();
     c.fill();
     c.stroke();
 
-    // Spoiler
-    c.fillStyle = car.color;
-    c.fillRect(-width * 0.52, -height * 1.1, width * 1.04, height * 0.15);
+    // 4. Upper Cabin Shell
+    c.fillStyle = '#0f0f18';
+    c.beginPath();
+    c.moveTo(-width * 0.37, -height * 0.4);
+    c.lineTo(-width * 0.24, -height * 0.84);
+    c.lineTo(width * 0.24, -height * 0.84);
+    c.lineTo(width * 0.37, -height * 0.4);
+    c.closePath();
+    c.fill();
+    c.stroke();
 
-    // Glowing Neon Tail Lights
-    c.fillStyle = COLORS.carTailRed;
-    c.shadowColor = COLORS.carTailRed;
-    c.shadowBlur = 8;
-    c.fillRect(-width * 0.4, -height * 0.42, width * 0.22, height * 0.15);
-    c.fillRect(width * 0.18, -height * 0.42, width * 0.22, height * 0.15);
+    // Windshield glass screen
+    c.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    c.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(-width * 0.24, -height * 0.46);
+    c.lineTo(-width * 0.18, -height * 0.76);
+    c.lineTo(width * 0.18, -height * 0.76);
+    c.lineTo(width * 0.24, -height * 0.46);
+    c.closePath();
+    c.fill();
+    c.stroke();
 
-    // Hover exhaust grid
-    c.fillStyle = car.color;
-    c.fillRect(-width * 0.12, -height * 0.25, width * 0.24, height * 0.1);
+    // Louver lines
+    c.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    for (let i = 1; i <= 3; i++) {
+      const hRatio = 0.4 + (i * 0.1);
+      const wRatio = 0.37 - (i * 0.04);
+      c.beginPath();
+      c.moveTo(-width * wRatio, -height * hRatio);
+      c.lineTo(width * wRatio, -height * hRatio);
+      c.stroke();
+    }
+
+    // 5. Dual Brackets Spoiler
+    c.fillStyle = '#06060c';
+    c.beginPath();
+    c.moveTo(-width * 0.39, -height * 0.4);
+    c.lineTo(-width * 0.41, -height * 0.9);
+    c.lineTo(-width * 0.34, -height * 0.9);
+    c.lineTo(-width * 0.34, -height * 0.4);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.beginPath();
+    c.moveTo(width * 0.34, -height * 0.4);
+    c.lineTo(width * 0.34, -height * 0.9);
+    c.lineTo(width * 0.41, -height * 0.9);
+    c.lineTo(width * 0.39, -height * 0.4);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    // Spoiler blade
+    c.fillRect(-width * 0.45, -height * 0.98, width * 0.9, height * 0.1);
+    c.strokeRect(-width * 0.45, -height * 0.98, width * 0.9, height * 0.1);
+
+    // 6. Glowing LED Tail Lights Bar (colored with their own neon color)
+    c.fillStyle = '#03010a';
+    c.fillRect(-width * 0.39, -height * 0.35, width * 0.78, height * 0.12);
+    c.strokeRect(-width * 0.39, -height * 0.35, width * 0.78, height * 0.12);
+    
+    c.fillStyle = neonTheme;
+    c.shadowColor = neonTheme;
+    c.shadowBlur = 10;
+    c.fillRect(-width * 0.36, -height * 0.32, width * 0.72, height * 0.05);
+
+    // 7. Exhaust circles
+    c.shadowBlur = 0;
+    c.fillStyle = '#111';
+    c.beginPath();
+    c.arc(-width * 0.18, -height * 0.1, 3.5, 0, Math.PI * 2);
+    c.arc(width * 0.18, -height * 0.1, 3.5, 0, Math.PI * 2);
+    c.fill();
 
     c.restore();
   }
@@ -1256,7 +1287,7 @@ export class GridRiderGame {
     const height = 110;
 
     const isBraking = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchBrake;
-    const isBoosting = this.boostTimer > 0;
+    const isBoosting = false;
     const neonTheme = isBoosting ? '#00f0ff' : '#ff00f0';
 
     // 1. Wide Rear Tires (drawn behind the chassis)
@@ -1280,9 +1311,14 @@ export class GridRiderGame {
     c.fillRect(width * 0.16, 0, 3, height * 0.12);
 
     // 3. Lower Bumper & License Plate Deck
+    const bumperGrad = c.createLinearGradient(0, -height * 0.42, 0, 0);
+    bumperGrad.addColorStop(0, '#2e0854'); // metallic purple top
+    bumperGrad.addColorStop(0.5, '#120029'); // dark indigo middle
+    bumperGrad.addColorStop(1, '#060012'); // deep black base
+
     c.shadowColor = neonTheme;
     c.shadowBlur = 10;
-    c.fillStyle = '#100024';
+    c.fillStyle = bumperGrad;
     c.strokeStyle = neonTheme;
     c.lineWidth = 3.5;
     c.beginPath();
@@ -1295,7 +1331,12 @@ export class GridRiderGame {
     c.stroke();
 
     // 4. Upper Cabin Shell (windshield columns, engine cover, and roof)
-    c.fillStyle = '#1a0236';
+    const cabinGrad = c.createLinearGradient(0, -height * 0.98, 0, -height * 0.42);
+    cabinGrad.addColorStop(0, '#3f0b70'); // bright metallic top roof
+    cabinGrad.addColorStop(0.4, '#1d003b'); // mid-indigo
+    cabinGrad.addColorStop(1, '#0d001e'); // base dark
+
+    c.fillStyle = cabinGrad;
     c.beginPath();
     c.moveTo(-width * 0.39, -height * 0.42);
     c.lineTo(-width * 0.25, -height * 0.88); // Left windshield column

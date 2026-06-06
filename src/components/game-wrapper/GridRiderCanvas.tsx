@@ -16,7 +16,8 @@ export default function GridRiderCanvas() {
   const [gameState, setGameState] = useState<GameState>('MENU');
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(40);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [shield, setShield] = useState(100);
   const [speed, setSpeed] = useState(0);
   const [distance, setDistance] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -52,7 +53,8 @@ export default function GridRiderCanvas() {
     setBestScore(game.bestScore);
 
     game.onScore = (s) => setScore(s);
-    game.onTime = (t) => setTimeLeft(t);
+    game.onTime = (t) => setTimeElapsed(t);
+    game.onShield = (sh) => setShield(sh);
     game.onSpeed = (sp) => setSpeed(sp);
     game.onDistance = (d) => setDistance(d);
     
@@ -85,8 +87,10 @@ export default function GridRiderCanvas() {
   };
 
   const formatTime = (t: number) => {
-    const secs = Math.ceil(t);
-    return secs.toString().padStart(2, '0');
+    const totalSecs = Math.floor(t);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Virtual mobile touch controls helpers
@@ -143,14 +147,27 @@ export default function GridRiderCanvas() {
 
           <div className={styles.hudItem}>
             <span className={styles.hudLabel}>TIME</span>
-            <span className={`${styles.hudValue} ${orbitron.className} ${timeLeft <= 10 ? styles.timerDanger : ''}`}>
-              {formatTime(timeLeft)}s
+            <span className={`${styles.hudValue} ${orbitron.className}`}>
+              {formatTime(timeElapsed)}
             </span>
           </div>
 
           <div className={styles.hudItem}>
             <span className={styles.hudLabel}>DISTANCE</span>
             <span className={`${styles.hudValue} ${orbitron.className}`}>{distance}m</span>
+          </div>
+
+          <div className={styles.hudItem}>
+            <span className={styles.hudLabel}>SHIELD</span>
+            <span 
+              className={`${styles.hudValue} ${orbitron.className} ${shield <= 25 ? styles.timerDanger : ''}`}
+              style={{ 
+                color: shield > 50 ? '#39ff14' : (shield > 25 ? '#ffaa00' : '#ff3333'),
+                textShadow: shield > 50 ? '0 0 10px rgba(57, 255, 20, 0.6)' : (shield > 25 ? '0 0 10px rgba(255, 170, 0, 0.6)' : '0 0 10px rgba(255, 51, 51, 0.6)')
+              }}
+            >
+              {shield}%
+            </span>
           </div>
         </div>
 
@@ -229,17 +246,17 @@ export default function GridRiderCanvas() {
           <Link href="/" className={`${styles.backBtn} ${orbitron.className}`}>← BACK</Link>
           <div className={styles.menuIcon}>🏎️</div>
           <h1 className={`${styles.menuTitle} ${orbitron.className}`}>GRID RIDER</h1>
-          <p className={styles.menuSub}>SYNTHWAVE 3D HIGHWAY DRIFTER</p>
+          <p className={styles.menuSub}>SYNTHWAVE 3D HIGHWAY CRUISER</p>
           
           <div className={styles.menuRules}>
             <p>⌨️ Controls: <b>A / D</b> (or <b>Left / Right</b> Arrow) to steer</p>
             <p>⌨️ Speed: <b>W / Up</b> to accelerate, <b>S / Down</b> to brake</p>
-            <p>⚡ Boost: Run over <b>cyan neon arrows</b> for super boost speed</p>
+            <p>🛡️ Shield: Avoid crashes! Hits reduce shield. Pass checkpoints to recover <b>+25% shield</b></p>
             <p>❌ Obstacles: Avoid construction barriers and slow AI traffic</p>
           </div>
 
           {bestScore > 0 && (
-            <p className={`${styles.menuBest} ${orbitron.className}`}>BEST LAP DISTANCE: {bestScore} pts</p>
+            <p className={`${styles.menuBest} ${orbitron.className}`}>BEST SCORE: {bestScore} pts</p>
           )}
 
           <button onClick={startGame} className={`${styles.startBtn} ${orbitron.className}`}>
@@ -252,9 +269,9 @@ export default function GridRiderCanvas() {
       {gameState === 'GAME_OVER' && (
         <div className={styles.overlay}>
           <h1 className={`${styles.gameOverTitle} ${orbitron.className}`}>
-            {completed ? 'ROUTE COMPLETE' : 'SYSTEM CRASHED'}
+            {completed ? 'ROUTE COMPLETE' : 'SHIELD DEPLETED'}
           </h1>
-          <p className={styles.menuSub}>{completed ? 'YOU RULLED THE SYNTH GRID!' : 'OUT OF TIME'}</p>
+          <p className={styles.menuSub}>{completed ? 'YOU RULED THE SYNTH GRID!' : 'SYSTEM CRASHED'}</p>
 
           <div className={styles.statsGrid}>
             <div className={styles.statItem}>
