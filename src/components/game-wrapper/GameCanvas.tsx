@@ -7,7 +7,7 @@ import { Orbitron, Rajdhani } from "next/font/google";
 const orbitron = Orbitron({ subsets: ["latin"], weight: ["400", "700", "900"] });
 const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["500", "700"] });
 
-type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER';
+type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'COUNTDOWN' | 'GAME_OVER';
 
 const AVAILABLE_SKINS: { id: BirdSkin; name: string }[] = [
   { id: 'cyber-swift', name: 'CYBER SWIFT' },
@@ -29,6 +29,7 @@ export default function GameCanvas() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [bgmVol, setBgmVol] = useState(1.0);
   const [vfxVol, setVfxVol] = useState(1.0);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     setBestScore(parseInt(localStorage.getItem('fb_best') || '0'));
@@ -44,16 +45,10 @@ export default function GameCanvas() {
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const wrapper = canvas.parentElement;
-    if (wrapper) {
-      canvas.width = wrapper.clientWidth;
-      canvas.height = wrapper.clientHeight;
-    }
-
-    const game = new FlappyBirdGame(canvas);
+    const game = new FlappyBirdGame(canvasRef.current);
     
     const handleResize = () => {
+      const wrapper = canvasRef.current?.parentElement;
       if (wrapper) game.resize(wrapper.clientWidth, wrapper.clientHeight);
     };
     window.addEventListener('resize', handleResize);
@@ -70,13 +65,53 @@ export default function GameCanvas() {
     game.start(); 
     game.isStarted = false;
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setGameState(prev => {
+          if (prev === 'PLAYING') {
+            game.pause();
+            return 'PAUSED';
+          }
+          return prev;
+        });
+      }
+    };
+
+    const handleBlur = () => {
+      setGameState(prev => {
+        if (prev === 'PLAYING') {
+          game.pause();
+          return 'PAUSED';
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('blur', handleBlur);
+
     gameRef.current = game;
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('blur', handleBlur);
       game.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    if (countdown !== null && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0) {
+      setCountdown(null);
+      if (gameRef.current) {
+        gameRef.current.resume();
+        setGameState('PLAYING');
+      }
+    }
+  }, [countdown]);
 
   // Update BGM when gameState changes
   useEffect(() => {
@@ -149,8 +184,8 @@ export default function GameCanvas() {
 
   const resumeGame = () => {
     if (gameRef.current && gameState === 'PAUSED') {
-      gameRef.current.resume();
-      setGameState('PLAYING');
+      setCountdown(3);
+      setGameState('COUNTDOWN');
     }
   };
 
@@ -285,6 +320,13 @@ export default function GameCanvas() {
                 <button className={`${styles.btn} ${styles.btnSecondary} ${orbitron.className}`} onClick={restartGame}>RESTART</button>
               </div>
             </div>
+          </div>
+
+          {/* COUNTDOWN OVERLAY */}
+          <div className={`${styles.overlay} ${(gameState === 'COUNTDOWN') ? styles.overlayActive : ''}`}>
+             <div className={`${styles.countdownText} ${orbitron.className}`}>
+                {countdown && countdown > 0 ? countdown : 'GO!'}
+             </div>
           </div>
 
           {/* GAME OVER OVERLAY */}

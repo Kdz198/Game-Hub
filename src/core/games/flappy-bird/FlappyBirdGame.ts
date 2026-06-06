@@ -143,7 +143,7 @@ class AudioSystem {
         }
     }
 
-    public updateBgm(state: 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER') {
+    public updateBgm(state: 'MENU' | 'PLAYING' | 'PAUSED' | 'COUNTDOWN' | 'GAME_OVER') {
         if (!this.bgmAudio) return;
         if (this.isMuted || this.masterBgmVolume === 0) {
             this.bgmAudio.pause();
@@ -153,7 +153,8 @@ class AudioSystem {
         switch (state) {
             case 'MENU': targetVol = 0.6; break;
             case 'PLAYING': targetVol = 1.0; break;
-            case 'PAUSED': targetVol = 0.3; break;
+            case 'PAUSED':
+            case 'COUNTDOWN': targetVol = 0.3; break;
             case 'GAME_OVER': targetVol = 0.2; break;
         }
         this.bgmAudio.volume = Math.max(0, Math.min(1, targetVol * this.masterBgmVolume));
