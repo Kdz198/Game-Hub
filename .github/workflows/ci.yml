@@ -13,7 +13,7 @@ concurrency:
 
 env:
   # Thay đổi TÊN_USERNAME thành username DockerHub của bạn
-  IMAGE_NAME: hoangtugio198/hcm-antigravity
+  IMAGE_NAME: hoangtugio198/game-antigravity
 
 jobs:
   build-and-push:
