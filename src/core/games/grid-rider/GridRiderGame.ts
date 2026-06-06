@@ -954,125 +954,236 @@ export class GridRiderGame {
 
     if (width <= 0 || height <= 0) return;
 
-    c.save();
-    c.translate(sx, sy);
-
     if (sprite.type === 'building') {
-      // Draw 3D neon cyber building/skyscraper corridor
+      // Draw 3D neon cyber building/skyscraper corridor with perspective depth
       c.save();
-      
-      c.fillStyle = '#06030c';
-      c.strokeStyle = sprite.color;
-      c.lineWidth = 1.5;
-      
       const leftSide = sprite.x < 0;
-      const bx = leftSide ? -width : 0;
       
-      // Draw building block
-      c.fillRect(bx, -height, width, height);
-      c.strokeRect(bx, -height, width, height);
+      const frontIndex = (seg.index - 5 + this.segments.length) % this.segments.length;
+      let frontSeg = this.segments[frontIndex];
       
-      // Draw neon windows
+      // If the front segment has outdated or invalid scale, mock it
+      if (frontSeg.screen.scale <= seg.screen.scale) {
+        frontSeg = {
+          ...seg,
+          screen: {
+            x: seg.screen.x,
+            y: this.canvas.height + 100,
+            w: seg.screen.w * 1.6,
+            scale: seg.screen.scale * 1.6
+          }
+        };
+      }
+      
+      const scale_back = seg.screen.scale;
+      const scale_front = frontSeg.screen.scale;
+      
+      const xOffset = sprite.x;
+      const buildingWidth = sprite.width;
+      const buildingHeight = sprite.height;
+      const screenW = this.canvas.width / 2;
+      const screenH = this.canvas.height / 2;
+      
+      // Back Face base points
+      const x_back_road = seg.screen.x + seg.screen.w * xOffset;
+      const y_back_road = seg.screen.y;
+      
+      // Front Face base points
+      const x_front_road = frontSeg.screen.x + frontSeg.screen.w * xOffset;
+      const y_front_road = frontSeg.screen.y;
+      
+      // Outer points
+      const outer_factor = leftSide ? -1 : 1;
+      const x_back_outer = x_back_road + outer_factor * buildingWidth * scale_back * screenW;
+      const x_front_outer = x_front_road + outer_factor * buildingWidth * scale_front * screenW;
+      
+      // Roof height points
+      const y_back_roof = y_back_road - buildingHeight * scale_back * screenH;
+      const y_front_roof = y_front_road - buildingHeight * scale_front * screenH;
+      
+      const strokeColor = sprite.color;
+      
+      // 1. Draw SIDE WALL (facing the road, going into perspective)
+      c.fillStyle = '#090510';
+      c.strokeStyle = strokeColor;
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(x_front_road, y_front_road);
+      c.lineTo(x_back_road, y_back_road);
+      c.lineTo(x_back_road, y_back_roof);
+      c.lineTo(x_front_road, y_front_roof);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      
+      // Draw window grid on the side wall (perspective rows)
       c.fillStyle = 'rgba(255, 240, 31, 0.45)'; // glowing yellow windows
       c.shadowColor = '#fff01f';
       c.shadowBlur = 4;
       
       const rows = 6;
-      const cols = 4;
-      const winW = width * 0.12;
-      const winH = height * 0.08;
-      const gapX = width * 0.08;
-      const gapY = height * 0.06;
-      
+      const cols = 5;
       for (let r = 0; r < rows; r++) {
+        const rRatio = (r + 0.5) / rows;
+        const y_front_w = y_front_roof + (y_front_road - y_front_roof) * rRatio;
+        const y_back_w = y_back_roof + (y_back_road - y_back_roof) * rRatio;
+        
         for (let col = 0; col < cols; col++) {
-          const litSeed = Math.sin(sprite.width + r * 12 + col * 34) * 0.5 + 0.5;
-          if (litSeed > 0.4) {
-            const wx = bx + gapX + col * (winW + gapX);
-            const wy = -height + gapY + r * (winH + gapY);
-            c.fillRect(wx, wy, winW, winH);
+          const colRatio = (col + 0.5) / cols;
+          const wx = x_front_road + (x_back_road - x_front_road) * colRatio;
+          const wy = y_front_w + (y_back_w - y_front_w) * colRatio;
+          
+          const wScale = scale_front + (scale_back - scale_front) * colRatio;
+          const winSizeW = 12 * wScale * screenW * 0.15;
+          const winSizeH = 20 * wScale * screenH * 0.15;
+          
+          const litSeed = Math.sin(sprite.width + r * 17 + col * 23) * 0.5 + 0.5;
+          if (litSeed > 0.45 && winSizeW > 1) {
+            c.fillRect(wx - winSizeW/2, wy - winSizeH/2, winSizeW, winSizeH);
           }
         }
       }
+      c.shadowBlur = 0;
+      
+      // 2. Draw FRONT FACE (facing the player)
+      const frontGrad = c.createLinearGradient(x_front_outer, 0, x_front_road, 0);
+      frontGrad.addColorStop(0, '#0e0a1a');
+      frontGrad.addColorStop(1, '#06040e');
+      c.fillStyle = frontGrad;
+      
+      c.beginPath();
+      c.moveTo(x_front_outer, y_front_road);
+      c.lineTo(x_front_road, y_front_road);
+      c.lineTo(x_front_road, y_front_roof);
+      c.lineTo(x_front_outer, y_front_roof);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      
+      // Draw window grid on the front face
+      c.fillStyle = 'rgba(0, 240, 255, 0.45)'; // cyan windows on the front face
+      c.shadowColor = '#00f0ff';
+      c.shadowBlur = 4;
+      
+      for (let r = 0; r < rows; r++) {
+        const rRatio = (r + 0.5) / rows;
+        const wy = y_front_roof + (y_front_road - y_front_roof) * rRatio;
+        const winSizeH = 14 * scale_front * screenH * 0.15;
+        
+        for (let col = 0; col < 3; col++) {
+          const colRatio = (col + 0.5) / 3;
+          const wx = x_front_outer + (x_front_road - x_front_outer) * colRatio;
+          const winSizeW = 14 * scale_front * screenW * 0.15;
+          
+          const litSeed = Math.sin(sprite.height + r * 13 + col * 29) * 0.5 + 0.5;
+          if (litSeed > 0.5 && winSizeW > 1) {
+            c.fillRect(wx - winSizeW/2, wy - winSizeH/2, winSizeW, winSizeH);
+          }
+        }
+      }
+      c.shadowBlur = 0;
+      
+      // 3. Draw ROOF
+      c.fillStyle = '#05030a';
+      c.beginPath();
+      c.moveTo(x_front_outer, y_front_roof);
+      c.lineTo(x_front_road, y_front_roof);
+      c.lineTo(x_back_road, y_back_roof);
+      c.lineTo(x_back_outer, y_back_roof);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      
+      // Roof accent neon line
+      c.strokeStyle = strokeColor;
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(x_front_outer, y_front_roof);
+      c.lineTo(x_front_road, y_front_roof);
+      c.stroke();
       
       // Draw neon antenna on some buildings
       const hasAntenna = (sprite.width % 3 === 0);
       if (hasAntenna) {
-        c.strokeStyle = sprite.color;
+        c.strokeStyle = strokeColor;
+        c.lineWidth = 1.5;
+        const antX = x_front_outer + (x_front_road - x_front_outer) * 0.5;
+        const antY = y_front_roof;
+        const antH = buildingHeight * scale_front * screenH * 0.15;
+        
         c.beginPath();
-        c.moveTo(bx + width / 2, -height);
-        c.lineTo(bx + width / 2, -height - height * 0.15);
+        c.moveTo(antX, antY);
+        c.lineTo(antX, antY - antH);
         c.stroke();
         
         c.fillStyle = '#ff3333';
         c.shadowColor = '#ff3333';
         c.shadowBlur = 8;
         c.beginPath();
-        c.arc(bx + width / 2, -height - height * 0.15, 3, 0, Math.PI * 2);
+        c.arc(antX, antY - antH, 3, 0, Math.PI * 2);
         c.fill();
       }
       
       c.restore();
     }
-    else if (sprite.type === 'light') {
-      // Neon street light pole
-      c.strokeStyle = '#00f0ff';
-      c.lineWidth = 2.5;
-      c.beginPath();
-      // Pole
-      c.moveTo(0, 0);
-      c.lineTo(0, -height * 0.9);
-      // Arm reaching road
-      const reach = sprite.x > 0 ? -width * 0.8 : width * 0.8;
-      c.lineTo(reach, -height);
-      c.stroke();
-
-      // Light beam polygon
-      const beamGrad = c.createLinearGradient(reach, -height, reach, 0);
-      beamGrad.addColorStop(0, 'rgba(0, 240, 255, 0.4)');
-      beamGrad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
-      c.fillStyle = beamGrad;
-      c.beginPath();
-      c.moveTo(reach, -height);
-      c.lineTo(reach - width * 0.5, 0);
-      c.lineTo(reach + width * 0.5, 0);
-      c.closePath();
-      c.fill();
-    }
-    else if (sprite.type === 'sign_checkpoint') {
-      // Roadside neon billboard instead of overhead arch
+    else {
+      // Translated draw for lampposts and billboards
       c.save();
-      const leftSide = sprite.x < 0;
+      c.translate(sx, sy);
       
-      c.fillStyle = '#110022';
-      c.strokeStyle = sprite.color;
-      c.lineWidth = 3;
-      c.shadowColor = sprite.color;
-      c.shadowBlur = 15;
-      
-      // Billboard sign board
-      const wWidth = width * 0.6;
-      const wHeight = height * 0.4;
-      const bx = leftSide ? -wWidth : 0;
-      
-      // Sign post
-      c.beginPath();
-      c.moveTo(bx + wWidth / 2, 0);
-      c.lineTo(bx + wWidth / 2, -height);
-      c.stroke();
-      
-      // Board
-      c.fillRect(bx, -height, wWidth, wHeight);
-      c.strokeRect(bx, -height, wWidth, wHeight);
-      
-      // Text
-      c.fillStyle = '#ffffff';
-      c.shadowColor = '#ffffff';
-      c.shadowBlur = 6;
-      c.font = `bold ${Math.max(6, Math.floor(14 * seg.screen.scale * 3.5))}px "Orbitron", sans-serif`;
-      c.textAlign = 'center';
-      c.fillText("CHECK", bx + wWidth / 2, -height + wHeight * 0.45);
-      c.fillText("POINT", bx + wWidth / 2, -height + wHeight * 0.85);
+      if (sprite.type === 'light') {
+        c.strokeStyle = '#00f0ff';
+        c.lineWidth = 2.5;
+        c.beginPath();
+        c.moveTo(0, 0);
+        c.lineTo(0, -height * 0.9);
+        const reach = sprite.x > 0 ? -width * 0.8 : width * 0.8;
+        c.lineTo(reach, -height);
+        c.stroke();
+
+        const beamGrad = c.createLinearGradient(reach, -height, reach, 0);
+        beamGrad.addColorStop(0, 'rgba(0, 240, 255, 0.4)');
+        beamGrad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
+        c.fillStyle = beamGrad;
+        c.beginPath();
+        c.moveTo(reach, -height);
+        c.lineTo(reach - width * 0.5, 0);
+        c.lineTo(reach + width * 0.5, 0);
+        c.closePath();
+        c.fill();
+      }
+      else if (sprite.type === 'sign_checkpoint') {
+        c.save();
+        const leftSide = sprite.x < 0;
+        
+        c.fillStyle = '#110022';
+        c.strokeStyle = sprite.color;
+        c.lineWidth = 3;
+        c.shadowColor = sprite.color;
+        c.shadowBlur = 15;
+        
+        const wWidth = width * 0.6;
+        const wHeight = height * 0.4;
+        const bx = leftSide ? -wWidth : 0;
+        
+        c.beginPath();
+        c.moveTo(bx + wWidth / 2, 0);
+        c.lineTo(bx + wWidth / 2, -height);
+        c.stroke();
+        
+        c.fillRect(bx, -height, wWidth, wHeight);
+        c.strokeRect(bx, -height, wWidth, wHeight);
+        
+        c.fillStyle = '#ffffff';
+        c.shadowColor = '#ffffff';
+        c.shadowBlur = 6;
+        c.font = `bold ${Math.max(6, Math.floor(14 * seg.screen.scale * 3.5))}px "Orbitron", sans-serif`;
+        c.textAlign = 'center';
+        c.fillText("CHECK", bx + wWidth / 2, -height + wHeight * 0.45);
+        c.fillText("POINT", bx + wWidth / 2, -height + wHeight * 0.85);
+        
+        c.restore();
+      }
       
       c.restore();
     }
