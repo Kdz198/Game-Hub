@@ -55,7 +55,11 @@ export class AudioSynth {
   /* ── public API ───────────────────────────────────────────────── */
 
   public playEat() {
-    if (!this.enabled || this.eatPool.length === 0) return;
+    if (!this.enabled || this.eatPool.length === 0) {
+      console.warn('[AUDIO] playEat SKIPPED — enabled:', this.enabled, 'poolSize:', this.eatPool.length);
+      return;
+    }
+    console.log('[AUDIO] playEat — index:', this.eatIndex, 'pool:', this.eatPool.length);
     this.playFromPool(this.eatPool, this.eatIndex);
     this.eatIndex = (this.eatIndex + 1) % this.eatPool.length;
   }
@@ -89,9 +93,14 @@ export class AudioSynth {
 
   private playFromPool(pool: HTMLAudioElement[], index: number) {
     const a = pool[index];
+    console.log('[AUDIO] playFromPool — readyState:', a.readyState, 'paused:', a.paused, 'currentTime:', a.currentTime, 'src:', a.src ? 'OK' : 'EMPTY');
     // Reset to start if it was already playing or finished
     a.currentTime = 0;
-    a.play().catch(() => {});
+    a.play().then(() => {
+      console.log('[AUDIO] ✅ play() succeeded');
+    }).catch((err) => {
+      console.error('[AUDIO] ❌ play() FAILED:', err.message);
+    });
   }
 
   /* ── WAV generator ────────────────────────────────────────────── */
