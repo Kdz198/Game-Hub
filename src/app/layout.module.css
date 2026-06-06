@@ -1,0 +1,68 @@
+.appContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  margin: 1rem 2rem;
+  position: sticky;
+  top: 1rem;
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logoIcon {
+  font-size: 2rem;
+}
+
+.logo h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #fff, var(--accent-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.nav {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav a {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.nav a:hover {
+  color: var(--accent-color);
+  text-shadow: 0 0 8px var(--accent-color-glow);
+}
+
+.userProfile .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-color), #8a2be2);
+  border: 2px solid var(--glass-border);
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
