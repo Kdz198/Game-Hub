@@ -56,6 +56,16 @@ export default function Home() {
       neonColor: "#ff00f0", // Neon Magenta/Purple
       status: "ONLINE",
       players: "2,045"
+    },
+    {
+      id: "stack-ball",
+      title: "STACK BALL",
+      category: "ARCADE / 3D SMASH",
+      description: "Đập vỡ tháp đĩa xoay neon đầy sắc màu và kích hoạt trạng thái cuồng nhiệt Fever Mode.",
+      icon: "💥",
+      neonColor: "#ffaa00", // Neon Orange
+      status: "ONLINE",
+      players: "3,120"
     }
   ];
 
