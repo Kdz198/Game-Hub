@@ -1,11 +1,11 @@
 import { GameLoop } from "../../engine/GameLoop";
 import { InputManager } from "../../engine/InputManager";
 
-const INITIAL_PIPE_SPEED = 0.25;
-const MAX_PIPE_SPEED = 0.55;
-const BASE_GRAVITY = 0.0022;
-const BASE_JUMP_STRENGTH = -0.55;
-const PIPE_SPAWN_RATE = 1500; 
+const INITIAL_PIPE_SPEED = 2.8;
+const MAX_PIPE_SPEED = 5.5;
+const BASE_GRAVITY = 0.45;
+const BASE_JUMP_STRENGTH = -7.2;
+const PIPE_SPAWN_RATE = 110; 
 const BASE_GAP_SIZE = 185;
 const MIN_GAP_SIZE = 140;
 
@@ -385,16 +385,22 @@ export class FlappyBirdGame {
   }
 
   private update(deltaTime: number) {
-    this.frameCount++;
-    if (this.screenShakeTime > 0) this.screenShakeTime--;
+    const timeScale = deltaTime / 16.666;
+    this.frameCount += timeScale;
+    
+    // Update ground offset for background rendering
+    this.groundOffset += this.basePipeSpeed * timeScale;
+    if (this.groundOffset >= 35) this.groundOffset -= 35;
+
+    if (this.screenShakeTime > 0) this.screenShakeTime -= timeScale;
     const hasAction = this.input.consumeAction();
     
     // Update Particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= p.decay;
+      p.x += p.vx * timeScale;
+      p.y += p.vy * timeScale;
+      p.life -= p.decay * timeScale;
       if (p.life <= 0) this.particles.splice(i, 1);
     }
 
@@ -407,8 +413,8 @@ export class FlappyBirdGame {
 
     this.handleJump(hasAction);
     
-    this.bird.velocity += BASE_GRAVITY * deltaTime;
-    this.bird.y += this.bird.velocity * (deltaTime * 0.2); // Scaling factor to match old engine
+    this.bird.velocity += BASE_GRAVITY * timeScale;
+    this.bird.y += this.bird.velocity * timeScale;
 
     if (this.bird.y < this.bird.size) {
         this.bird.y = this.bird.size;
@@ -423,7 +429,7 @@ export class FlappyBirdGame {
     this.bird.rotation += (this.bird.targetRotation - this.bird.rotation) * 0.15;
 
     const skin = SKINS_CONFIG[this.currentSkin];
-    if (this.frameCount % 2 === 0) {
+    if (Math.floor(this.frameCount) % 2 === 0) {
         this.trail.push({ x: this.width * 0.22 - 8, y: this.bird.y });
         if (this.trail.length > 8) this.trail.shift();
     }
@@ -432,12 +438,12 @@ export class FlappyBirdGame {
         this.createParticle(
             this.width * 0.22 - 12, this.bird.y + (Math.random() * 6 - 3),
             skin.thrusterColor,
-            -this.basePipeSpeed * 10 - Math.random(), Math.random() * 1 - 0.5,
+            -this.basePipeSpeed - Math.random(), Math.random() * 1 - 0.5,
             Math.random() * 3 + 1, 0.08
         );
     }
 
-    this.lastPipeSpawn += deltaTime;
+    this.lastPipeSpawn += timeScale;
     if (this.lastPipeSpawn > PIPE_SPAWN_RATE) {
       this.spawnPipe();
       this.lastPipeSpawn = 0;
@@ -445,10 +451,10 @@ export class FlappyBirdGame {
 
     for (let i = this.pipes.length - 1; i >= 0; i--) {
       const pipe = this.pipes[i];
-      pipe.x -= this.basePipeSpeed * deltaTime;
+      pipe.x -= this.basePipeSpeed * timeScale;
 
       if (pipe.isMoving) {
-          pipe.topHeight += pipe.vy;
+          pipe.topHeight += pipe.vy * timeScale;
           if (pipe.topHeight < pipe.minY || pipe.topHeight > pipe.maxY) pipe.vy = -pipe.vy;
           pipe.bottomHeight = this.height - pipe.gapSize - pipe.topHeight - 80;
       }
@@ -457,7 +463,7 @@ export class FlappyBirdGame {
           pipe.passed = true;
           this.score++;
           audioSys.playScore();
-          if (this.score % 4 === 0) this.basePipeSpeed = Math.min(MAX_PIPE_SPEED, this.basePipeSpeed + 0.03);
+          if (this.score % 4 === 0) this.basePipeSpeed = Math.min(MAX_PIPE_SPEED, this.basePipeSpeed + 0.3);
           if (this.onScore) this.onScore(this.score);
           if (this.score > this.bestScore) {
             this.bestScore = this.score;
@@ -473,7 +479,7 @@ export class FlappyBirdGame {
   private handleJump(hasAction: boolean) {
     if (this.isGameOver || this.isPaused) return;
     if (hasAction) {
-      this.bird.velocity = BASE_JUMP_STRENGTH * 12; // Adjusted for delta time multiplier
+      this.bird.velocity = BASE_JUMP_STRENGTH; 
       audioSys.playFlap();
       const skin = SKINS_CONFIG[this.currentSkin];
       for (let i = 0; i < 4; i++) {
@@ -573,7 +579,7 @@ export class FlappyBirdGame {
     this.ctx.shadowBlur = 4;
     this.ctx.shadowColor = '#7a00ff';
 
-    const citySpeed = this.basePipeSpeed * 0.1 * 16;
+    const citySpeed = this.basePipeSpeed * 0.1;
     const scrollX = (this.frameCount * citySpeed) % 240;
 
     const buildings = [
@@ -628,9 +634,6 @@ export class FlappyBirdGame {
         this.ctx.lineTo(startX, this.height);
         this.ctx.stroke();
     }
-
-    this.groundOffset += this.basePipeSpeed * 16;
-    if (this.groundOffset >= 35) this.groundOffset = 0;
 
     const startH = this.groundY;
     let gridOffset = this.groundOffset;
