@@ -38,21 +38,22 @@ export class AudioSynth {
     this.init();
     if (!this.ctx) return;
 
+    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.linearRampToValueAtTime(1200, t + 0.1);
     
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.1);
     
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.1);
+    osc.start(t);
+    osc.stop(t + 0.1);
   }
 
   public playCrash() {
@@ -60,22 +61,22 @@ export class AudioSynth {
     this.init();
     if (!this.ctx) return;
 
-    // Distorted low pitch drop
+    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.5);
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.linearRampToValueAtTime(10, t + 0.5);
     
-    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.5, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.5);
     
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.5);
+    osc.start(t);
+    osc.stop(t + 0.5);
   }
 
   public playMilestone() {
@@ -83,21 +84,21 @@ export class AudioSynth {
     this.init();
     if (!this.ctx) return;
 
-    // Chime riser
+    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     
     osc.type = 'square';
-    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.linearRampToValueAtTime(800, t + 0.3);
     
-    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.3);
     
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.3);
+    osc.start(t);
+    osc.stop(t + 0.3);
   }
 }
