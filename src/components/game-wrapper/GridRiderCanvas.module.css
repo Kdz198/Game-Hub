@@ -1,0 +1,425 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #05000b;
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── HUD ──────────────────────────────────────────────────────── */
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  opacity: 0;
+  transition: all 0.5s ease;
+  z-index: 10;
+}
+
+.hudVisible {
+  opacity: 1;
+}
+
+.hudTop {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.5rem 2.5rem;
+  width: 100%;
+}
+
+.hudItem {
+  background: rgba(10, 0, 20, 0.75);
+  border: 1px solid rgba(255, 0, 240, 0.15);
+  border-top: 3px solid #ff00f0;
+  padding: 0.6rem 2rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 0, 240, 0.05);
+}
+
+.hudLabel {
+  font-size: 0.65rem;
+  color: #888;
+  letter-spacing: 2px;
+}
+
+.hudValue {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ff00f0;
+  text-shadow: 0 0 10px rgba(255, 0, 240, 0.6);
+  line-height: 1.1;
+}
+
+.timerDanger {
+  color: #ff3333;
+  text-shadow: 0 0 12px rgba(255, 51, 51, 0.8);
+  animation: timerBlink 0.5s ease infinite alternate;
+}
+
+@keyframes timerBlink {
+  0% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* ── Speedometer ── */
+
+.speedometerBox {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 0, 20, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-bottom: 3px solid #00f0ff;
+  border-radius: 4px;
+  padding: 0.6rem 1.8rem;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 240, 255, 0.05);
+  pointer-events: none;
+}
+
+.speedDial {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.speedNumber {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #00f0ff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+  line-height: 1;
+}
+
+.speedUnit {
+  font-size: 0.8rem;
+  color: #666;
+  letter-spacing: 1px;
+  margin-left: 5px;
+  font-weight: bold;
+}
+
+.speedBarContainer {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.speedBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f0ff, #ff00f0);
+  box-shadow: 0 0 8px #00f0ff;
+  transition: width 0.08s ease-out;
+}
+
+/* ── Checkpoint Alert ── */
+
+.checkpointAlert {
+  position: absolute;
+  top: 32%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 0, 20, 0.9);
+  border: 2px solid #00f0ff;
+  color: #00f0ff;
+  font-size: 2.2rem;
+  font-weight: 900;
+  padding: 1rem 3rem;
+  border-radius: 4px;
+  text-shadow: 0 0 15px rgba(0, 240, 255, 0.8);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.3);
+  text-align: center;
+  letter-spacing: 4px;
+  z-index: 15;
+}
+
+/* ── Mobile Virtual Controls ── */
+
+.mobileControls {
+  position: absolute;
+  bottom: 25px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2rem;
+  pointer-events: auto;
+  z-index: 12;
+}
+
+.steeringPad, .pedalsPad {
+  display: flex;
+  gap: 1.2rem;
+}
+
+.ctrlBtn {
+  background: rgba(10, 0, 20, 0.8);
+  border: 2px solid;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.1s;
+}
+
+.ctrlBtn:active {
+  transform: scale(0.92);
+}
+
+.steerBtn {
+  width: 75px;
+  height: 75px;
+  font-size: 1.8rem;
+  border-color: #ff00f0;
+  box-shadow: 0 0 15px rgba(255, 0, 240, 0.2);
+  text-shadow: 0 0 8px rgba(255, 0, 240, 0.6);
+}
+
+.steerBtn:active {
+  background: rgba(255, 0, 240, 0.15);
+  box-shadow: 0 0 25px rgba(255, 0, 240, 0.5);
+}
+
+.brakeBtn {
+  width: 95px;
+  height: 75px;
+  font-size: 1rem;
+  border-color: #ff3333;
+  color: #ff3333;
+  box-shadow: 0 0 15px rgba(255, 51, 51, 0.2);
+  letter-spacing: 1px;
+}
+
+.brakeBtn:active {
+  background: rgba(255, 51, 51, 0.15);
+  box-shadow: 0 0 25px rgba(255, 51, 51, 0.5);
+}
+
+.gasBtn {
+  width: 95px;
+  height: 75px;
+  font-size: 1.1rem;
+  border-color: #00f0ff;
+  color: #00f0ff;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+  letter-spacing: 1px;
+}
+
+.gasBtn:active {
+  background: rgba(0, 240, 255, 0.15);
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
+}
+
+/* ── MENU / OVERLAYS ──────────────────────────────────────────── */
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(5, 0, 12, 0.88);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  animation: overlayFade 0.4s ease;
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.backBtn {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  color: #888;
+  text-decoration: none;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  transition: color 0.3s;
+}
+
+.backBtn:hover {
+  color: #ff00f0;
+  text-shadow: 0 0 8px rgba(255, 0, 240, 0.5);
+}
+
+.menuIcon {
+  font-size: 4.5rem;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(0 0 20px rgba(255, 0, 240, 0.4));
+  animation: floatIcon 2.5s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-12px) scale(1.03); }
+}
+
+.menuTitle {
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #ff00f0;
+  text-shadow: 0 0 30px rgba(255, 0, 240, 0.7);
+  margin: 0;
+  letter-spacing: 6px;
+}
+
+.menuSub {
+  color: #666;
+  font-size: 0.8rem;
+  letter-spacing: 4px;
+  margin-top: 0.4rem;
+  text-transform: uppercase;
+}
+
+.menuRules {
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  color: #b8b8c8;
+  font-size: 0.95rem;
+  background: rgba(10, 0, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 1.5rem 2rem;
+  border-radius: 6px;
+  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.01);
+}
+
+.menuRules p {
+  margin: 0;
+}
+
+.menuBest {
+  color: #39ff14;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+}
+
+.startBtn {
+  margin-top: 1rem;
+  background: transparent;
+  border: 2px solid #ff00f0;
+  color: #ff00f0;
+  padding: 1rem 3.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 10px rgba(255, 0, 240, 0.4);
+  box-shadow: 0 0 20px rgba(255, 0, 240, 0.15);
+}
+
+.startBtn:hover {
+  background: rgba(255, 0, 240, 0.15);
+  box-shadow: 0 0 45px rgba(255, 0, 240, 0.5);
+  transform: scale(1.03);
+}
+
+/* ── GAME OVER ── */
+
+.gameOverTitle {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #ff3333;
+  text-shadow: 0 0 35px rgba(255, 51, 51, 0.6);
+  margin: 0 0 1.5rem 0;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+  width: 90%;
+  max-width: 500px;
+}
+
+.statItem {
+  background: rgba(10, 0, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 1rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.statLabel {
+  font-size: 0.6rem;
+  color: #777;
+  letter-spacing: 1.5px;
+  margin-bottom: 0.4rem;
+}
+
+.statValue {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.gameOverButtons {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+}
+
+.homeBtn {
+  background: transparent;
+  border: 1px solid #444;
+  color: #aaa;
+  padding: 1rem 2.2rem;
+  font-size: 0.95rem;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.homeBtn:hover {
+  border-color: #ff00f0;
+  color: #ff00f0;
+  text-shadow: 0 0 10px rgba(255, 0, 240, 0.4);
+}

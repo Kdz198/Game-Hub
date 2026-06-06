@@ -46,6 +46,16 @@ export default function Home() {
       neonColor: "#ff3333", // Neon Red
       status: "ONLINE",
       players: "978"
+    },
+    {
+      id: "grid-rider",
+      title: "GRID RIDER",
+      category: "OUTRUN / RACING",
+      description: "Đua xe giả lập 3D trên xa lộ neon dưới hoàng hôn Synthwave tuyệt đẹp.",
+      icon: "🏎️",
+      neonColor: "#ff00f0", // Neon Magenta/Purple
+      status: "ONLINE",
+      players: "2,045"
     }
   ];
 
