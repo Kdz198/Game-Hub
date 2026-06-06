@@ -77,11 +77,13 @@
 }
 
 .scoreValue {
-  font-size: 2rem;
-  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.2rem;
+  font-weight: bold;
   color: #00f0ff;
-  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  text-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
   line-height: 1;
+  margin-top: 0.5rem;
 }
 
 .bestDisplay {
@@ -104,10 +106,13 @@
 }
 
 .bestValue {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.2rem;
+  font-weight: bold;
   color: #39ff14;
-  text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+  text-shadow: 0 0 15px rgba(57, 255, 20, 0.6);
+  line-height: 1;
+  margin-top: 0.5rem;
 }
 
 .overlay {
