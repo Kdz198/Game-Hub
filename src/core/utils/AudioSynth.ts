@@ -13,22 +13,13 @@
 
 // ── Module-level singleton ──────────────────────────────────────
 let sharedCtx: AudioContext | null = null;
-let sharedGain: GainNode | null = null;
 
 function getCtx(): AudioContext {
   if (!sharedCtx) {
     const AC = window.AudioContext || (window as any).webkitAudioContext;
     sharedCtx = new AC();
-    sharedGain = sharedCtx.createGain();
-    sharedGain.gain.value = 0.4;
-    sharedGain.connect(sharedCtx.destination);
   }
   return sharedCtx;
-}
-
-function getGain(): GainNode {
-  if (!sharedGain) getCtx();
-  return sharedGain!;
 }
 
 // ── Class ───────────────────────────────────────────────────────
@@ -80,24 +71,27 @@ export class AudioSynth {
     }
     const buf = this.buffers[name];
     if (!buf) {
-      console.warn('[AUDIO]', name, 'SKIP: no buffer (unlock not called?)');
+      console.warn('[AUDIO]', name, 'SKIP: no buffer');
       return;
     }
 
     const ctx = getCtx();
-    const gain = getGain();
 
-    // Always try to resume (no-op if already running)
     if (ctx.state === 'suspended') {
       ctx.resume().catch(() => {});
     }
 
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.connect(gain);
-    src.start(0);
+    src.connect(ctx.destination);  // Direct to destination, no gain node
 
-    console.log('[AUDIO] ▶', name, '— ctxState:', ctx.state, 'ctxTime:', ctx.currentTime.toFixed(3));
+    const startTime = ctx.currentTime;
+    src.onended = () => {
+      console.log('[AUDIO] ⏹', name, '— played for', ((ctx.currentTime - startTime) * 1000).toFixed(0), 'ms');
+    };
+
+    src.start();
+    console.log('[AUDIO] ▶', name, '— ctxState:', ctx.state, 'ctxTime:', ctx.currentTime.toFixed(3), 'bufDur:', buf.duration.toFixed(3));
   }
 
   /* ── buffer rendering ─────────────────────────────────────────── */
@@ -123,19 +117,19 @@ export class AudioSynth {
   private genEat(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
     const freq = 880 + 2000 * (t / dur);
-    return Math.sin(2 * Math.PI * freq * t) * env * 0.7;
+    return Math.sin(2 * Math.PI * freq * t) * env;
   }
 
   private genCrash(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
     const freq = 150 * Math.pow(0.1, t / dur);
     const phase = freq * t;
-    return (2 * (phase - Math.floor(phase)) - 1) * env * 0.8;
+    return (2 * (phase - Math.floor(phase)) - 1) * env;
   }
 
   private genMilestone(t: number, dur: number): number {
     const env = Math.max(0, 1 - t / dur);
     const freq = 440 + 880 * (t / dur);
-    return Math.sin(2 * Math.PI * freq * t) * env * 0.6;
+    return Math.sin(2 * Math.PI * freq * t) * env;
   }
 }
