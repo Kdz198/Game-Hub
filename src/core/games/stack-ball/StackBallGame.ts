@@ -233,10 +233,11 @@ export class StackBallGame {
     this.currentPlatformIndex = this.totalPlatforms - 1;
 
     // Ball starts bouncing above the top platform
-    this.ballY = this.totalPlatforms * this.platformSpacing + 50;
-    this.ballVY = 0;
-    this.cameraY = this.ballY;
-    this.targetCameraY = this.ballY;
+    const topPlatformY = (this.totalPlatforms - 1) * this.platformSpacing;
+    this.ballY = topPlatformY + 10;
+    this.ballVY = this.bounceStrength;
+    this.targetCameraY = topPlatformY + 60;
+    this.cameraY = this.targetCameraY;
 
     // Choose palette for the current level
     const palette = PALETTES[(this.level - 1) % PALETTES.length];
@@ -392,8 +393,9 @@ export class StackBallGame {
     }
 
     // Smooth camera tracking
-    // Keep camera slightly below the ball
-    this.targetCameraY = this.ballY + 40;
+    // Keep camera centered on the active platform
+    const activePlatformY = this.platforms[this.currentPlatformIndex].y;
+    this.targetCameraY = activePlatformY + 60;
     this.cameraY += (this.targetCameraY - this.cameraY) * 0.0065 * dt;
   }
 
