@@ -159,6 +159,7 @@ export class SnakeGame {
   }
 
   public start() {
+    this.audio.unlock(); // Unlock audio context on user gesture
     this.reset();
     this.loop.start();
   }

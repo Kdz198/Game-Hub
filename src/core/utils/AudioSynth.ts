@@ -18,6 +18,21 @@ export class AudioSynth {
     }
   }
 
+  public unlock() {
+    if (!this.enabled) return;
+    this.init();
+    if (this.ctx) {
+      // Play a silent note immediately to unlock audio engine on mobile/desktop
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.001);
+    }
+  }
+
   public playEat() {
     if (!this.enabled) return;
     this.init();
