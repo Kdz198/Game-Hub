@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 
 interface RLBrainVisualizerProps {
   game: any;
+  gameType?: 'snake' | 'flappy-bird';
 }
 
 const INPUT_LABELS = [
@@ -30,7 +31,7 @@ const OUTPUT_LABELS = [
   'TURN RIGHT'
 ];
 
-export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
+export default function RLBrainVisualizer({ game, gameType = 'snake' }: RLBrainVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
   const pulseOffsetRef = useRef<number>(0);
@@ -42,6 +43,25 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const isFlappy = gameType === 'flappy-bird';
+    const inputLabels = isFlappy ? [
+      'BIRD Y',
+      'VELOCITY',
+      'PIPE DIST',
+      'GAP TOP Y',
+      'GAP BOTTOM Y',
+      'GAP DIFF Y'
+    ] : INPUT_LABELS;
+    
+    const outputLabels = isFlappy ? [
+      'GLIDE',
+      'FLAP'
+    ] : OUTPUT_LABELS;
+
+    const inputCount = isFlappy ? 6 : 15;
+    const outputCount = isFlappy ? 2 : 3;
+    const hiddenCount = 6;
+
     // Draw the neural network
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -50,8 +70,8 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
       const height = canvas.height;
       
       // Pull real-time data from game object
-      const state = (game && game.rlLastState) || Array(15).fill(0);
-      const qValues = (game && game.rlLastQValues) || [0, 0, 0];
+      const state = (game && game.rlLastState) || Array(inputCount).fill(0);
+      const qValues = (game && game.rlLastQValues) || Array(outputCount).fill(0);
       const selectedAction = (game && game.rlLastAction !== undefined) ? game.rlLastAction : -1;
 
       // Node positions
@@ -59,26 +79,26 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
       const hiddenX = width / 2 + 20;
       const outputX = width - 100;
       
-      const inputCount = 15;
-      const hiddenCount = 6;
-      const outputCount = 3;
-      
       const inputNodes: { x: number; y: number; active: boolean; val?: number; label: string }[] = [];
       const hiddenNodes: { x: number; y: number }[] = [];
       const outputNodes: { x: number; y: number; q: number; active: boolean; label: string }[] = [];
 
       // Calculate node positions
-      const paddingY = 20; // Slightly smaller padding for 14 nodes to fit height nicely
-      const inputSpacing = (height - 2 * paddingY) / (inputCount - 1);
+      const paddingY = 20; 
+      const inputSpacing = inputCount > 1 ? (height - 2 * paddingY) / (inputCount - 1) : 0;
       for (let i = 0; i < inputCount; i++) {
         const val = state[i] || 0;
-        const isContinuous = i >= 11;
+        const isContinuous = isFlappy || i >= 11;
+        const label = isFlappy
+          ? `${inputLabels[i]} (${val.toFixed(2)})`
+          : (isContinuous ? `${inputLabels[i]} (${Math.round(val * 100)}%)` : inputLabels[i]);
+
         inputNodes.push({
           x: inputX,
           y: paddingY + i * inputSpacing,
-          active: isContinuous ? val > 0.05 : val === 1,
+          active: isFlappy ? Math.abs(val) > 0.01 : (isContinuous ? val > 0.05 : val === 1),
           val: val,
-          label: isContinuous ? `${INPUT_LABELS[i]} (${Math.round(val * 100)}%)` : INPUT_LABELS[i]
+          label: label
         });
       }
 
@@ -98,7 +118,7 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
           y: outputOffset + i * outputSpacing,
           q: qValues[i] || 0,
           active: selectedAction === i,
-          label: OUTPUT_LABELS[i]
+          label: outputLabels[i]
         });
       }
 

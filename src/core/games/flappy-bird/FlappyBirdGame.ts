@@ -1,5 +1,6 @@
 import { GameLoop } from "../../engine/GameLoop";
 import { InputManager } from "../../engine/InputManager";
+import { FlappyRLAgent } from "./FlappyRLAgent";
 
 const INITIAL_PIPE_SPEED = 2.8;
 const MAX_PIPE_SPEED = 5.5;
@@ -283,6 +284,25 @@ export class FlappyBirdGame {
 
   private stars: {x: number, y: number, size: number, speed: number, phase: number}[] = [];
 
+  // RL Agent properties
+  public isRLTraining = false;
+  public isExplorationEnabled = true;
+  public autoPlaySpeed = 1;
+  public rlAgent?: FlappyRLAgent;
+  public onRLStats?: (episode: number, avgScore: number, epsilon: number) => void;
+  private rlEpisode = 0;
+  private rlScores: number[] = [];
+  private rlPrevState: number[] | null = null;
+  private rlPrevAction = 0;
+  private rlPrevScore = 0;
+  private rlStepCount = 0;
+
+  // RL Visualization Data
+  public isVisualizing = false;
+  public rlLastState: number[] = Array(6).fill(0);
+  public rlLastQValues: number[] = [0, 0];
+  public rlLastAction = 0;
+
   public onScore?: (score: number) => void;
   public onGameOver?: (score: number, best: number) => void;
 
@@ -343,7 +363,9 @@ export class FlappyBirdGame {
     this.reset();
     this.isStarted = true;
     this.bird.velocity = BASE_JUMP_STRENGTH;
-    audioSys.playFlap();
+    if (!(this.isRLTraining && this.autoPlaySpeed >= 2)) {
+      audioSys.playFlap();
+    }
     this.loop.start();
   }
 
@@ -384,6 +406,13 @@ export class FlappyBirdGame {
     this.isStarted = false;
     this.isPaused = false;
     this.lastPipeSpawn = 0;
+
+    // Reset RL training variables
+    this.rlPrevState = null;
+    this.rlPrevAction = 0;
+    this.rlPrevScore = 0;
+    this.rlStepCount = 0;
+
     if (this.onScore) this.onScore(0);
   }
 
@@ -415,23 +444,49 @@ export class FlappyBirdGame {
   }
 
   private update(deltaTime: number) {
+    if (this.isRLTraining) {
+      // Run the physics/AI loop autoPlaySpeed times per frame
+      for (let step = 0; step < this.autoPlaySpeed; step++) {
+        this.updatePhysicsStep(deltaTime);
+        if (this.isGameOver) break;
+      }
+    } else {
+      this.updatePhysicsStep(deltaTime);
+    }
+  }
+
+  private updatePhysicsStep(deltaTime: number) {
     const timeScale = deltaTime / 16.666;
     this.frameCount += timeScale;
     
+    const isFast = this.isRLTraining && this.autoPlaySpeed >= 2;
+
     // Update ground offset for background rendering
-    this.groundOffset += this.basePipeSpeed * timeScale;
-    if (this.groundOffset >= 35) this.groundOffset -= 35;
+    if (!isFast) {
+      this.groundOffset += this.basePipeSpeed * timeScale;
+      if (this.groundOffset >= 35) this.groundOffset -= 35;
+    }
 
     if (this.screenShakeTime > 0) this.screenShakeTime -= timeScale;
-    const hasAction = this.input.consumeAction();
+    
+    // Determine action
+    let hasAction = false;
+    if (this.isRLTraining && this.rlAgent) {
+      this.calculateRLStep();
+      hasAction = (this.rlLastAction === 1);
+    } else {
+      hasAction = this.input.consumeAction();
+    }
     
     // Update Particles
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
-      p.x += p.vx * timeScale;
-      p.y += p.vy * timeScale;
-      p.life -= p.decay * timeScale;
-      if (p.life <= 0) this.particles.splice(i, 1);
+    if (!isFast) {
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.x += p.vx * timeScale;
+        p.y += p.vy * timeScale;
+        p.life -= p.decay * timeScale;
+        if (p.life <= 0) this.particles.splice(i, 1);
+      }
     }
 
     if (this.isGameOver) return;
@@ -459,12 +514,12 @@ export class FlappyBirdGame {
     this.bird.rotation += (this.bird.targetRotation - this.bird.rotation) * 0.15;
 
     const skin = SKINS_CONFIG[this.currentSkin];
-    if (Math.floor(this.frameCount) % 2 === 0) {
+    if (!isFast && Math.floor(this.frameCount) % 2 === 0) {
         this.trail.push({ x: this.width * 0.22 - 8, y: this.bird.y });
         if (this.trail.length > 8) this.trail.shift();
     }
 
-    if (Math.random() < 0.4) {
+    if (!isFast && Math.random() < 0.4) {
         this.createParticle(
             this.width * 0.22 - 12, this.bird.y + (Math.random() * 6 - 3),
             skin.thrusterColor,
@@ -492,7 +547,9 @@ export class FlappyBirdGame {
       if (!pipe.passed && pipe.x + pipe.width / 2 < this.width * 0.22) {
           pipe.passed = true;
           this.score++;
-          audioSys.playScore();
+          if (!isFast) {
+            audioSys.playScore();
+          }
           if (this.score % 4 === 0) this.basePipeSpeed = Math.min(MAX_PIPE_SPEED, this.basePipeSpeed + 0.3);
           if (this.onScore) this.onScore(this.score);
           if (this.score > this.bestScore) {
@@ -506,18 +563,83 @@ export class FlappyBirdGame {
     this.checkCollisions();
   }
 
+  private calculateRLStep() {
+    if (!this.rlAgent) return;
+
+    const nextPipe = this.getNextPipe();
+    const state = this.rlAgent.getState(
+      this.bird.y,
+      this.bird.velocity,
+      nextPipe,
+      this.width * 0.22,
+      this.width,
+      this.height,
+      this.groundY
+    );
+
+    // Save transition for previous step
+    if (this.rlPrevState !== null) {
+      let reward = 0.1; // Survival reward
+      if (this.score > this.rlPrevScore) {
+        reward = 15.0; // High reward for passing pipe
+      }
+      
+      this.rlAgent.remember(
+        this.rlPrevState,
+        this.rlPrevAction,
+        reward,
+        state,
+        false
+      );
+
+      this.rlStepCount++;
+      if (this.rlStepCount % 4 === 0) {
+        this.rlAgent.trainOnBatch();
+      }
+    }
+
+    const action = this.rlAgent.getAction(state, this.isExplorationEnabled);
+
+    if (this.isVisualizing) {
+      const qValues = this.rlAgent.getQValues(state);
+      this.rlLastState = state;
+      this.rlLastQValues = qValues;
+      this.rlLastAction = action;
+    } else {
+      this.rlLastAction = action;
+    }
+
+    this.rlPrevState = state;
+    this.rlPrevAction = action;
+    this.rlPrevScore = this.score;
+  }
+
+  public getNextPipe(): Pipe | null {
+    const birdX = this.width * 0.22;
+    for (let i = 0; i < this.pipes.length; i++) {
+      const pipe = this.pipes[i];
+      if (pipe.x + pipe.width > birdX - this.bird.size / 2) {
+        return pipe;
+      }
+    }
+    return null;
+  }
+
   private handleJump(hasAction: boolean) {
     if (this.isGameOver || this.isPaused) return;
     if (hasAction) {
       this.bird.velocity = BASE_JUMP_STRENGTH; 
-      audioSys.playFlap();
-      const skin = SKINS_CONFIG[this.currentSkin];
-      for (let i = 0; i < 4; i++) {
-          this.createParticle(
-              this.width * 0.22 - 10, this.bird.y, skin.thrusterColor,
-              (-Math.random() * 3 - 2), (Math.random() * 2 - 1) * 2,
-              Math.random() * 4 + 3, 0.05
-          );
+      const isFast = this.isRLTraining && this.autoPlaySpeed >= 2;
+      if (!isFast) {
+        audioSys.playFlap();
+        const skin = SKINS_CONFIG[this.currentSkin];
+        for (let i = 0; i < 4; i++) {
+            this.createParticle(
+                this.width * 0.22 - 10, this.bird.y, skin.thrusterColor,
+                (-Math.random() * 3 - 2), (Math.random() * 2 - 1) * 2,
+                Math.random() * 4 + 3, 0.05
+            );
+        }
       }
     }
   }
@@ -550,16 +672,43 @@ export class FlappyBirdGame {
 
   private triggerGameOver() {
     this.isGameOver = true;
-    audioSys.playHit();
-    audioSys.playGameOver();
-    this.screenShakeTime = 10;
-    this.screenShakeIntensity = 15;
     
-    const skin = SKINS_CONFIG[this.currentSkin];
-    for (let i = 0; i < 35; i++) {
-        const speed = (Math.random() * 6 + 2);
-        const angle = Math.random() * Math.PI * 2;
-        this.createParticle(this.width * 0.22, this.bird.y, skin.primaryColor, Math.cos(angle) * speed, Math.sin(angle) * speed, Math.random() * 6 + 4, 0.02);
+    if (this.isRLTraining && this.rlAgent && this.rlPrevState) {
+      const nextState = Array(this.rlAgent.stateSize).fill(0);
+      this.rlAgent.remember(this.rlPrevState, this.rlPrevAction, -10.0, nextState, true);
+      const epsilon = this.rlAgent.trainOnBatch() || this.rlAgent.epsilon;
+      
+      this.rlEpisode++;
+      this.rlScores.push(this.score);
+      if (this.rlScores.length > 100) this.rlScores.shift();
+      const avg = this.rlScores.reduce((a, b) => a + b, 0) / this.rlScores.length;
+      if (this.onRLStats) this.onRLStats(this.rlEpisode, avg, epsilon);
+      
+      // Reset training state
+      this.rlPrevState = null;
+      this.rlPrevAction = 0;
+      
+      setTimeout(() => {
+        if (this.isRLTraining) {
+          this.start();
+        }
+      }, 50);
+      return;
+    }
+
+    const isFast = this.isRLTraining && this.autoPlaySpeed >= 2;
+    if (!isFast) {
+      audioSys.playHit();
+      audioSys.playGameOver();
+      this.screenShakeTime = 10;
+      this.screenShakeIntensity = 15;
+      
+      const skin = SKINS_CONFIG[this.currentSkin];
+      for (let i = 0; i < 35; i++) {
+          const speed = (Math.random() * 6 + 2);
+          const angle = Math.random() * Math.PI * 2;
+          this.createParticle(this.width * 0.22, this.bird.y, skin.primaryColor, Math.cos(angle) * speed, Math.sin(angle) * speed, Math.random() * 6 + 4, 0.02);
+      }
     }
     this.bird.y = -1000; 
     if (this.onGameOver) this.onGameOver(this.score, this.bestScore);
