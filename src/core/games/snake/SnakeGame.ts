@@ -635,7 +635,7 @@ export class SnakeGame {
       return;
     }
 
-    const isLooping = this.stepsSinceLastEat > Math.min(this.snake.length, 100);
+    const isLooping = this.stepsSinceLastEat > Math.min(this.snake.length, 100) / 2;
 
     // Sort evaluations to find the best move
     evaluations.sort((a, b) => {
