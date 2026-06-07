@@ -74,6 +74,10 @@ export default function SnakeCanvas() {
       }
     };
     
+    // Set initial canvas size synchronously before instantiating the game
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    
     // Create ResizeObserver to smoothly resize the canvas during CSS panel animations/transitions
     const resizeObserver = new ResizeObserver(() => {
       resizeCanvas();

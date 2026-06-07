@@ -107,7 +107,7 @@ export class SnakeGame {
     const totalH = this.gridRows * this.cellSize;
     
     this.gridX = (this.canvas.width - totalW) / 2;
-    this.gridY = (this.canvas.height * 0.55) - (totalH / 2); 
+    this.gridY = (this.canvas.height * 0.48) - (totalH / 2); 
   }
 
   private attachEvents() {
@@ -944,7 +944,7 @@ export class SnakeGame {
     
     if (scale < 1) {
       const dx = (this.canvas.width - arenaW * scale) / 2 - this.gridX * scale;
-      const dy = (this.canvas.height * 0.55 - (arenaH * scale) / 2) - this.gridY * scale;
+      const dy = (this.canvas.height * 0.48 - (arenaH * scale) / 2) - this.gridY * scale;
       c.translate(dx, dy);
       c.scale(scale, scale);
     }
