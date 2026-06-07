@@ -1,5 +1,6 @@
 import { GameLoop } from "../../engine/GameLoop";
 import { AudioSynth } from "../../utils/AudioSynth";
+import { SnakeRLAgent } from "./SnakeRLAgent";
 
 type Point = { x: number; y: number };
 
@@ -41,6 +42,15 @@ export class SnakeGame {
   // Auto Play
   public isAutoPlay = false;
   public autoPlaySpeed = 1;
+
+  // RL Agent
+  public isRLTraining = false;
+  public rlAgent?: SnakeRLAgent;
+  public onRLStats?: (episode: number, avgScore: number, epsilon: number) => void;
+  private rlEpisode = 0;
+  private rlScores: number[] = [];
+  private rlPrevState: number[] | null = null;
+  private rlPrevAction = 0;
 
   // Audio
   public audio = new AudioSynth();
@@ -182,6 +192,10 @@ export class SnakeGame {
     this.isDigesting = false;
     this.stepsSinceLastEat = 0;
 
+    // Reset RL transition state
+    this.rlPrevState = null;
+    this.rlPrevAction = 0;
+
     // Start in middle
     const startX = Math.floor(this.gridCols / 2);
     const startY = Math.floor(this.gridRows / 2);
@@ -221,6 +235,25 @@ export class SnakeGame {
   private triggerGameOver() {
     this.printDebugMap("SNAKE GAME OVER");
     this.isGameOver = true;
+
+    if (this.isRLTraining && this.rlAgent && this.rlPrevState) {
+      const nextState = Array(this.rlAgent.stateSize).fill(0);
+      this.rlAgent.remember(this.rlPrevState, this.rlPrevAction, -10, nextState, true);
+      const epsilon = this.rlAgent.trainOnBatch() || this.rlAgent.epsilon;
+      
+      this.rlEpisode++;
+      this.rlScores.push(this.score);
+      if (this.rlScores.length > 100) this.rlScores.shift();
+      const avg = this.rlScores.reduce((a, b) => a + b, 0) / this.rlScores.length;
+      if (this.onRLStats) this.onRLStats(this.rlEpisode, avg, epsilon);
+      
+      setTimeout(() => {
+        if (this.isRLTraining) {
+          this.start();
+        }
+      }, 50);
+      return;
+    }
     
     const isPerf = this.isAutoPlay && this.autoPlaySpeed >= 20;
 
@@ -289,11 +322,15 @@ export class SnakeGame {
     }
 
     if (!this.isGameOver) {
-      const multiplier = this.isAutoPlay ? this.autoPlaySpeed : 1;
+      const multiplier = (this.isAutoPlay || this.isRLTraining) ? this.autoPlaySpeed : 1;
       this.moveTimer += dt * multiplier;
       while (this.moveTimer >= this.moveInterval) {
         this.moveTimer -= this.moveInterval;
-        if (this.isAutoPlay) this.calculateAutoMove();
+        if (this.isRLTraining && this.rlAgent) {
+          this.calculateRLMove();
+        } else if (this.isAutoPlay) {
+          this.calculateAutoMove();
+        }
         this.moveSnake();
         if (this.isGameOver) break;
 
@@ -717,6 +754,65 @@ export class SnakeGame {
     const bestMove = evaluations[0];
     this.nextDx = bestMove.dx;
     this.nextDy = bestMove.dy;
+  }
+
+  private calculateRLMove() {
+    if (!this.rlAgent || !this.food) return;
+
+    const state = this.rlAgent.getState(
+      this.snake,
+      this.dx,
+      this.dy,
+      this.food,
+      this.gridCols,
+      this.gridRows
+    );
+    
+    // Remember previous step transition
+    if (this.rlPrevState) {
+      let reward = 0;
+      if (this.isDigesting) {
+        reward = 10;
+      } else {
+        // Did we move closer to food?
+        const head = this.snake[0];
+        const prevHead = this.snake[1] || head;
+        const distPrev = Math.abs(prevHead.x - this.food.x) + Math.abs(prevHead.y - this.food.y);
+        const distCurr = Math.abs(head.x - this.food.x) + Math.abs(head.y - this.food.y);
+        if (distCurr < distPrev) {
+          reward = 0.15;
+        } else {
+          reward = -0.2;
+        }
+      }
+      this.rlAgent.remember(this.rlPrevState, this.rlPrevAction, reward, state, false);
+      this.rlAgent.trainOnBatch();
+    }
+
+    // Get next action from RL Agent
+    const action = this.rlAgent.getAction(state);
+    
+    // Convert relative action to absolute direction
+    // Action 0: Straight, 1: Turn Left, 2: Turn Right
+    let nextDx = this.dx;
+    let nextDy = this.dy;
+    
+    if (action === 1) {
+      // Turn Left
+      nextDx = this.dy;
+      nextDy = -this.dx;
+    } else if (action === 2) {
+      // Turn Right
+      nextDx = -this.dy;
+      nextDy = this.dx;
+    }
+
+    this.nextDx = nextDx;
+    this.nextDy = nextDy;
+
+    // Save for next step transition
+    this.rlPrevState = state;
+    this.rlPrevAction = action;
   }
 
   private moveSnake() {

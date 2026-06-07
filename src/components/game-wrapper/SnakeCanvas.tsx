@@ -20,6 +20,42 @@ export default function SnakeCanvas() {
   const [autoSpeed, setAutoSpeed] = useState(1);
   const [soundOn, setSoundOn] = useState(true);
 
+  // RL Training State
+  const [isRLTraining, setIsRLTraining] = useState(false);
+  const [rlStats, setRlStats] = useState({ episode: 0, avgScore: 0, epsilon: 1.0 });
+
+  const handleSaveModel = () => {
+    if (gameRef.current?.rlAgent) {
+      const success = gameRef.current.rlAgent.saveModel();
+      if (success) {
+        alert("AI Brain saved successfully to localStorage!");
+      }
+    }
+  };
+
+  const handleLoadModel = async () => {
+    if (gameRef.current?.rlAgent) {
+      const success = await gameRef.current.rlAgent.loadModel();
+      if (success) {
+        alert("AI Brain loaded successfully!");
+        setRlStats(prev => ({ ...prev, epsilon: 0.01 }));
+      } else {
+        alert("No saved AI Brain found.");
+      }
+    }
+  };
+
+  const handleResetModel = () => {
+    if (confirm("Are you sure you want to reset the AI Brain? This will clear all training progress.")) {
+      if (gameRef.current) {
+        const { SnakeRLAgent } = require('../../core/games/snake/SnakeRLAgent');
+        gameRef.current.rlAgent = new SnakeRLAgent();
+        setRlStats({ episode: 0, avgScore: 0, epsilon: 1.0 });
+        alert("AI Brain reset!");
+      }
+    }
+  };
+
   // Initialize Canvas and Game
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -67,9 +103,36 @@ export default function SnakeCanvas() {
     if (gameRef.current) {
       gameRef.current.isAutoPlay = autoPlay;
       gameRef.current.autoPlaySpeed = autoSpeed;
-      gameRef.current.audio.enabled = soundOn && !(autoPlay && autoSpeed >= 20);
+      gameRef.current.audio.enabled = soundOn && !((autoPlay || isRLTraining) && autoSpeed >= 20);
     }
-  }, [autoPlay, autoSpeed, soundOn]);
+  }, [autoPlay, autoSpeed, soundOn, isRLTraining]);
+
+  // Handle RL Training Toggle
+  useEffect(() => {
+    if (gameRef.current) {
+      if (isRLTraining) {
+        if (!gameRef.current.rlAgent) {
+          const { SnakeRLAgent } = require('../../core/games/snake/SnakeRLAgent');
+          gameRef.current.rlAgent = new SnakeRLAgent();
+        }
+        gameRef.current.isRLTraining = true;
+        gameRef.current.isAutoPlay = false;
+        setAutoPlay(false);
+
+        gameRef.current.onRLStats = (episode, avgScore, epsilon) => {
+          setRlStats({ episode, avgScore, epsilon });
+        };
+
+        if (gameState !== 'PLAYING') {
+          gameRef.current.start();
+          setGameState('PLAYING');
+          setIsSettingsOpen(false);
+        }
+      } else {
+        gameRef.current.isRLTraining = false;
+      }
+    }
+  }, [isRLTraining, gameState]);
 
   const startGame = () => {
     if (gameRef.current) {
@@ -104,6 +167,23 @@ export default function SnakeCanvas() {
             <span className={styles.bestValue}>{bestScore}</span>
           </div>
         </div>
+
+        {isRLTraining && (
+          <div className={styles.rlHud}>
+            <div className={styles.rlStatCol}>
+              <span className={styles.rlStatLabel}>EPISODE</span>
+              <span className={styles.rlStatVal}>{rlStats.episode}</span>
+            </div>
+            <div className={styles.rlStatCol}>
+              <span className={styles.rlStatLabel}>AVG SCORE (100)</span>
+              <span className={styles.rlStatVal}>{rlStats.avgScore.toFixed(1)}</span>
+            </div>
+            <div className={styles.rlStatCol}>
+              <span className={styles.rlStatLabel}>EXPLORATION</span>
+              <span className={styles.rlStatVal}>{(rlStats.epsilon * 100).toFixed(0)}%</span>
+            </div>
+          </div>
+        )}
 
         <div className={styles.gameContainer}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
@@ -146,13 +226,33 @@ export default function SnakeCanvas() {
                 <span>AUTO PLAY BOT</span>
                 <button 
                   className={`${styles.toggleBtn} ${autoPlay ? styles.toggleOn : ''}`}
-                  onClick={() => setAutoPlay(!autoPlay)}
+                  onClick={() => {
+                    setAutoPlay(!autoPlay);
+                    if (!autoPlay) {
+                      setIsRLTraining(false);
+                    }
+                  }}
                 >
                   {autoPlay ? 'ON' : 'OFF'}
                 </button>
               </div>
 
-              {autoPlay && (
+              <div className={styles.settingRow}>
+                <span>AI TRAINING MODE</span>
+                <button 
+                  className={`${styles.toggleBtn} ${isRLTraining ? styles.toggleOn : ''}`}
+                  onClick={() => {
+                    setIsRLTraining(!isRLTraining);
+                    if (!isRLTraining) {
+                      setAutoPlay(false);
+                    }
+                  }}
+                >
+                  {isRLTraining ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              {(autoPlay || isRLTraining) && (
                 <div className={styles.settingRow}>
                   <span>BOT SPEED</span>
                   <div className={styles.speedGroup}>
@@ -166,6 +266,20 @@ export default function SnakeCanvas() {
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {isRLTraining && (
+                <div className={styles.aiControls}>
+                  <button className={styles.aiBtn} onClick={handleSaveModel}>
+                    SAVE AI BRAIN
+                  </button>
+                  <button className={styles.aiBtn} onClick={handleLoadModel}>
+                    LOAD AI BRAIN
+                  </button>
+                  <button className={`${styles.aiBtn} ${styles.aiBtnReset}`} onClick={handleResetModel}>
+                    RESET BRAIN
+                  </button>
                 </div>
               )}
 
