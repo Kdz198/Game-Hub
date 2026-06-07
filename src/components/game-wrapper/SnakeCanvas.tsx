@@ -26,12 +26,7 @@ export default function SnakeCanvas() {
   const [rlStats, setRlStats] = useState({ episode: 0, avgScore: 0, epsilon: 1.0 });
   const [viewBrain, setViewBrain] = useState(false);
 
-  // Trigger resize to fit split screen layout changes
-  useEffect(() => {
-    setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
-    }, 150);
-  }, [viewBrain, isRLTraining]);
+
 
   const handleSaveModel = () => {
     if (gameRef.current?.rlAgent) {
@@ -74,10 +69,16 @@ export default function SnakeCanvas() {
     const resizeCanvas = () => {
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
+      if (gameRef.current) {
+        gameRef.current.onResize();
+      }
     };
     
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    // Create ResizeObserver to smoothly resize the canvas during CSS panel animations/transitions
+    const resizeObserver = new ResizeObserver(() => {
+      resizeCanvas();
+    });
+    resizeObserver.observe(container);
 
     const game = new SnakeGame(canvas);
     gameRef.current = game;
@@ -102,7 +103,7 @@ export default function SnakeCanvas() {
     if (best) setBestScore(parseInt(best));
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
+      resizeObserver.disconnect();
       game.destroy();
     };
   }, []);

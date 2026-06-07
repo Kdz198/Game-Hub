@@ -132,11 +132,12 @@ export class SnakeGame {
     window.removeEventListener('keydown', this.onKeyDown);
   }
 
-  private onResize = () => {
+  public onResize = () => {
     const totalW = this.gridCols * this.cellSize;
     const totalH = this.gridRows * this.cellSize;
     this.gridX = (this.canvas.width - totalW) / 2;
     this.gridY = (this.canvas.height * 0.55) - (totalH / 2);
+    this.draw();
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
