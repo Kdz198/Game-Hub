@@ -687,7 +687,25 @@ export class FlappyBirdGame {
       // Reset training state
       this.rlPrevState = null;
       this.rlPrevAction = 0;
+
+      // Spawn explosion particles for AI bird crash!
+      const skin = SKINS_CONFIG[this.currentSkin];
+      for (let i = 0; i < 35; i++) {
+          const speed = (Math.random() * 6 + 2);
+          const angle = Math.random() * Math.PI * 2;
+          this.createParticle(this.width * 0.22, this.bird.y, skin.primaryColor, Math.cos(angle) * speed, Math.sin(angle) * speed, Math.random() * 6 + 4, 0.02);
+      }
       
+      const isFast = this.autoPlaySpeed >= 2;
+      if (!isFast) {
+        audioSys.playHit();
+        audioSys.playGameOver();
+        this.screenShakeTime = 10;
+        this.screenShakeIntensity = 15;
+      }
+      
+      this.bird.y = -1000;
+
       setTimeout(() => {
         if (this.isRLTraining) {
           this.start();

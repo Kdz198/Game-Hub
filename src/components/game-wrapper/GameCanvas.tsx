@@ -311,7 +311,7 @@ export default function GameCanvas() {
 
             {/* HUD */}
             <div className={`${styles.hud} ${gameState === 'PLAYING' ? styles.hudActive : ''} ${orbitron.className}`}>
-              <div className={styles.hudTopRow}>
+              <div className={styles.hudLeftContainer}>
                 <div className={styles.hudScoreGroup}>
                   <div className={styles.scoreDisplay}>
                     <span className={styles.label}>SCORE</span>
@@ -351,11 +351,13 @@ export default function GameCanvas() {
                     </svg>
                   </button>
                   
-                  <button className={styles.btnIcon} onClick={pauseGame} aria-label="Pause game">
-                    <svg viewBox="0 0 24 24" className={styles.icon}>
-                      <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                    </svg>
-                  </button>
+                  {!isRLTraining && (
+                    <button className={styles.btnIcon} onClick={pauseGame} aria-label="Pause game">
+                      <svg viewBox="0 0 24 24" className={styles.icon}>
+                        <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
 

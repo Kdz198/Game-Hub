@@ -69,10 +69,10 @@
     position: absolute;
     top: 20px;
     left: 20px;
-    right: 20px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 15px;
     z-index: 10;
     pointer-events: none;
     opacity: 0;
@@ -83,11 +83,10 @@
     opacity: 1;
 }
 
-.hudTopRow {
-    width: 100%;
+.hudLeftContainer {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 15px;
     pointer-events: auto;
 }
 
@@ -649,12 +648,11 @@
 
 .rlHud {
   width: auto;
-  min-width: 380px;
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 8px 16px;
+  min-width: 160px;
+  padding: 15px;
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  gap: 12px;
   background: rgba(10, 5, 28, 0.85);
   border: 1px solid var(--border-neon-blue);
   border-radius: 8px;
@@ -662,13 +660,14 @@
   -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 8px 32px rgba(0, 240, 255, 0.15), inset 0 0 10px rgba(0, 240, 255, 0.05);
   pointer-events: auto;
-  align-self: center;
+  align-self: flex-start;
+  margin-top: 5px;
 }
 
 .rlStatCol {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .rlStatLabel {
