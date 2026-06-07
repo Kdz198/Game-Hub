@@ -221,25 +221,30 @@ export class SnakeGame {
   private triggerGameOver() {
     this.printDebugMap("SNAKE GAME OVER");
     this.isGameOver = true;
-    this.screenFlash = 1.0;
-    this.triggerScreenShake(20, 600);
-    this.audio.playCrash();
     
-    // Explode snake head
-    const head = this.snake[0];
-    const px = this.gridX + head.x * this.cellSize + this.cellSize/2;
-    const py = this.gridY + head.y * this.cellSize + this.cellSize/2;
-    for(let i=0; i<80; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 15 + 2;
-      this.particles.push({
-        x: px, y: py,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1.0,
-        color: '#ff007f', // Red/Pink death explosion
-        size: Math.random() * 6 + 2
-      });
+    const isPerf = this.isAutoPlay && this.autoPlaySpeed >= 20;
+
+    if (!isPerf) {
+      this.screenFlash = 1.0;
+      this.triggerScreenShake(20, 600);
+      this.audio.playCrash();
+      
+      // Explode snake head
+      const head = this.snake[0];
+      const px = this.gridX + head.x * this.cellSize + this.cellSize/2;
+      const py = this.gridY + head.y * this.cellSize + this.cellSize/2;
+      for(let i=0; i<80; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 15 + 2;
+        this.particles.push({
+          x: px, y: py,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1.0,
+          color: '#ff007f', // Red/Pink death explosion
+          size: Math.random() * 6 + 2
+        });
+      }
     }
 
     if (this.onGameOver) {
@@ -298,6 +303,15 @@ export class SnakeGame {
           this.stepsSinceLastEat = 0; // reset to avoid spamming every single step
         }
       }
+    }
+
+    const isPerf = this.isAutoPlay && this.autoPlaySpeed >= 20;
+    if (isPerf) {
+      this.particles = [];
+      this.floatingTexts = [];
+      this.screenFlash = 0;
+      this.shakeTime = 0;
+      this.milestoneFlash = null;
     }
 
     // Update particles
@@ -743,30 +757,38 @@ export class SnakeGame {
       const fx = this.gridX + this.food.x * this.cellSize + this.cellSize/2 + (Math.random() - 0.5) * 15;
       const fy = this.gridY + this.food.y * this.cellSize + this.cellSize/2 + (Math.random() - 0.5) * 15;
       
-      this.audio.playEat();
-      this.spawnFloatingText(`+${pts}`, fx, fy, this.foodColor);
-      this.triggerScreenShake(3, 100);
+      const isPerf = this.isAutoPlay && this.autoPlaySpeed >= 20;
+
+      if (!isPerf) {
+        this.audio.playEat();
+        this.spawnFloatingText(`+${pts}`, fx, fy, this.foodColor);
+        this.triggerScreenShake(3, 100);
+      }
 
       // Milestone check (every 100 points)
       if (Math.floor(this.score / 100) > Math.floor(oldScore / 100)) {
-         this.audio.playMilestone();
-         this.triggerScreenShake(15, 600); // Strong shake
-         this.milestoneFlash = { text: 'SPEED UP!', life: 2.0, scale: 0.1 };
-         this.screenFlash = 0.5; // Slight flash
+         if (!isPerf) {
+           this.audio.playMilestone();
+           this.triggerScreenShake(15, 600); // Strong shake
+           this.milestoneFlash = { text: 'SPEED UP!', life: 2.0, scale: 0.1 };
+           this.screenFlash = 0.5; // Slight flash
+         }
       }
       
       // Burst some particles
-      for(let i=0; i<15; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 8 + 2;
-        this.particles.push({
-          x: fx, y: fy,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 1.0,
-          color: this.foodColor,
-          size: Math.random() * 4 + 2
-        });
+      if (!isPerf) {
+        for(let i=0; i<15; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 8 + 2;
+          this.particles.push({
+            x: fx, y: fy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1.0,
+            color: this.foodColor,
+            size: Math.random() * 4 + 2
+          });
+        }
       }
 
       this.spawnFood();
@@ -789,35 +811,43 @@ export class SnakeGame {
     const c = this.ctx;
     c.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    const isPerf = this.isAutoPlay && this.autoPlaySpeed >= 20;
+
     c.save();
-    if (this.shakeTime > 0) {
+    if (!isPerf && this.shakeTime > 0) {
       const sx = (Math.random() - 0.5) * this.shakeMag;
       const sy = (Math.random() - 0.5) * this.shakeMag;
       c.translate(sx, sy);
     }
 
     // Background Grid
-    c.save();
-    c.strokeStyle = 'rgba(0, 240, 255, 0.05)';
-    c.lineWidth = 1;
-    for (let r=0; r<=this.gridRows; r++) {
-      c.beginPath();
-      c.moveTo(this.gridX, this.gridY + r*this.cellSize);
-      c.lineTo(this.gridX + this.gridCols*this.cellSize, this.gridY + r*this.cellSize);
-      c.stroke();
-    }
-    for (let col=0; col<=this.gridCols; col++) {
-      c.beginPath();
-      c.moveTo(this.gridX + col*this.cellSize, this.gridY);
-      c.lineTo(this.gridX + col*this.cellSize, this.gridY + this.gridRows*this.cellSize);
-      c.stroke();
+    if (!isPerf) {
+      c.save();
+      c.strokeStyle = 'rgba(0, 240, 255, 0.05)';
+      c.lineWidth = 1;
+      for (let r=0; r<=this.gridRows; r++) {
+        c.beginPath();
+        c.moveTo(this.gridX, this.gridY + r*this.cellSize);
+        c.lineTo(this.gridX + this.gridCols*this.cellSize, this.gridY + r*this.cellSize);
+        c.stroke();
+      }
+      for (let col=0; col<=this.gridCols; col++) {
+        c.beginPath();
+        c.moveTo(this.gridX + col*this.cellSize, this.gridY);
+        c.lineTo(this.gridX + col*this.cellSize, this.gridY + this.gridRows*this.cellSize);
+        c.stroke();
+      }
+      c.restore();
     }
     
     // Grid Border (Arena)
+    c.save();
     c.strokeStyle = 'rgba(0, 240, 255, 0.3)';
     c.lineWidth = 2;
-    c.shadowColor = '#00f0ff';
-    c.shadowBlur = 10;
+    if (!isPerf) {
+      c.shadowColor = '#00f0ff';
+      c.shadowBlur = 10;
+    }
     c.strokeRect(this.gridX, this.gridY, this.gridCols*this.cellSize, this.gridRows*this.cellSize);
     c.restore();
 
@@ -827,15 +857,16 @@ export class SnakeGame {
       const fx = this.gridX + this.food.x * this.cellSize;
       const fy = this.gridY + this.food.y * this.cellSize;
       
-      this.foodPulse += 0.1;
-      const scale = (Math.sin(this.foodPulse) + 1) / 2 * 0.2 + 0.8; // 0.8 to 1.0
-      
       c.translate(fx + this.cellSize/2, fy + this.cellSize/2);
-      c.scale(scale, scale);
       
       c.fillStyle = this.foodColor;
-      c.shadowColor = this.foodColor;
-      c.shadowBlur = 15;
+      if (!isPerf) {
+        this.foodPulse += 0.1;
+        const scale = (Math.sin(this.foodPulse) + 1) / 2 * 0.2 + 0.8; // 0.8 to 1.0
+        c.scale(scale, scale);
+        c.shadowColor = this.foodColor;
+        c.shadowBlur = 15;
+      }
       
       // Diamond shape
       c.beginPath();
@@ -850,24 +881,26 @@ export class SnakeGame {
     // Draw Snake
     c.save();
     if (this.snake.length > 1) {
-      const progress = this.isGameOver ? 1.0 : (this.moveTimer / this.moveInterval);
-      
       const head = this.snake[0];
       const neck = this.snake[1];
-      const hx = neck.x + (head.x - neck.x) * progress;
-      const hy = neck.y + (head.y - neck.y) * progress;
-      
       const tailIndex = this.snake.length - 1;
       const tail = this.snake[tailIndex];
-      const tailPrev = this.snake[tailIndex - 1];
-      
+
+      let hx = head.x;
+      let hy = head.y;
       let tx = tail.x;
       let ty = tail.y;
-      
-      // Interpolate tail only if not digesting and not game over
-      if (!this.isDigesting && !this.isGameOver && tailPrev) {
-         tx = tail.x + (tailPrev.x - tail.x) * progress;
-         ty = tail.y + (tailPrev.y - tail.y) * progress;
+
+      if (!isPerf) {
+        const progress = this.isGameOver ? 1.0 : (this.moveTimer / this.moveInterval);
+        hx = neck.x + (head.x - neck.x) * progress;
+        hy = neck.y + (head.y - neck.y) * progress;
+        
+        const tailPrev = this.snake[tailIndex - 1];
+        if (!this.isDigesting && !this.isGameOver && tailPrev) {
+           tx = tail.x + (tailPrev.x - tail.x) * progress;
+           ty = tail.y + (tailPrev.y - tail.y) * progress;
+        }
       }
 
       // Draw neon trail
@@ -885,23 +918,29 @@ export class SnakeGame {
       
       c.lineTo(this.gridX + hx * this.cellSize + this.cellSize/2, this.gridY + hy * this.cellSize + this.cellSize/2);
       
-      c.shadowColor = '#00f0ff';
-      c.shadowBlur = Math.sin(this.time * 0.01) * 5 + 15;
+      if (!isPerf) {
+        c.shadowColor = '#00f0ff';
+        c.shadowBlur = Math.sin(this.time * 0.01) * 5 + 15;
+      }
       c.stroke();
 
       // Draw Lightcycle Head (Triangle)
       c.save();
       c.fillStyle = '#fff';
-      c.shadowColor = '#fff';
-      c.shadowBlur = 20;
+      if (!isPerf) {
+        c.shadowColor = '#fff';
+        c.shadowBlur = 20;
+      }
       
       c.translate(this.gridX + hx * this.cellSize + this.cellSize/2, this.gridY + hy * this.cellSize + this.cellSize/2);
       
       let angle = 0;
-      if (head.x > neck.x) angle = 0;
-      else if (head.x < neck.x) angle = Math.PI;
-      else if (head.y > neck.y) angle = Math.PI / 2;
-      else if (head.y < neck.y) angle = -Math.PI / 2;
+      if (neck) {
+        if (head.x > neck.x) angle = 0;
+        else if (head.x < neck.x) angle = Math.PI;
+        else if (head.y > neck.y) angle = Math.PI / 2;
+        else if (head.y < neck.y) angle = -Math.PI / 2;
+      }
       
       c.rotate(angle);
       
@@ -916,32 +955,36 @@ export class SnakeGame {
     c.restore();
 
     // Draw Particles
-    c.save();
-    c.globalCompositeOperation = 'lighter';
-    for (let p of this.particles) {
-      c.fillStyle = p.color;
-      c.globalAlpha = p.life;
-      c.shadowColor = p.color;
-      c.shadowBlur = 10;
-      c.fillRect(p.x, p.y, p.size, p.size);
+    if (!isPerf) {
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      for (let p of this.particles) {
+        c.fillStyle = p.color;
+        c.globalAlpha = p.life;
+        c.shadowColor = p.color;
+        c.shadowBlur = 10;
+        c.fillRect(p.x, p.y, p.size, p.size);
+      }
+      c.restore();
     }
-    c.restore();
 
     // Draw Floating Texts
-    c.save();
-    c.textAlign = 'center';
-    for (let ft of this.floatingTexts) {
-      c.font = `bold ${ft.size}px "Orbitron", sans-serif`;
-      c.fillStyle = ft.color;
-      c.globalAlpha = ft.life;
-      c.shadowColor = ft.color;
-      c.shadowBlur = 15;
-      c.fillText(ft.text, ft.x, ft.y);
+    if (!isPerf) {
+      c.save();
+      c.textAlign = 'center';
+      for (let ft of this.floatingTexts) {
+        c.font = `bold ${ft.size}px "Orbitron", sans-serif`;
+        c.fillStyle = ft.color;
+        c.globalAlpha = ft.life;
+        c.shadowColor = ft.color;
+        c.shadowBlur = 15;
+        c.fillText(ft.text, ft.x, ft.y);
+      }
+      c.restore();
     }
-    c.restore();
 
     // Draw Screen Flash
-    if (this.screenFlash > 0) {
+    if (!isPerf && this.screenFlash > 0) {
       c.save();
       c.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to cover full screen
       c.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.5})`;
@@ -950,7 +993,7 @@ export class SnakeGame {
     }
 
     // Draw Milestone Flash on top of everything
-    if (this.milestoneFlash) {
+    if (!isPerf && this.milestoneFlash) {
       c.save();
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.translate(this.canvas.width / 2, this.canvas.height / 2);

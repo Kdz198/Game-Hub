@@ -67,7 +67,7 @@ export default function SnakeCanvas() {
     if (gameRef.current) {
       gameRef.current.isAutoPlay = autoPlay;
       gameRef.current.autoPlaySpeed = autoSpeed;
-      gameRef.current.audio.enabled = soundOn;
+      gameRef.current.audio.enabled = soundOn && !(autoPlay && autoSpeed >= 20);
     }
   }, [autoPlay, autoSpeed, soundOn]);
 
@@ -156,7 +156,7 @@ export default function SnakeCanvas() {
                 <div className={styles.settingRow}>
                   <span>BOT SPEED</span>
                   <div className={styles.speedGroup}>
-                    {[1, 2, 3, 5, 10].map((s) => (
+                    {[1, 2, 3, 5, 10, 20].map((s) => (
                       <button
                         key={s}
                         className={`${styles.speedBtn} ${autoSpeed === s ? styles.speedBtnActive : ''}`}
