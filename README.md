@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎮 Arcade Nexus: Cyberpunk Game Hub & Client-Side AI
 
-## Getting Started
+Chào mừng bạn đến với **Arcade Nexus (Game Hub)** — Cổng trò chơi điện tử retro mang phong cách đồ họa Neon / Cyberpunk tích hợp Trí Tuệ Nhân Tạo (AI) học sâu trực tiếp trên trình duyệt của bạn!
 
-First, run the development server:
+Dự án được xây dựng trên nền tảng **Next.js**, **TypeScript** và **Vanilla CSS** với hiệu năng render Canvas mượt mà 60 FPS cùng âm thanh điện tử độc đáo.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Điểm nhấn Công nghệ: Tron Snake & Học Máy Tăng Cường (DQN AI)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Trò chơi **Tron Snake** không chỉ là một game rắn săn mồi thông thường mà là một **phòng thí nghiệm Trí tuệ nhân tạo (Reinforcement Learning)** hoạt động hoàn toàn ở phía Client (trình duyệt) thông qua thư viện **TensorFlow.js**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🧠 Cơ chế hoạt động của AI Rắn:
+AI học chơi game từ con số 0 bằng phương pháp thử - sai (Trial and Error) thông qua thuật toán học sâu **Deep Q-Network (DQN)**:
 
-## Learn More
+*   **Bộ não Mạng thần kinh nơ-ron (Neural Network)**: Mạng Sequential gồm 3 tầng với **10,371 bánh răng tham số (weights)**:
+    *   *Tầng đầu vào (Input)*: **15 thông số** nhận diện trạng thái thế giới (State Vector).
+    *   *Tầng ẩn (Hidden Layers)*: 2 tầng lần lượt gồm **128** và **64** nơ-ron liên kết đầy đủ.
+    *   *Tầng đầu ra (Output)*: **3 hành động** di chuyển tương đối (`Đi thẳng`, `Rẽ trái`, `Rẽ phải`).
+*   **Véc-tơ Trạng thái 15 chiều (15-Dimensional State Vector)**:
+    1.  *Danger Straight/Left/Right (3 chiều)*: Khoảng cách vật lý báo động nguy hiểm va chạm tường hoặc thân mình.
+    2.  *Current Direction (4 chiều)*: Hướng di chuyển hiện tại (`Lên`, `Xuống`, `Trái`, `Phải`).
+    3.  *Food Location (4 chiều)*: Vị trí tương đối của quả táo so với đầu rắn (`Phía trên`, `Phía dưới`, `Bên trái`, `Bên phải`).
+    4.  *Reachable Space (3 chiều)*: Sử dụng thuật toán **BFS / Flood Fill** tính toán thời gian thực phần trăm không gian trống khả dụng ở 3 hướng đi trước mắt, giúp rắn tuyệt đối né tránh các ngõ cụt.
+    5.  *Fill Ratio (1 chiều - Mới!)*: Tỷ lệ lấp đầy của cơ thể rắn trên bản đồ (`Độ dài thân / Diện tích lưới`), giúp AI tự động điều chỉnh chiến thuật từ săn mồi (khi rắn ngắn) sang bảo thủ né tránh (khi rắn dài ra chiếm dụng bản đồ).
+*   **Tăng tốc phần cứng GPU WebGL**: Toàn bộ quá trình tính toán đạo hàm ngược (Backpropagation) và cập nhật ma trận trọng số được tính toán trực tiếp trên **GPU** của bạn thông qua WebGL backend của TensorFlow.js, giúp CPU chính hoàn toàn rảnh rỗi và giữ game mượt mà 60 FPS ngay cả khi huấn luyện ở tốc độ cao.
+*   **Bảng mạch trực quan bộ não (Interactive Brain Visualizer)**: Sơ đồ mạng nơ-ron thời gian thực hiển thị mức độ kích hoạt của 15 tín hiệu đầu vào, các luồng xung điện truyền dẫn qua khớp thần kinh (synapse) và giá trị kỳ vọng (Q-value) của các quyết định rẽ hướng.
+*   **Nút chuyển đổi AI Exploration (Khám phá vs Lý trí)**:
+    *   `AI EXPLORATION: ON`: AI kết hợp đi ngẫu nhiên ($\epsilon$-greedy) để tự khám phá chiến thuật mới. Phù hợp khi **huấn luyện (training)**.
+    *   `AI EXPLORATION: OFF`: Tắt hoàn toàn đi bừa, AI đưa ra quyết định dựa trên 100% kinh nghiệm đỉnh cao đã học (Pure Exploitation). Giúp rắn biểu diễn lấy điểm tối đa mà không bị chết nhảm do Epsilon ngẫu nhiên.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🕹️ Danh sách các trò chơi khác trong Hub
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. 🧊 Synth Block (Neon Block Blast)
+Tựa game xếp khối neon mang tính gây nghiện cao:
+*   Cơ chế kéo thả tối ưu, hiển thị bóng ảo (Shadow Preview) trước khi hạ khối.
+*   Vật lý rơi tự do (Gravity Collapse): Khi chết game và chơi lại, các khối gạch cũ sẽ rơi lả tả theo trọng lực.
+*   Vỡ hàng/cột đi kèm sóng xung kích (Explosion Wave) và bụi hạt lấp lánh rực rỡ.
 
-## Deploy on Vercel
+### 2. 🏎️ Grid Rider (GTA Style Endless Chill Drive)
+Trải nghiệm lái siêu xe Hypercar Bugatti Chiron/Porsche 911 chạy bất tận trong đêm đô thị mờ ảo:
+*   Mô phỏng vật lý lốp nghiêng thể thao (Negative Camber `/ \`), gai lốp chuyển động cuộn tròn và lazang xoay mâm theo tốc độ thực.
+*   Đĩa phanh gốm Carbon phát sáng cam đỏ rực lửa khi phanh gấp.
+*   Cánh gió chủ động (Active Spoiler) nâng cao theo tốc độ và gập nghiêng thành phanh khí động học (Airbrake) khi nhấn phanh.
+*   Hiệu ứng phản quang Moon Specular Highlight chạy dọc thân vỏ xe khi vào cua.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. 💥 Stack Ball (3D Helix Smash)
+Đập phá tháp đĩa tròn xoay được mô phỏng giả lập 3D trên Canvas 2D:
+*   Cơ chế Z-Sorting phân tầng vẽ đĩa trước/sau cột trung tâm giúp tháp đĩa quay tròn tự nhiên.
+*   **6 loại Skins cao cấp**: Neon Orb, Magma Core, Matrix Cube, Saturn Ring, Disco Glitter, Plasma Arc mang các hiệu ứng hạt vật lý đặc trưng (mưa mã nhị phân, tia sét plasma, bụi sao tinh vân, tia laser disco).
+*   Chế độ Fever Mode cuồng nộ hủy diệt đĩa đen đi kèm hiệu ứng thay đổi theo từng Skin.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. 🪲 Bug Hunter (Retro Space Invaders)
+Trò chơi bắn súng phản xạ diệt Drone phá hoại hệ thống:
+*   Tích hợp hệ thống tính điểm liên hoàn (Combo Multiplier) tăng độ kịch tính.
+*   Nhiều chủng loại Drone từ nhỏ gọn nhanh nhẹn đến Tanker khổng lồ nhiều máu.
+
+---
+
+## 🔊 Động cơ âm thanh điện tử (AudioSynth)
+Toàn bộ trò chơi sử dụng một bộ tổng hợp tần số âm thanh tùy biến (`AudioSynth.ts`) viết bằng **Web Audio API**:
+*   Âm thanh được render trước (Pre-render) thành dạng sóng PCM thô lưu vào buffer giúp phát ra với độ trễ bằng 0, giải quyết triệt để hiện tượng trễ tiếng khi kết nối loa Bluetooth.
+*   Sử dụng dạng sóng Sine và Triangle dịu tai, tinh chỉnh cường độ vừa phải chống chói khi chơi thời gian dài.
+
+---
+
+## 🛠️ Hướng dẫn khởi chạy dự án tại Local
+
+Yêu cầu máy tính đã cài đặt **Node.js** (Phiên bản 18+ khuyến nghị).
+
+1.  **Clone mã nguồn dự án**:
+    ```bash
+    git clone https://github.com/Kdz198/Game-Hub.git
+    cd Game-Hub/game-hub
+    ```
+
+2.  **Cài đặt các thư viện phụ thuộc (Dependencies)**:
+    ```bash
+    npm install
+    ```
+
+3.  **Chạy server phát triển (Development mode)**:
+    ```bash
+    npm run dev
+    ```
+    Mở trình duyệt truy cập đường dẫn: [http://localhost:3000](http://localhost:3000)
+
+4.  **Biên dịch sản phẩm tối ưu (Production Build)**:
+    ```bash
+    npm run build
+    ```
+
+---
+
+*Dự án được phát triển và tối ưu hóa bởi **Antigravity AI Pair Programmer** cùng **Kdz198**.*
