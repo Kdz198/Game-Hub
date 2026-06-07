@@ -52,6 +52,11 @@ export class SnakeGame {
   private rlPrevState: number[] | null = null;
   private rlPrevAction = 0;
 
+  // RL Visualization Data
+  public rlLastState: number[] = Array(11).fill(0);
+  public rlLastQValues: number[] = [0, 0, 0];
+  public rlLastAction = 0;
+
   // Audio
   public audio = new AudioSynth();
 
@@ -789,8 +794,16 @@ export class SnakeGame {
       this.rlAgent.trainOnBatch();
     }
 
+    // Get Q-values for visualization
+    const qValues = this.rlAgent.getQValues(state);
+
     // Get next action from RL Agent
     const action = this.rlAgent.getAction(state);
+
+    // Store visualization data
+    this.rlLastState = state;
+    this.rlLastQValues = qValues;
+    this.rlLastAction = action;
     
     // Convert relative action to absolute direction
     // Action 0: Straight, 1: Turn Left, 2: Turn Right

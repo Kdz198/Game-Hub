@@ -89,6 +89,15 @@ export class SnakeRLAgent {
     });
   }
 
+  // Get Q-values for a given state (for visualization)
+  public getQValues(state: number[]): number[] {
+    return tf.tidy(() => {
+      const stateTensor = tf.tensor2d([state]);
+      const prediction = this.model.predict(stateTensor) as tf.Tensor;
+      return Array.from(prediction.dataSync());
+    });
+  }
+
   // Remember transition
   public remember(state: number[], action: number, reward: number, nextState: number[], done: boolean) {
     this.memory.push({ state, action, reward, nextState, done });

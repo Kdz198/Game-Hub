@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './SnakeCanvas.module.css';
 import { SnakeGame } from '../../core/games/snake/SnakeGame';
+import RLBrainVisualizer from './RLBrainVisualizer';
 
 type GameState = 'START' | 'PLAYING' | 'GAME_OVER';
 
@@ -23,6 +24,14 @@ export default function SnakeCanvas() {
   // RL Training State
   const [isRLTraining, setIsRLTraining] = useState(false);
   const [rlStats, setRlStats] = useState({ episode: 0, avgScore: 0, epsilon: 1.0 });
+  const [viewBrain, setViewBrain] = useState(false);
+
+  // Trigger resize to fit split screen layout changes
+  useEffect(() => {
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 150);
+  }, [viewBrain, isRLTraining]);
 
   const handleSaveModel = () => {
     if (gameRef.current?.rlAgent) {
@@ -144,12 +153,32 @@ export default function SnakeCanvas() {
 
   return (
     <div className={styles.canvasContainer} ref={containerRef}>
-      <div className={styles.gameWrapper}>
-        <button 
-          className={styles.cornerSettingsBtn} 
-          onClick={() => setIsSettingsOpen(true)}
-          aria-label="Settings"
-        >
+      <div className={`${styles.mainLayout} ${viewBrain && isRLTraining ? styles.layoutSplit : ''}`}>
+        <div className={styles.gameWrapper}>
+          {isRLTraining && (
+            <button 
+              className={`${styles.cornerSettingsBtn} ${styles.cornerBrainBtn}`} 
+              onClick={() => setViewBrain(!viewBrain)}
+              style={{
+                right: '5.2rem',
+                color: viewBrain ? '#39ff14' : '#00f0ff',
+                borderColor: viewBrain ? '#39ff14' : 'rgba(0, 240, 255, 0.3)',
+                boxShadow: viewBrain ? '0 0 15px rgba(57, 255, 20, 0.4)' : 'none'
+              }}
+              aria-label="View Brain"
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-4.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2z"></path>
+                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-4.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2z"></path>
+              </svg>
+            </button>
+          )}
+
+          <button 
+            className={styles.cornerSettingsBtn} 
+            onClick={() => setIsSettingsOpen(true)}
+            aria-label="Settings"
+          >
           <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -287,6 +316,12 @@ export default function SnakeCanvas() {
                 [ CLOSE ]
               </button>
             </div>
+          </div>
+        )}
+        </div>
+        {viewBrain && isRLTraining && (
+          <div className={styles.brainPanel}>
+            <RLBrainVisualizer game={gameRef.current} />
           </div>
         )}
       </div>
