@@ -18,7 +18,7 @@ export class FlappyRLAgent {
   
   public epsilon = 1.0;
   public minEpsilon = 0.01;
-  public epsilonDecay = 0.996;
+  public epsilonDecay = 0.9985;
   private gamma = 0.9;
   private learningRate = 0.001;
   private batchSize = 64;

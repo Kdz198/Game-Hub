@@ -595,7 +595,16 @@ export class FlappyBirdGame {
 
     // Save transition for previous step
     if (this.rlPrevState !== null) {
-      let reward = 0.1; // Survival reward
+      let reward = 0.1; // Base survival reward
+      
+      // Dense reward: closer to the vertical center of the next pipe's gap is better
+      if (nextPipe) {
+        const gapCenterY = nextPipe.topHeight + nextPipe.gapSize / 2;
+        const distToCenter = Math.abs(this.bird.y - gapCenterY);
+        const normDist = distToCenter / (this.groundY / 2);
+        reward += Math.max(0, (1.0 - normDist) * 0.3); // Up to +0.3 extra reward for staying centered
+      }
+
       if (this.score > this.rlPrevScore) {
         reward = 15.0; // High reward for passing pipe
       }
@@ -691,7 +700,7 @@ export class FlappyBirdGame {
     
     if (this.isRLTraining && this.rlAgent && this.rlPrevState) {
       const nextState = Array(this.rlAgent.stateSize).fill(0);
-      this.rlAgent.remember(this.rlPrevState, this.rlPrevAction, -10.0, nextState, true);
+      this.rlAgent.remember(this.rlPrevState, this.rlPrevAction, -20.0, nextState, true);
       const epsilon = this.rlAgent.trainOnBatch() || this.rlAgent.epsilon;
       
       this.rlEpisode++;
