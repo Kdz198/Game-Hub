@@ -23,7 +23,7 @@ export class FlappyRLAgent {
   private learningRate = 0.0005;
   private batchSize = 64;
   
-  public stateSize = 6;
+  public stateSize = 7;
   public actionSize = 2; // 0: Glide (Do Nothing), 1: Flap (Jump)
   
   public trainCount = 0;
@@ -203,7 +203,7 @@ export class FlappyRLAgent {
   public getState(
     birdY: number,
     birdVelocity: number,
-    nextPipe: { x: number; topHeight: number; gapSize: number } | null,
+    nextPipe: { x: number; topHeight: number; gapSize: number; vy: number } | null,
     birdX: number,
     width: number,
     height: number,
@@ -216,6 +216,7 @@ export class FlappyRLAgent {
     let normTopPipeY = 0.0;
     let normBottomPipeY = 1.0;
     let normGapDiff = 0.0;
+    let normPipeVelocity = 0.0;
 
     if (nextPipe) {
       // Distance to next pipe (normalized)
@@ -234,6 +235,9 @@ export class FlappyRLAgent {
       
       // Difference (gapCenter - birdY) normalized to [-1, 1]
       normGapDiff = normGapCenter - normBirdY;
+
+      // Pipe vertical velocity (normalized, max moving velocity is 0.8)
+      normPipeVelocity = nextPipe.vy / 0.8;
     }
 
     return [
@@ -242,7 +246,8 @@ export class FlappyRLAgent {
       normPipeDist,
       normTopPipeY,
       normBottomPipeY,
-      normGapDiff
+      normGapDiff,
+      normPipeVelocity
     ];
   }
 
@@ -262,6 +267,13 @@ export class FlappyRLAgent {
     try {
       const loadedModel = await tf.loadLayersModel(`localstorage://${key}`);
       
+      // Check shape of loaded model input layer to prevent crashes on shape changes
+      const loadedInputShape = loadedModel.layers[0].batchInputShape;
+      if (loadedInputShape && loadedInputShape[1] !== this.stateSize) {
+        console.warn(`Model shape mismatch: loaded model has ${loadedInputShape[1]} inputs, but current model expects ${this.stateSize} inputs.`);
+        return false;
+      }
+
       // Create fresh models matching the loaded configuration
       this.model.setWeights(loadedModel.getWeights());
       this.updateTargetModel();

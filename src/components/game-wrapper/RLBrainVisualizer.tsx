@@ -50,7 +50,8 @@ export default function RLBrainVisualizer({ game, gameType = 'snake' }: RLBrainV
       'PIPE DIST',
       'GAP TOP Y',
       'GAP BOTTOM Y',
-      'GAP DIFF Y'
+      'GAP DIFF Y',
+      'PIPE VEL Y'
     ] : INPUT_LABELS;
     
     const outputLabels = isFlappy ? [
@@ -58,7 +59,7 @@ export default function RLBrainVisualizer({ game, gameType = 'snake' }: RLBrainV
       'FLAP'
     ] : OUTPUT_LABELS;
 
-    const inputCount = isFlappy ? 6 : 15;
+    const inputCount = isFlappy ? 7 : 15;
     const outputCount = isFlappy ? 2 : 3;
     const hiddenCount = 6;
 
