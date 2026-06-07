@@ -85,7 +85,9 @@ export class FlappyRLAgent {
   public getAction(state: number[], explore = true): number {
     if (explore && Math.random() < this.epsilon) {
       // Explore: random action (0 or 1)
-      return Math.random() < 0.15 ? 1 : 0; // Bias exploration slightly towards glides because flaps are powerful
+      // Level flight requires flapping roughly once every 33 steps (~3% probability).
+      // We set exploration flap probability to 0.04 so it drifts naturally in the middle of the screen.
+      return Math.random() < 0.04 ? 1 : 0;
     }
     
     // Exploit: predict Q-values

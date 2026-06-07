@@ -532,11 +532,6 @@ export class FlappyBirdGame {
     this.bird.velocity += BASE_GRAVITY * timeScale;
     this.bird.y += this.bird.velocity * timeScale;
 
-    if (this.bird.y < this.bird.size) {
-        this.bird.y = this.bird.size;
-        this.bird.velocity = 0;
-    }
-
     if (this.bird.velocity < 3) {
         this.bird.targetRotation = -0.3;
     } else {
@@ -670,7 +665,13 @@ export class FlappyBirdGame {
   }
 
   private checkCollisions() {
+    // Ground collision
     if (this.bird.y + (this.bird.size / 2) >= this.groundY) {
+        this.triggerGameOver();
+        return;
+    }
+    // Ceiling collision (flying off-screen at the top)
+    if (this.bird.y - (this.bird.size / 2) <= 0) {
         this.triggerGameOver();
         return;
     }
