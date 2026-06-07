@@ -311,53 +311,14 @@ export default function GameCanvas() {
 
             {/* HUD */}
             <div className={`${styles.hud} ${gameState === 'PLAYING' ? styles.hudActive : ''} ${orbitron.className}`}>
-              <div className={styles.hudLeftContainer}>
-                <div className={styles.hudScoreGroup}>
-                  <div className={styles.scoreDisplay}>
-                    <span className={styles.label}>SCORE</span>
-                    <span className={styles.scoreValueText}>{score}</span>
-                  </div>
-                  <div className={styles.highScoreHud}>
-                    <span className={styles.label}>BEST</span>
-                    <span className={styles.highScoreValueText}>{bestScore}</span>
-                  </div>
+              <div className={styles.hudScoreGroup}>
+                <div className={styles.scoreDisplay}>
+                  <span className={styles.label}>SCORE</span>
+                  <span className={styles.scoreValueText}>{score}</span>
                 </div>
-
-                <div className={styles.hudControlsGroup}>
-                  {isRLTraining && (
-                    <button 
-                      className={`${styles.btnIcon} ${styles.brainBtn}`} 
-                      onClick={() => setViewBrain(!viewBrain)}
-                      style={{
-                        color: viewBrain ? '#39ff14' : '#00f0ff',
-                        textShadow: viewBrain ? '0 0 10px #39ff14' : 'none'
-                      }}
-                      aria-label="Toggle Neural Network"
-                    >
-                      <svg viewBox="0 0 24 24" className={styles.icon} fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-4.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2z"></path>
-                        <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-4.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2z"></path>
-                      </svg>
-                    </button>
-                  )}
-                  
-                  <button 
-                    className={styles.btnIcon} 
-                    onClick={() => setIsSettingsOpen(true)} 
-                    aria-label="Settings"
-                  >
-                    <svg viewBox="0 0 24 24" className={styles.icon}>
-                      <path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                    </svg>
-                  </button>
-                  
-                  {!isRLTraining && (
-                    <button className={styles.btnIcon} onClick={pauseGame} aria-label="Pause game">
-                      <svg viewBox="0 0 24 24" className={styles.icon}>
-                        <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                      </svg>
-                    </button>
-                  )}
+                <div className={styles.highScoreHud}>
+                  <span className={styles.label}>BEST</span>
+                  <span className={styles.highScoreValueText}>{bestScore}</span>
                 </div>
               </div>
 
@@ -375,8 +336,56 @@ export default function GameCanvas() {
                     <span className={styles.rlStatLabel}>EXPLORATION</span>
                     <span className={styles.rlStatVal}>{(rlStats.epsilon * 100).toFixed(0)}%</span>
                   </div>
+                  <div className={styles.rlHudButtons}>
+                    <button 
+                      className={`${styles.btnIcon} ${styles.brainBtn}`} 
+                      onClick={() => setViewBrain(!viewBrain)}
+                      style={{
+                        color: viewBrain ? '#39ff14' : '#00f0ff',
+                        textShadow: viewBrain ? '0 0 10px #39ff14' : 'none'
+                      }}
+                      aria-label="Toggle Neural Network"
+                    >
+                      <svg viewBox="0 0 24 24" className={styles.icon} fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-4.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2z"></path>
+                        <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-4.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2z"></path>
+                      </svg>
+                    </button>
+                    
+                    <button 
+                      className={styles.btnIcon} 
+                      onClick={() => setIsSettingsOpen(true)} 
+                      aria-label="Settings"
+                    >
+                      <svg viewBox="0 0 24 24" className={styles.icon}>
+                        <path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               )}
+
+              <div className={styles.hudControlsGroup}>
+                {!isRLTraining && (
+                  <>
+                    <button 
+                      className={styles.btnIcon} 
+                      onClick={() => setIsSettingsOpen(true)} 
+                      aria-label="Settings"
+                    >
+                      <svg viewBox="0 0 24 24" className={styles.icon}>
+                        <path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                      </svg>
+                    </button>
+                    
+                    <button className={styles.btnIcon} onClick={pauseGame} aria-label="Pause game">
+                      <svg viewBox="0 0 24 24" className={styles.icon}>
+                        <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* MENU OVERLAY */}

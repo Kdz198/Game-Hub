@@ -462,10 +462,8 @@ export class FlappyBirdGame {
     const isFast = this.isRLTraining && this.autoPlaySpeed >= 2;
 
     // Update ground offset for background rendering
-    if (!isFast) {
-      this.groundOffset += this.basePipeSpeed * timeScale;
-      if (this.groundOffset >= 35) this.groundOffset -= 35;
-    }
+    this.groundOffset += this.basePipeSpeed * timeScale;
+    if (this.groundOffset >= 35) this.groundOffset -= 35;
 
     if (this.screenShakeTime > 0) this.screenShakeTime -= timeScale;
     
@@ -479,14 +477,12 @@ export class FlappyBirdGame {
     }
     
     // Update Particles
-    if (!isFast) {
-      for (let i = this.particles.length - 1; i >= 0; i--) {
-        const p = this.particles[i];
-        p.x += p.vx * timeScale;
-        p.y += p.vy * timeScale;
-        p.life -= p.decay * timeScale;
-        if (p.life <= 0) this.particles.splice(i, 1);
-      }
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * timeScale;
+      p.y += p.vy * timeScale;
+      p.life -= p.decay * timeScale;
+      if (p.life <= 0) this.particles.splice(i, 1);
     }
 
     if (this.isGameOver) return;
@@ -514,12 +510,12 @@ export class FlappyBirdGame {
     this.bird.rotation += (this.bird.targetRotation - this.bird.rotation) * 0.15;
 
     const skin = SKINS_CONFIG[this.currentSkin];
-    if (!isFast && Math.floor(this.frameCount) % 2 === 0) {
+    if (Math.floor(this.frameCount) % 2 === 0) {
         this.trail.push({ x: this.width * 0.22 - 8, y: this.bird.y });
         if (this.trail.length > 8) this.trail.shift();
     }
 
-    if (!isFast && Math.random() < 0.4) {
+    if (Math.random() < 0.4) {
         this.createParticle(
             this.width * 0.22 - 12, this.bird.y + (Math.random() * 6 - 3),
             skin.thrusterColor,
@@ -632,14 +628,14 @@ export class FlappyBirdGame {
       const isFast = this.isRLTraining && this.autoPlaySpeed >= 2;
       if (!isFast) {
         audioSys.playFlap();
-        const skin = SKINS_CONFIG[this.currentSkin];
-        for (let i = 0; i < 4; i++) {
-            this.createParticle(
-                this.width * 0.22 - 10, this.bird.y, skin.thrusterColor,
-                (-Math.random() * 3 - 2), (Math.random() * 2 - 1) * 2,
-                Math.random() * 4 + 3, 0.05
-            );
-        }
+      }
+      const skin = SKINS_CONFIG[this.currentSkin];
+      for (let i = 0; i < 4; i++) {
+          this.createParticle(
+              this.width * 0.22 - 10, this.bird.y, skin.thrusterColor,
+              (-Math.random() * 3 - 2), (Math.random() * 2 - 1) * 2,
+              Math.random() * 4 + 3, 0.05
+          );
       }
     }
   }

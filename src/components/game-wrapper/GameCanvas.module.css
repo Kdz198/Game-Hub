@@ -94,12 +94,14 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    pointer-events: auto;
 }
 
 .hudControlsGroup {
     display: flex;
     align-items: center;
     gap: 10px;
+    pointer-events: auto;
 }
 
 .scoreDisplay, .highScoreHud {
@@ -771,4 +773,15 @@
   background: rgba(255, 0, 127, 0.14);
   box-shadow: 0 0 12px rgba(255, 0, 127, 0.3);
   border-color: var(--neon-pink);
+}
+
+.rlHudButtons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 5px;
+  border-top: 1px solid rgba(0, 240, 255, 0.2);
+  padding-top: 12px;
 }
