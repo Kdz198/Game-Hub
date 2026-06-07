@@ -55,7 +55,7 @@ export class SnakeGame {
 
   // RL Visualization Data
   public isVisualizing = false;
-  public rlLastState: number[] = Array(11).fill(0);
+  public rlLastState: number[] = Array(14).fill(0);
   public rlLastQValues: number[] = [0, 0, 0];
   public rlLastAction = 0;
 

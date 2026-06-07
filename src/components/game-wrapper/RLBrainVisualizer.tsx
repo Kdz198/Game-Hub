@@ -17,7 +17,10 @@ const INPUT_LABELS = [
   'FOOD: UP',
   'FOOD: DOWN',
   'FOOD: LEFT',
-  'FOOD: RIGHT'
+  'FOOD: RIGHT',
+  'SPACE AHEAD',
+  'SPACE LEFT',
+  'SPACE RIGHT'
 ];
 
 const OUTPUT_LABELS = [
@@ -46,7 +49,7 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
       const height = canvas.height;
       
       // Pull real-time data from game object
-      const state = (game && game.rlLastState) || Array(11).fill(0);
+      const state = (game && game.rlLastState) || Array(14).fill(0);
       const qValues = (game && game.rlLastQValues) || [0, 0, 0];
       const selectedAction = (game && game.rlLastAction !== undefined) ? game.rlLastAction : -1;
 
@@ -55,23 +58,26 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
       const hiddenX = width / 2 + 20;
       const outputX = width - 100;
       
-      const inputCount = 11;
+      const inputCount = 14;
       const hiddenCount = 6;
       const outputCount = 3;
       
-      const inputNodes: { x: number; y: number; active: boolean; label: string }[] = [];
+      const inputNodes: { x: number; y: number; active: boolean; val?: number; label: string }[] = [];
       const hiddenNodes: { x: number; y: number }[] = [];
       const outputNodes: { x: number; y: number; q: number; active: boolean; label: string }[] = [];
 
       // Calculate node positions
-      const paddingY = 25;
+      const paddingY = 20; // Slightly smaller padding for 14 nodes to fit height nicely
       const inputSpacing = (height - 2 * paddingY) / (inputCount - 1);
       for (let i = 0; i < inputCount; i++) {
+        const val = state[i] || 0;
+        const isContinuous = i >= 11;
         inputNodes.push({
           x: inputX,
           y: paddingY + i * inputSpacing,
-          active: state[i] === 1,
-          label: INPUT_LABELS[i]
+          active: isContinuous ? val > 0.05 : val === 1,
+          val: val,
+          label: isContinuous ? `${INPUT_LABELS[i]} (${Math.round(val * 100)}%)` : INPUT_LABELS[i]
         });
       }
 
@@ -106,8 +112,9 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
           ctx.moveTo(input.x, input.y);
           ctx.lineTo(hidden.x, hidden.y);
           if (input.active) {
-            ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
-            ctx.lineWidth = 1.5;
+            const intensity = input.val !== undefined ? input.val : 1;
+            ctx.strokeStyle = `rgba(0, 240, 255, ${0.08 + intensity * 0.22})`;
+            ctx.lineWidth = 0.5 + intensity * 1.5;
           } else {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
             ctx.lineWidth = 0.5;
@@ -116,10 +123,11 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
 
           // Animated pulses flowing along active connections
           if (input.active) {
+            const intensity = input.val !== undefined ? input.val : 1;
             const px = input.x + (hidden.x - input.x) * pulseOffsetRef.current;
             const py = input.y + (hidden.y - input.y) * pulseOffsetRef.current;
             ctx.beginPath();
-            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.arc(px, py, 1.5 + intensity * 1.0, 0, Math.PI * 2);
             ctx.fillStyle = '#00f0ff';
             ctx.fill();
           }
@@ -145,7 +153,7 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
             const px = hidden.x + (output.x - hidden.x) * pulseOffsetRef.current;
             const py = hidden.y + (output.y - hidden.y) * pulseOffsetRef.current;
             ctx.beginPath();
-            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
             ctx.fillStyle = '#39ff14';
             ctx.fill();
           }
@@ -156,11 +164,12 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
       // Input Nodes
       inputNodes.forEach((node) => {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, 6, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, 5, 0, Math.PI * 2);
         if (node.active) {
+          const intensity = node.val !== undefined ? node.val : 1;
           ctx.fillStyle = node.label.startsWith('DANGER') ? '#ff007f' : '#00f0ff';
           ctx.shadowColor = ctx.fillStyle;
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 4 + intensity * 8;
         } else {
           ctx.fillStyle = '#1c1c3a';
           ctx.shadowBlur = 0;

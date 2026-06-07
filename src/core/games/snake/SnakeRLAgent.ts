@@ -23,7 +23,7 @@ export class SnakeRLAgent {
   private learningRate = 0.001;
   private batchSize = 64;
   
-  public stateSize = 11;
+  public stateSize = 14;
   public actionSize = 3; // 0: Straight, 1: Turn Left, 2: Turn Right
   
   public trainCount = 0;
@@ -263,6 +263,26 @@ export class SnakeRLAgent {
     const foodLeft = food.x < head.x ? 1 : 0;
     const foodRight = food.x > head.x ? 1 : 0;
 
+    // Calculate reachable space percentages for the 3 relative actions
+    const pStraight = isGoingRight ? { x: head.x + 1, y: head.y }
+                    : isGoingLeft ? { x: head.x - 1, y: head.y }
+                    : isGoingUp ? { x: head.x, y: head.y - 1 }
+                    : { x: head.x, y: head.y + 1 };
+
+    const pLeft = isGoingRight ? { x: head.x, y: head.y - 1 }
+                : isGoingLeft ? { x: head.x, y: head.y + 1 }
+                : isGoingUp ? { x: head.x - 1, y: head.y }
+                : { x: head.x + 1, y: head.y };
+
+    const pRight = isGoingRight ? { x: head.x, y: head.y + 1 }
+                 : isGoingLeft ? { x: head.x, y: head.y - 1 }
+                 : isGoingUp ? { x: head.x + 1, y: head.y }
+                 : { x: head.x - 1, y: head.y };
+
+    const spaceStraight = this.getReachableSpace(pStraight, snake, gridCols, gridRows);
+    const spaceLeft = this.getReachableSpace(pLeft, snake, gridCols, gridRows);
+    const spaceRight = this.getReachableSpace(pRight, snake, gridCols, gridRows);
+
     return [
       dangerStraight,
       dangerLeft,
@@ -274,8 +294,60 @@ export class SnakeRLAgent {
       foodUp,
       foodDown,
       foodLeft,
-      foodRight
+      foodRight,
+      spaceStraight,
+      spaceLeft,
+      spaceRight
     ];
+  }
+
+  // Calculate reachable space ratio (0.0 to 1.0) using static BFS/FloodFill
+  private getReachableSpace(
+    start: Point,
+    snake: Point[],
+    gridCols: number,
+    gridRows: number
+  ): number {
+    if (start.x < 0 || start.x >= gridCols || start.y < 0 || start.y >= gridRows) return 0;
+
+    // Check collision with snake body (excluding tail since tail moves)
+    for (let i = 0; i < snake.length - 1; i++) {
+      if (snake[i].x === start.x && snake[i].y === start.y) return 0;
+    }
+
+    const bodySet = new Set<string>();
+    // Exclude tail from blocked set because tail moves away
+    for (let i = 0; i < snake.length - 1; i++) {
+      bodySet.add(`${snake[i].x},${snake[i].y}`);
+    }
+
+    const queue: Point[] = [start];
+    const visited = new Set<string>();
+    visited.add(`${start.x},${start.y}`);
+
+    let count = 0;
+    const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      count++;
+
+      for (const d of dirs) {
+        const nx = curr.x + d.x;
+        const ny = curr.y + d.y;
+        const key = `${nx},${ny}`;
+
+        if (nx >= 0 && nx < gridCols && ny >= 0 && ny < gridRows) {
+          if (!visited.has(key) && !bodySet.has(key)) {
+            visited.add(key);
+            queue.push({ x: nx, y: ny });
+          }
+        }
+      }
+    }
+
+    const totalCells = gridCols * gridRows;
+    return count / totalCells;
   }
 
   // Save weights to local storage
