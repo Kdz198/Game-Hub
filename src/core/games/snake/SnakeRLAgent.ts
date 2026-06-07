@@ -34,6 +34,15 @@ export class SnakeRLAgent {
     this.model = this.createModel();
     this.targetModel = this.createModel();
     this.updateTargetModel();
+    this.warmup();
+  }
+
+  private warmup() {
+    tf.tidy(() => {
+      const dummyInput = tf.zeros([1, this.stateSize]);
+      this.model.predict(dummyInput);
+      this.targetModel.predict(dummyInput);
+    });
   }
 
   private createModel(): tf.Sequential {
