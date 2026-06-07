@@ -365,15 +365,18 @@ export class SnakeGame {
   }
 
   private getReachableSpaceSize(start: Point, snakeBody: Point[]): number {
-    const queue: Point[] = [start];
+    const L = snakeBody.length;
+    const clearTime = Array(this.gridRows).fill(null).map(() => Array(this.gridCols).fill(0));
+    for (let i = 0; i < L; i++) {
+      const p = snakeBody[i];
+      if (p.x >= 0 && p.x < this.gridCols && p.y >= 0 && p.y < this.gridRows) {
+        clearTime[p.y][p.x] = Math.max(clearTime[p.y][p.x], L - i);
+      }
+    }
+
+    const queue: {x: number, y: number, time: number}[] = [{x: start.x, y: start.y, time: 0}];
     const visited = new Set<string>();
     visited.add(`${start.x},${start.y}`);
-
-    const bodySet = new Set<string>();
-    // Treat the entire body (including tail) as blocked for static space evaluation
-    for (let i = 0; i < snakeBody.length; i++) {
-      bodySet.add(`${snakeBody[i].x},${snakeBody[i].y}`);
-    }
 
     let count = 0;
     const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
@@ -385,12 +388,15 @@ export class SnakeGame {
       for (const d of dirs) {
         const nx = curr.x + d.dx;
         const ny = curr.y + d.dy;
+        const nextTime = curr.time + 1;
         const key = `${nx},${ny}`;
 
         if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows) {
-          if (!visited.has(key) && !bodySet.has(key)) {
-            visited.add(key);
-            queue.push({ x: nx, y: ny });
+          if (!visited.has(key)) {
+             if (nextTime >= clearTime[ny][nx]) {
+                visited.add(key);
+                queue.push({ x: nx, y: ny, time: nextTime });
+             }
           }
         }
       }
