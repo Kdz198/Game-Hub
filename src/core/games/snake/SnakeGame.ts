@@ -219,6 +219,7 @@ export class SnakeGame {
   }
 
   private triggerGameOver() {
+    this.printDebugMap("SNAKE GAME OVER");
     this.isGameOver = true;
     this.screenFlash = 1.0;
     this.triggerScreenShake(20, 600);
@@ -892,8 +893,8 @@ export class SnakeGame {
     c.restore();
   }
 
-  private printDebugMap() {
-    console.log("=== SNAKE AI LOOP DETECTED ===");
+  private printDebugMap(header: string = "SNAKE AI LOOP DETECTED") {
+    console.log(`=== ${header} ===`);
     console.log(`Grid Size: ${this.gridCols}x${this.gridRows}, Snake Length: ${this.snake.length}, Steps since eat: ${this.stepsSinceLastEat}`);
     
     const grid: string[][] = Array(this.gridRows).fill(null).map(() => Array(this.gridCols).fill('.'));
