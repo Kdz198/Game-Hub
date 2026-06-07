@@ -312,16 +312,12 @@ export class SnakeGame {
   }
 
   private getPath(start: Point, target: Point, snakeBody: Point[]): Point[] | null {
-     const queue: {x: number, y: number, path: Point[]}[] = [{x: start.x, y: start.y, path: []}];
-     const visited = new Set<string>();
-     visited.add(`${start.x},${start.y}`);
+     const queue: {x: number, y: number, time: number, path: Point[]}[] = [{x: start.x, y: start.y, time: 0, path: []}];
+     const visited = new Map<string, number>(); // key: "x,y", value: minTime
+     visited.set(`${start.x},${start.y}`, 0);
      
-     const bodySet = new Set<string>();
-     for (let i = 0; i < snakeBody.length - 1; i++) {
-        bodySet.add(`${snakeBody[i].x},${snakeBody[i].y}`);
-     }
-
      const dirs = [ {dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0} ];
+     const L = snakeBody.length;
 
      while (queue.length > 0) {
         const curr = queue.shift()!;
@@ -330,11 +326,29 @@ export class SnakeGame {
         for (let d of dirs) {
            const nx = curr.x + d.dx;
            const ny = curr.y + d.dy;
+           const nextTime = curr.time + 1;
            const key = `${nx},${ny}`;
            
-           if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows && !visited.has(key) && !bodySet.has(key)) {
-              visited.add(key);
-              queue.push({ x: nx, y: ny, path: [...curr.path, {x: nx, y: ny}] });
+           if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows) {
+              const prevTime = visited.get(key);
+              if (prevTime === undefined || nextTime < prevTime) {
+                 // Check if the cell is occupied by the body at nextTime
+                 let isOccupied = false;
+                 for (let i = 0; i < L; i++) {
+                    if (snakeBody[i].x === nx && snakeBody[i].y === ny) {
+                       // It is occupied if nextTime < L - i
+                       if (nextTime < L - i) {
+                          isOccupied = true;
+                          break;
+                       }
+                    }
+                 }
+                 
+                 if (!isOccupied) {
+                    visited.set(key, nextTime);
+                    queue.push({ x: nx, y: ny, time: nextTime, path: [...curr.path, {x: nx, y: ny}] });
+                 }
+              }
            }
         }
      }
@@ -396,12 +410,17 @@ export class SnakeGame {
         // Check bounds
         if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
 
-        // Check body collision (excluding tail)
+        // Check body collision (using time-space safety check)
         let hitSelf = false;
-        for (let i = 0; i < currentSnake.length - 1; i++) {
+        const L = currentSnake.length;
+        const nextTime = step + 1;
+        for (let i = 0; i < L; i++) {
           if (currentSnake[i].x === nx && currentSnake[i].y === ny) {
-            hitSelf = true;
-            break;
+            // It is occupied if nextTime < L - i
+            if (nextTime < L - i) {
+              hitSelf = true;
+              break;
+            }
           }
         }
         if (hitSelf) continue;
