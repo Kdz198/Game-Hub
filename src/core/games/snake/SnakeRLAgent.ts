@@ -28,6 +28,7 @@ export class SnakeRLAgent {
   
   public trainCount = 0;
   private updateTargetEvery = 15; // steps
+  private isTraining = false;
 
   constructor() {
     this.model = this.createModel();
@@ -98,7 +99,7 @@ export class SnakeRLAgent {
 
   // Train on a batch from replay memory
   public trainOnBatch(): number | null {
-    if (this.memory.length < this.batchSize) {
+    if (this.isTraining || this.memory.length < this.batchSize) {
       return null;
     }
 
@@ -146,6 +147,8 @@ export class SnakeRLAgent {
 
     if (!loss) return null;
 
+    this.isTraining = true;
+
     // Train the model asynchronously
     this.model.fit(loss.statesTensor, loss.targetsTensor, {
       epochs: 1,
@@ -159,6 +162,12 @@ export class SnakeRLAgent {
       if (this.trainCount % this.updateTargetEvery === 0) {
         this.updateTargetModel();
       }
+      this.isTraining = false;
+    }).catch((err) => {
+      console.error("Error during model.fit:", err);
+      loss.statesTensor.dispose();
+      loss.targetsTensor.dispose();
+      this.isTraining = false;
     });
 
     // Decay epsilon
