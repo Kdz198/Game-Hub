@@ -666,31 +666,10 @@ export class SnakeGame {
           return a.distToFood - b.distToFood;
         }
       } else {
-        if (isLooping) {
-          // Only maximize distToTail if the head has a large open space available.
-          // In tight spaces, it must continue to minimize distToTail (hug the tail closely)
-          // to follow the body clearing path safely out of the compartment.
-          const aSpaceLarge = a.reachableSpace >= Math.min(this.snake.length, 120);
-          const bSpaceLarge = b.reachableSpace >= Math.min(this.snake.length, 120);
-
-          if (aSpaceLarge !== bSpaceLarge) {
-            return aSpaceLarge ? -1 : 1; // Prioritize the move that keeps us in a larger open space
-          }
-
-          if (aSpaceLarge) {
-            if (a.distToTail !== b.distToTail) {
-              return b.distToTail - a.distToTail; // Maximize to unwind
-            }
-          } else {
-            if (a.distToTail !== b.distToTail) {
-              return a.distToTail - b.distToTail; // Minimize to follow tail closely
-            }
-          }
-        } else {
-          // Otherwise, minimize distance to tail to stay compact
-          if (a.distToTail !== b.distToTail) {
-            return a.distToTail - b.distToTail;
-          }
+        // Food is unreachable or unsafe. Always maximize distance to tail (distToTail)
+        // to force the snake to hug the outer body loop and avoid taking self-trapping shortcuts.
+        if (a.distToTail !== b.distToTail) {
+          return b.distToTail - a.distToTail;
         }
       }
 
