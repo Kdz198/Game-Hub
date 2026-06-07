@@ -489,6 +489,29 @@ export class SnakeGame {
     return pathToTail !== null;
   }
 
+  private getEmptyNeighborsCount(p: Point, body: Point[]): number {
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+    let count = 0;
+    
+    for (const d of dirs) {
+      const nx = p.x + d.dx;
+      const ny = p.y + d.dy;
+      if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows) {
+        let inBody = false;
+        for (let i = 0; i < body.length; i++) {
+          if (body[i].x === nx && body[i].y === ny) {
+            inBody = true;
+            break;
+          }
+        }
+        if (!inBody) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
   private calculateAutoMove() {
     if (!this.food) return;
 
@@ -505,6 +528,7 @@ export class SnakeGame {
       distToFood: number;
       distToTail: number;
       reachableSpace: number;
+      emptyNeighbors: number;
     }
 
     const evaluations: MoveEval[] = [];
@@ -581,6 +605,11 @@ export class SnakeGame {
         }
       }
 
+      let emptyNeighbors = 0;
+      if (rolledSnake) {
+        emptyNeighbors = this.getEmptyNeighborsCount(rolledSnake[0], rolledSnake);
+      }
+
       evaluations.push({
         dx: d.dx,
         dy: d.dy,
@@ -590,7 +619,8 @@ export class SnakeGame {
         isEatingMove: isEating,
         distToFood,
         distToTail,
-        reachableSpace
+        reachableSpace,
+        emptyNeighbors
       });
     }
 
@@ -647,7 +677,11 @@ export class SnakeGame {
       if (a.canReachTail !== b.canReachTail) {
         return a.canReachTail ? -1 : 1;
       }
-      // 6. Maximize reachable space
+      // 6. Prefer moves with more empty neighbors (prefer open spaces to avoid tunnels)
+      if (a.emptyNeighbors !== b.emptyNeighbors) {
+        return b.emptyNeighbors - a.emptyNeighbors;
+      }
+      // 7. Maximize reachable space
       if (a.reachableSpace !== b.reachableSpace) {
         return b.reachableSpace - a.reachableSpace;
       }
