@@ -163,66 +163,71 @@ export default function SnakeCanvas() {
     <div className={styles.canvasContainer}>
       <div className={`${styles.mainLayout} ${viewBrain && isRLTraining ? styles.layoutSplit : ''}`}>
         <div className={styles.gameWrapper}>
-          {isRLTraining && (
-            <button 
-              className={`${styles.cornerSettingsBtn} ${styles.cornerBrainBtn}`} 
-              onClick={() => setViewBrain(!viewBrain)}
-              style={{
-                right: '5.2rem',
-                color: viewBrain ? '#39ff14' : '#00f0ff',
-                borderColor: viewBrain ? '#39ff14' : 'rgba(0, 240, 255, 0.3)',
-                boxShadow: viewBrain ? '0 0 15px rgba(57, 255, 20, 0.4)' : 'none'
-              }}
-              aria-label="View Brain"
-            >
-              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-4.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2z"></path>
-                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-4.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2z"></path>
-              </svg>
-            </button>
-          )}
+          <div className={styles.headerArea}>
+            <div className={styles.topHeaderRow}>
+              <div className={`${styles.hud} ${gameState === 'PLAYING' ? styles.hudActive : ''}`}>
+                <div className={styles.scoreDisplay}>
+                  <span className={styles.scoreLabel}>SCORE</span>
+                  <span className={styles.scoreValue}>{score}</span>
+                </div>
+                
+                <div className={styles.bestDisplay}>
+                  <span className={styles.bestLabel}>BEST</span>
+                  <span className={styles.bestValue}>{bestScore}</span>
+                </div>
+              </div>
 
-          <button 
-            className={styles.cornerSettingsBtn} 
-            onClick={() => setIsSettingsOpen(true)}
-            aria-label="Settings"
-          >
-          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-        </button>
+              <div className={styles.headerButtons}>
+                {isRLTraining && (
+                  <button 
+                    className={`${styles.headerBtn} ${styles.headerBrainBtn}`} 
+                    onClick={() => setViewBrain(!viewBrain)}
+                    style={{
+                      color: viewBrain ? '#39ff14' : '#00f0ff',
+                      borderColor: viewBrain ? '#39ff14' : 'rgba(0, 240, 255, 0.3)',
+                      boxShadow: viewBrain ? '0 0 15px rgba(57, 255, 20, 0.4)' : 'none'
+                    }}
+                    aria-label="View Brain"
+                  >
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-4.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2z"></path>
+                      <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-4.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2z"></path>
+                    </svg>
+                  </button>
+                )}
 
-        <div className={`${styles.hud} ${gameState === 'PLAYING' ? styles.hudActive : ''}`}>
-          <div className={styles.scoreDisplay}>
-            <span className={styles.scoreLabel}>SCORE</span>
-            <span className={styles.scoreValue}>{score}</span>
-          </div>
-          
-          <div className={styles.bestDisplay}>
-            <span className={styles.bestLabel}>BEST</span>
-            <span className={styles.bestValue}>{bestScore}</span>
-          </div>
-        </div>
-
-        {isRLTraining && (
-          <div className={styles.rlHud}>
-            <div className={styles.rlStatCol}>
-              <span className={styles.rlStatLabel}>EPISODE</span>
-              <span className={styles.rlStatVal}>{rlStats.episode}</span>
+                <button 
+                  className={styles.headerBtn} 
+                  onClick={() => setIsSettingsOpen(true)}
+                  aria-label="Settings"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div className={styles.rlStatCol}>
-              <span className={styles.rlStatLabel}>AVG SCORE (100)</span>
-              <span className={styles.rlStatVal}>{rlStats.avgScore.toFixed(1)}</span>
-            </div>
-            <div className={styles.rlStatCol}>
-              <span className={styles.rlStatLabel}>EXPLORATION</span>
-              <span className={styles.rlStatVal}>{(rlStats.epsilon * 100).toFixed(0)}%</span>
-            </div>
-          </div>
-        )}
 
-        <div className={styles.gameContainer} ref={containerRef}>
+            {isRLTraining && (
+              <div className={styles.rlHud}>
+                <div className={styles.rlStatCol}>
+                  <span className={styles.rlStatLabel}>EPISODE</span>
+                  <span className={styles.rlStatVal}>{rlStats.episode}</span>
+                </div>
+                <div className={styles.rlStatCol}>
+                  <span className={styles.rlStatLabel}>AVG SCORE (100)</span>
+                  <span className={styles.rlStatVal}>{rlStats.avgScore.toFixed(1)}</span>
+                </div>
+                <div className={styles.rlStatCol}>
+                  <span className={styles.rlStatLabel}>EXPLORATION</span>
+                  <span className={styles.rlStatVal}>{(rlStats.epsilon * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.gameContainer} ref={containerRef}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
         </div>
 

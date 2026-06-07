@@ -83,6 +83,7 @@ export class SnakeGame {
     if (!ctx) throw new Error("Canvas 2D context not found");
     this.ctx = ctx;
 
+    this.initLayout();
     this.calculateLayout();
     this.attachEvents();
     
@@ -92,14 +93,16 @@ export class SnakeGame {
     );
   }
 
-  private calculateLayout() {
+  private initLayout() {
     // Fill the screen but ensure it's divisible by cellSize
     const maxGridWidth = this.canvas.width * 0.95;
     const maxGridHeight = this.canvas.height * 0.75; // Leave top for HUD
     
     this.gridCols = Math.floor(maxGridWidth / this.cellSize);
     this.gridRows = Math.floor(maxGridHeight / this.cellSize);
-    
+  }
+
+  private calculateLayout() {
     const totalW = this.gridCols * this.cellSize;
     const totalH = this.gridRows * this.cellSize;
     
@@ -134,10 +137,7 @@ export class SnakeGame {
   }
 
   public onResize = () => {
-    const totalW = this.gridCols * this.cellSize;
-    const totalH = this.gridRows * this.cellSize;
-    this.gridX = (this.canvas.width - totalW) / 2;
-    this.gridY = (this.canvas.height * 0.55) - (totalH / 2);
+    this.calculateLayout();
     this.draw();
   }
 
