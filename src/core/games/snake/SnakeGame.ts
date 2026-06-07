@@ -462,6 +462,33 @@ export class SnakeGame {
     return currentSnake;
   }
 
+  private isFoodSafe(simSnake: Point[], pathToFood: Point[]): boolean {
+    if (pathToFood.length === 0) return false;
+    
+    let currentSnake = [...simSnake];
+    
+    // Simulate each step along pathToFood
+    for (let i = 0; i < pathToFood.length; i++) {
+      const nextPoint = pathToFood[i];
+      const isLastStep = (i === pathToFood.length - 1);
+      
+      if (isLastStep) {
+        // This is the eating step! The snake grows, tail does not move.
+        currentSnake = [nextPoint, ...currentSnake];
+      } else {
+        // Normal step, tail moves.
+        currentSnake = [nextPoint, ...currentSnake.slice(0, -1)];
+      }
+    }
+    
+    // Now check if from this simulated state, the head can reach its tail
+    const head = currentSnake[0];
+    const tail = currentSnake[currentSnake.length - 1];
+    
+    const pathToTail = this.getPath(head, tail, currentSnake);
+    return pathToTail !== null;
+  }
+
   private calculateAutoMove() {
     if (!this.food) return;
 
@@ -548,7 +575,7 @@ export class SnakeGame {
           distToFood = 0;
         } else {
           const pathToFood = this.getPath(newHead, this.food, rolledSnake);
-          if (pathToFood) {
+          if (pathToFood && this.isFoodSafe(rolledSnake, pathToFood)) {
             distToFood = pathToFood.length;
           }
         }
@@ -572,6 +599,8 @@ export class SnakeGame {
       return;
     }
 
+    const isLooping = this.stepsSinceLastEat > Math.max(this.snake.length * 1.5, 100);
+
     // Sort evaluations to find the best move
     evaluations.sort((a, b) => {
       // 1. Prioritize safe moves
@@ -589,7 +618,7 @@ export class SnakeGame {
       
       // 4. Path prioritization: 
       // If we can reach the food, prioritize getting closer to it.
-      // If food is unreachable, prioritize following the tail closely (minimize distToTail).
+      // If food is unreachable, prioritize following the tail.
       const aCanReachFood = a.distToFood !== Infinity;
       const bCanReachFood = b.distToFood !== Infinity;
       if (aCanReachFood !== bCanReachFood) {
@@ -601,8 +630,16 @@ export class SnakeGame {
           return a.distToFood - b.distToFood;
         }
       } else {
-        if (a.distToTail !== b.distToTail) {
-          return a.distToTail - b.distToTail;
+        if (isLooping) {
+          // If we are looping and food is unreachable/unsafe, prioritize MAXIMIZING distance to tail to unwind
+          if (a.distToTail !== b.distToTail) {
+            return b.distToTail - a.distToTail;
+          }
+        } else {
+          // Otherwise, minimize distance to tail to stay compact
+          if (a.distToTail !== b.distToTail) {
+            return a.distToTail - b.distToTail;
+          }
         }
       }
 
