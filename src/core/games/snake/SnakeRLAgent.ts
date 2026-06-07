@@ -23,7 +23,7 @@ export class SnakeRLAgent {
   private learningRate = 0.001;
   private batchSize = 64;
   
-  public stateSize = 14;
+  public stateSize = 15;
   public actionSize = 3; // 0: Straight, 1: Turn Left, 2: Turn Right
   
   public trainCount = 0;
@@ -82,8 +82,8 @@ export class SnakeRLAgent {
   }
 
   // Get action (epsilon-greedy)
-  public getAction(state: number[]): number {
-    if (Math.random() < this.epsilon) {
+  public getAction(state: number[], explore = true): number {
+    if (explore && Math.random() < this.epsilon) {
       // Explore: random relative action
       return Math.floor(Math.random() * this.actionSize);
     }
@@ -283,6 +283,8 @@ export class SnakeRLAgent {
     const spaceLeft = this.getReachableSpace(pLeft, snake, gridCols, gridRows);
     const spaceRight = this.getReachableSpace(pRight, snake, gridCols, gridRows);
 
+    const fillRatio = snake.length / (gridCols * gridRows);
+
     return [
       dangerStraight,
       dangerLeft,
@@ -297,7 +299,8 @@ export class SnakeRLAgent {
       foodRight,
       spaceStraight,
       spaceLeft,
-      spaceRight
+      spaceRight,
+      fillRatio
     ];
   }
 

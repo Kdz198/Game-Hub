@@ -45,6 +45,7 @@ export class SnakeGame {
 
   // RL Agent
   public isRLTraining = false;
+  public isExplorationEnabled = true;
   public rlAgent?: SnakeRLAgent;
   public onRLStats?: (episode: number, avgScore: number, epsilon: number) => void;
   private rlEpisode = 0;
@@ -55,7 +56,7 @@ export class SnakeGame {
 
   // RL Visualization Data
   public isVisualizing = false;
-  public rlLastState: number[] = Array(14).fill(0);
+  public rlLastState: number[] = Array(15).fill(0);
   public rlLastQValues: number[] = [0, 0, 0];
   public rlLastAction = 0;
 
@@ -804,7 +805,7 @@ export class SnakeGame {
     }
 
     // Get next action from RL Agent
-    const action = this.rlAgent.getAction(state);
+    const action = this.rlAgent.getAction(state, this.isExplorationEnabled);
 
     // Only get Q-values and update visualization properties on the last step of the catch-up loop
     if (this.isVisualizing && this.moveTimer < this.moveInterval) {

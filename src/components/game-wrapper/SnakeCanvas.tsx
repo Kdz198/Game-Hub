@@ -23,6 +23,7 @@ export default function SnakeCanvas() {
 
   // RL Training State
   const [isRLTraining, setIsRLTraining] = useState(false);
+  const [isExploration, setIsExploration] = useState(true);
   const [rlStats, setRlStats] = useState({ episode: 0, avgScore: 0, epsilon: 1.0 });
   const [viewBrain, setViewBrain] = useState(false);
 
@@ -125,8 +126,9 @@ export default function SnakeCanvas() {
       gameRef.current.isAutoPlay = autoPlay;
       gameRef.current.autoPlaySpeed = autoSpeed;
       gameRef.current.audio.enabled = soundOn && !((autoPlay || isRLTraining) && autoSpeed >= 20);
+      gameRef.current.isExplorationEnabled = isExploration;
     }
-  }, [autoPlay, autoSpeed, soundOn, isRLTraining]);
+  }, [autoPlay, autoSpeed, soundOn, isRLTraining, isExploration]);
 
   // Handle RL Training Toggle
   useEffect(() => {
@@ -297,6 +299,18 @@ export default function SnakeCanvas() {
                   {isRLTraining ? 'ON' : 'OFF'}
                 </button>
               </div>
+
+              {isRLTraining && (
+                <div className={styles.settingRow}>
+                  <span>AI EXPLORATION</span>
+                  <button 
+                    className={`${styles.toggleBtn} ${isExploration ? styles.toggleOn : ''}`}
+                    onClick={() => setIsExploration(!isExploration)}
+                  >
+                    {isExploration ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              )}
 
               {(autoPlay || isRLTraining) && (
                 <div className={styles.settingRow}>

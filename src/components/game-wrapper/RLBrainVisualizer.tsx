@@ -20,7 +20,8 @@ const INPUT_LABELS = [
   'FOOD: RIGHT',
   'SPACE AHEAD',
   'SPACE LEFT',
-  'SPACE RIGHT'
+  'SPACE RIGHT',
+  'FILL RATIO'
 ];
 
 const OUTPUT_LABELS = [
@@ -49,7 +50,7 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
       const height = canvas.height;
       
       // Pull real-time data from game object
-      const state = (game && game.rlLastState) || Array(14).fill(0);
+      const state = (game && game.rlLastState) || Array(15).fill(0);
       const qValues = (game && game.rlLastQValues) || [0, 0, 0];
       const selectedAction = (game && game.rlLastAction !== undefined) ? game.rlLastAction : -1;
 
@@ -58,7 +59,7 @@ export default function RLBrainVisualizer({ game }: RLBrainVisualizerProps) {
       const hiddenX = width / 2 + 20;
       const outputX = width - 100;
       
-      const inputCount = 14;
+      const inputCount = 15;
       const hiddenCount = 6;
       const outputCount = 3;
       
