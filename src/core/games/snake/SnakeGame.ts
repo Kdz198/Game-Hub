@@ -666,10 +666,24 @@ export class SnakeGame {
           return a.distToFood - b.distToFood;
         }
       } else {
-        // Food is unreachable or unsafe. Always maximize distance to tail (distToTail)
-        // to force the snake to hug the outer body loop and avoid taking self-trapping shortcuts.
-        if (a.distToTail !== b.distToTail) {
-          return b.distToTail - a.distToTail;
+        // Food is unreachable or unsafe. Follow tail.
+        // If we have enough reachable space to fit the entire snake body, we can maximize distToTail to unwind.
+        // Otherwise, we must minimize distToTail (hug the tail closely) to follow the body clearing path safely.
+        const aSpaceLarge = a.reachableSpace >= this.snake.length;
+        const bSpaceLarge = b.reachableSpace >= this.snake.length;
+
+        if (aSpaceLarge !== bSpaceLarge) {
+          return aSpaceLarge ? -1 : 1; // Prioritize the move that keeps us in a larger space
+        }
+
+        if (aSpaceLarge) {
+          if (a.distToTail !== b.distToTail) {
+            return b.distToTail - a.distToTail; // Maximize to unwind
+          }
+        } else {
+          if (a.distToTail !== b.distToTail) {
+            return a.distToTail - b.distToTail; // Minimize to follow tail closely
+          }
         }
       }
 
