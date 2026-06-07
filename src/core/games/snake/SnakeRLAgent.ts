@@ -51,14 +51,14 @@ export class SnakeRLAgent {
     // Hidden Layer 1
     model.add(tf.layers.dense({
       inputShape: [this.stateSize],
-      units: 128,
+      units: 256,
       activation: 'relu',
       kernelInitializer: 'heNormal'
     }));
 
     // Hidden Layer 2
     model.add(tf.layers.dense({
-      units: 64,
+      units: 128,
       activation: 'relu',
       kernelInitializer: 'heNormal'
     }));
