@@ -152,7 +152,7 @@ export default function SnakeCanvas() {
   };
 
   return (
-    <div className={styles.canvasContainer} ref={containerRef}>
+    <div className={styles.canvasContainer}>
       <div className={`${styles.mainLayout} ${viewBrain && isRLTraining ? styles.layoutSplit : ''}`}>
         <div className={styles.gameWrapper}>
           {isRLTraining && (
@@ -214,7 +214,7 @@ export default function SnakeCanvas() {
           </div>
         )}
 
-        <div className={styles.gameContainer}>
+        <div className={styles.gameContainer} ref={containerRef}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
         </div>
 

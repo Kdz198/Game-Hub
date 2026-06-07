@@ -921,6 +921,25 @@ export class SnakeGame {
     const isPerf = this.isAutoPlay && this.autoPlaySpeed >= 20;
 
     c.save();
+
+    // Responsive Scaling:
+    // Scale the entire rendering context if the arena exceeds the available canvas size
+    const arenaW = this.gridCols * this.cellSize;
+    const arenaH = this.gridRows * this.cellSize;
+    const maxW = this.canvas.width * 0.95;
+    const maxH = this.canvas.height * 0.75;
+    
+    const scaleX = maxW / arenaW;
+    const scaleY = maxH / arenaH;
+    const scale = Math.min(1, Math.min(scaleX, scaleY));
+    
+    if (scale < 1) {
+      const dx = (this.canvas.width - arenaW * scale) / 2 - this.gridX * scale;
+      const dy = (this.canvas.height * 0.55 - (arenaH * scale) / 2) - this.gridY * scale;
+      c.translate(dx, dy);
+      c.scale(scale, scale);
+    }
+
     if (!isPerf && this.shakeTime > 0) {
       const sx = (Math.random() - 0.5) * this.shakeMag;
       const sy = (Math.random() - 0.5) * this.shakeMag;
