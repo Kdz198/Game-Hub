@@ -1,5 +1,8 @@
 import * as tf from '@tensorflow/tfjs';
 
+// Set backend to CPU for small network optimization and to eliminate WebGL sync latency
+tf.setBackend('cpu').catch(err => console.warn('Failed to set TFJS backend to CPU:', err));
+
 type Point = { x: number; y: number };
 
 export interface Transition {

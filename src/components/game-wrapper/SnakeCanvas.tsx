@@ -107,6 +107,13 @@ export default function SnakeCanvas() {
     };
   }, []);
 
+  // Sync visualization state to game object
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.isVisualizing = viewBrain && isRLTraining;
+    }
+  }, [viewBrain, isRLTraining]);
+
   // Update game settings when toggled
   useEffect(() => {
     if (gameRef.current) {

@@ -53,6 +53,7 @@ export class SnakeGame {
   private rlPrevAction = 0;
 
   // RL Visualization Data
+  public isVisualizing = false;
   public rlLastState: number[] = Array(11).fill(0);
   public rlLastQValues: number[] = [0, 0, 0];
   public rlLastAction = 0;
@@ -132,9 +133,10 @@ export class SnakeGame {
   }
 
   private onResize = () => {
-    // Only resize layout, don't restart game
-    // A robust game might recalculate grid and snap snake to bounds, 
-    // but for simplicity we assume canvas size is mostly static during play.
+    const totalW = this.gridCols * this.cellSize;
+    const totalH = this.gridRows * this.cellSize;
+    this.gridX = (this.canvas.width - totalW) / 2;
+    this.gridY = (this.canvas.height * 0.55) - (totalH / 2);
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -794,16 +796,16 @@ export class SnakeGame {
       this.rlAgent.trainOnBatch();
     }
 
-    // Get Q-values for visualization
-    const qValues = this.rlAgent.getQValues(state);
-
     // Get next action from RL Agent
     const action = this.rlAgent.getAction(state);
 
-    // Store visualization data
-    this.rlLastState = state;
-    this.rlLastQValues = qValues;
-    this.rlLastAction = action;
+    // Only get Q-values and update visualization properties on the last step of the catch-up loop
+    if (this.isVisualizing && this.moveTimer < this.moveInterval) {
+      const qValues = this.rlAgent.getQValues(state);
+      this.rlLastState = state;
+      this.rlLastQValues = qValues;
+      this.rlLastAction = action;
+    }
     
     // Convert relative action to absolute direction
     // Action 0: Straight, 1: Turn Left, 2: Turn Right
