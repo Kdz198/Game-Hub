@@ -397,7 +397,10 @@ export class FlappyBirdGame {
   public reset() {
     this.bird = this.getInitialBird();
     this.pipes = [];
-    this.particles = [];
+    // Do not clear active particles on reset in AI mode, so the crash explosion can finish playing
+    if (!this.isRLTraining) {
+      this.particles = [];
+    }
     this.trail = [];
     this.score = 0;
     this.frameCount = 0;
@@ -453,20 +456,61 @@ export class FlappyBirdGame {
     } else {
       this.updatePhysicsStep(deltaTime);
     }
+
+    // Run visual updates exactly once per frame
+    this.updateVisuals(deltaTime);
   }
 
-  private updatePhysicsStep(deltaTime: number) {
+  private updateVisuals(deltaTime: number) {
     const timeScale = deltaTime / 16.666;
     this.frameCount += timeScale;
-    
-    const isFast = this.isRLTraining && this.autoPlaySpeed >= 2;
+
+    if (this.screenShakeTime > 0) this.screenShakeTime -= timeScale;
 
     // Update ground offset for background rendering
     this.groundOffset += this.basePipeSpeed * timeScale;
     if (this.groundOffset >= 35) this.groundOffset -= 35;
 
-    if (this.screenShakeTime > 0) this.screenShakeTime -= timeScale;
-    
+    // Scroll trail to the left to match game movement
+    for (let i = 0; i < this.trail.length; i++) {
+      this.trail[i].x -= this.basePipeSpeed * timeScale;
+    }
+
+    // Add new point to trail
+    if (this.isStarted && !this.isGameOver) {
+      if (Math.floor(this.frameCount) % 2 === 0) {
+        this.trail.push({ x: this.width * 0.22 - 8, y: this.bird.y });
+        if (this.trail.length > 8) this.trail.shift();
+      }
+    }
+
+    // Continuous thruster particles
+    if (this.isStarted && !this.isGameOver) {
+      const skin = SKINS_CONFIG[this.currentSkin];
+      if (Math.random() < 0.4) {
+        this.createParticle(
+          this.width * 0.22 - 12, this.bird.y + (Math.random() * 6 - 3),
+          skin.thrusterColor,
+          -this.basePipeSpeed - Math.random(), Math.random() * 1 - 0.5,
+          Math.random() * 3 + 1, 0.08
+        );
+      }
+    }
+
+    // Update Particles (move and decay)
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * timeScale;
+      p.y += p.vy * timeScale;
+      p.life -= p.decay * timeScale;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+  }
+
+  private updatePhysicsStep(deltaTime: number) {
+    const timeScale = deltaTime / 16.666;
+    const isFast = this.isRLTraining && this.autoPlaySpeed >= 2;
+
     // Determine action
     let hasAction = false;
     if (this.isRLTraining && this.rlAgent) {
@@ -474,15 +518,6 @@ export class FlappyBirdGame {
       hasAction = (this.rlLastAction === 1);
     } else {
       hasAction = this.input.consumeAction();
-    }
-    
-    // Update Particles
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
-      p.x += p.vx * timeScale;
-      p.y += p.vy * timeScale;
-      p.life -= p.decay * timeScale;
-      if (p.life <= 0) this.particles.splice(i, 1);
     }
 
     if (this.isGameOver) return;
@@ -508,21 +543,6 @@ export class FlappyBirdGame {
         this.bird.targetRotation = Math.min(Math.PI / 2.5, (this.bird.velocity - 3) * 0.12);
     }
     this.bird.rotation += (this.bird.targetRotation - this.bird.rotation) * 0.15;
-
-    const skin = SKINS_CONFIG[this.currentSkin];
-    if (Math.floor(this.frameCount) % 2 === 0) {
-        this.trail.push({ x: this.width * 0.22 - 8, y: this.bird.y });
-        if (this.trail.length > 8) this.trail.shift();
-    }
-
-    if (Math.random() < 0.4) {
-        this.createParticle(
-            this.width * 0.22 - 12, this.bird.y + (Math.random() * 6 - 3),
-            skin.thrusterColor,
-            -this.basePipeSpeed - Math.random(), Math.random() * 1 - 0.5,
-            Math.random() * 3 + 1, 0.08
-        );
-    }
 
     this.lastPipeSpawn += timeScale;
     if (this.lastPipeSpawn > PIPE_SPAWN_RATE) {
@@ -706,7 +726,7 @@ export class FlappyBirdGame {
         if (this.isRLTraining) {
           this.start();
         }
-      }, 50);
+      }, 400);
       return;
     }
 
