@@ -51,6 +51,7 @@ export class SnakeGame {
   private rlScores: number[] = [];
   private rlPrevState: number[] | null = null;
   private rlPrevAction = 0;
+  private rlStepCount = 0;
 
   // RL Visualization Data
   public isVisualizing = false;
@@ -203,6 +204,7 @@ export class SnakeGame {
     // Reset RL transition state
     this.rlPrevState = null;
     this.rlPrevAction = 0;
+    this.rlStepCount = 0;
 
     // Start in middle
     const startX = Math.floor(this.gridCols / 2);
@@ -794,7 +796,11 @@ export class SnakeGame {
         }
       }
       this.rlAgent.remember(this.rlPrevState, this.rlPrevAction, reward, state, false);
-      this.rlAgent.trainOnBatch();
+      
+      this.rlStepCount++;
+      if (this.rlStepCount % 4 === 0) {
+        this.rlAgent.trainOnBatch();
+      }
     }
 
     // Get next action from RL Agent
