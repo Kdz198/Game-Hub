@@ -40,6 +40,7 @@ export class SnakeGame {
   
   // Auto Play
   public isAutoPlay = false;
+  public autoPlaySpeed = 1;
 
   // Audio
   public audio = new AudioSynth();
@@ -280,11 +281,13 @@ export class SnakeGame {
     }
 
     if (!this.isGameOver) {
-      this.moveTimer += dt;
-      if (this.moveTimer >= this.moveInterval) {
+      const multiplier = this.isAutoPlay ? this.autoPlaySpeed : 1;
+      this.moveTimer += dt * multiplier;
+      while (this.moveTimer >= this.moveInterval) {
         this.moveTimer -= this.moveInterval;
         if (this.isAutoPlay) this.calculateAutoMove();
         this.moveSnake();
+        if (this.isGameOver) break;
       }
     }
 
@@ -338,90 +341,257 @@ export class SnakeGame {
      return null;
   }
 
+  private getReachableSpaceSize(start: Point, snakeBody: Point[]): number {
+    const queue: Point[] = [start];
+    const visited = new Set<string>();
+    visited.add(`${start.x},${start.y}`);
+
+    const bodySet = new Set<string>();
+    // Treat the entire body (including tail) as blocked for static space evaluation
+    for (let i = 0; i < snakeBody.length; i++) {
+      bodySet.add(`${snakeBody[i].x},${snakeBody[i].y}`);
+    }
+
+    let count = 0;
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      count++;
+
+      for (const d of dirs) {
+        const nx = curr.x + d.dx;
+        const ny = curr.y + d.dy;
+        const key = `${nx},${ny}`;
+
+        if (nx >= 0 && nx < this.gridCols && ny >= 0 && ny < this.gridRows) {
+          if (!visited.has(key) && !bodySet.has(key)) {
+            visited.add(key);
+            queue.push({ x: nx, y: ny });
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  private rolloutForcedMoves(simSnake: Point[], dx: number, dy: number): Point[] | null {
+    let currentSnake = [...simSnake];
+    let currentDx = dx;
+    let currentDy = dy;
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+
+    // Limit rollout depth to prevent infinite loops (although normally bounded by grid space)
+    for (let step = 0; step < 100; step++) {
+      const head = currentSnake[0];
+      const validMoves: { dx: number; dy: number; nx: number; ny: number }[] = [];
+
+      for (const d of dirs) {
+        // Don't reverse
+        if (d.dx === -currentDx && d.dy === -currentDy && currentSnake.length > 1) continue;
+
+        const nx = head.x + d.dx;
+        const ny = head.y + d.dy;
+
+        // Check bounds
+        if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
+
+        // Check body collision (excluding tail)
+        let hitSelf = false;
+        for (let i = 0; i < currentSnake.length - 1; i++) {
+          if (currentSnake[i].x === nx && currentSnake[i].y === ny) {
+            hitSelf = true;
+            break;
+          }
+        }
+        if (hitSelf) continue;
+
+        validMoves.push({ dx: d.dx, dy: d.dy, nx, ny });
+      }
+
+      if (validMoves.length === 0) {
+        // Leads directly to a crash (0 valid moves)
+        return null;
+      }
+
+      if (validMoves.length > 1) {
+        // Has choices, stop rollout here
+        return currentSnake;
+      }
+
+      // Exactly 1 valid move - force it!
+      const move = validMoves[0];
+      currentDx = move.dx;
+      currentDy = move.dy;
+
+      // Simulate move
+      const isEating = (this.food && move.nx === this.food.x && move.ny === this.food.y);
+      currentSnake = isEating
+        ? [{ x: move.nx, y: move.ny }, ...currentSnake]
+        : [{ x: move.nx, y: move.ny }, ...currentSnake.slice(0, -1)];
+    }
+
+    return currentSnake;
+  }
+
   private calculateAutoMove() {
     if (!this.food) return;
 
     const head = this.snake[0];
-    
-    // 1. Try to find shortest path to food
-    let path = this.getPath(head, this.food, this.snake);
-    
-    // 2. Survival check
-    let isPathSafe = false;
-    if (path && path.length > 0) {
-       // Simulate eating the food
-       let simSnake = [...[...path].reverse(), ...this.snake];
-       simSnake = simSnake.slice(0, this.snake.length + 1);
-       
-       const simHead = simSnake[0];
-       const simTail = simSnake[simSnake.length - 1];
-       
-       // Can we still reach our own tail from the new head?
-       const escapePath = this.getPath(simHead, simTail, simSnake);
-       if (escapePath) {
-          isPathSafe = true;
-       }
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+
+    interface MoveEval {
+      dx: number;
+      dy: number;
+      isSafe: boolean;
+      canReachTail: boolean;
+      isolatedHoles: number;
+      isEatingMove: boolean;
+      distToFood: number;
+      distToTail: number;
+      reachableSpace: number;
     }
 
-    if (isPathSafe && path && path.length > 0) {
-       this.nextDx = path[0].x - head.x;
-       this.nextDy = path[0].y - head.y;
-       return;
-    }
+    const evaluations: MoveEval[] = [];
 
-    // 3. Stalling / Desperation mode (Chase tail)
-    const dirs = [ {dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0} ];
-    let bestDir = null;
-    let maxDist = -1;
-
-    for (let d of dirs) {
+    for (const d of dirs) {
+      // Don't reverse directly
       if (d.dx === -this.dx && d.dy === -this.dy && this.snake.length > 1) continue;
+
       const nx = head.x + d.dx;
       const ny = head.y + d.dy;
 
+      // Check bounds
       if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
-      
+
+      // Check collision with snake body (excluding tail, since tail will move)
       let hitSelf = false;
       for (let i = 0; i < this.snake.length - 1; i++) {
         if (this.snake[i].x === nx && this.snake[i].y === ny) {
-          hitSelf = true; break;
+          hitSelf = true;
+          break;
         }
       }
       if (hitSelf) continue;
 
-      let simSnake = [{x: nx, y: ny}, ...this.snake];
-      simSnake.pop(); // didn't eat
-      
-      const escapePath = this.getPath(simSnake[0], simSnake[simSnake.length-1], simSnake);
-      const escapeDist = escapePath ? escapePath.length : 0;
-      
-      if (escapePath && escapeDist > maxDist) {
-         maxDist = escapeDist;
-         bestDir = d;
+      // Simulate move
+      const isEating = (nx === this.food.x && ny === this.food.y);
+      const simSnake = isEating 
+        ? [{ x: nx, y: ny }, ...this.snake] 
+        : [{ x: nx, y: ny }, ...this.snake.slice(0, -1)];
+
+      // Roll out forced moves to evaluate where the path actually leads
+      const rolledSnake = this.rolloutForcedMoves(simSnake, d.dx, d.dy);
+
+      let isSafe = false;
+      let canReachTail = false;
+      let reachableSpace = 0;
+      let isolatedHoles = Infinity;
+      let distToTail = Infinity;
+
+      if (rolledSnake) {
+        const newHead = rolledSnake[0];
+        const newTail = rolledSnake[rolledSnake.length - 1];
+
+        // 1. Can we reach tail from the new head?
+        const pathToTail = this.getPath(newHead, newTail, rolledSnake);
+        canReachTail = pathToTail !== null;
+        if (pathToTail) {
+          distToTail = pathToTail.length;
+        }
+
+        // 2. How much space is reachable?
+        reachableSpace = this.getReachableSpaceSize(newHead, rolledSnake);
+        const totalEmptyCells = (this.gridCols * this.gridRows) - (rolledSnake.length - 1);
+        isolatedHoles = Math.max(0, totalEmptyCells - reachableSpace);
+
+        // A move is safe if we can reach the tail OR the reachable space is large enough to contain our entire body
+        isSafe = canReachTail || reachableSpace >= rolledSnake.length;
       }
+
+      // 3. Distance to food
+      let distToFood = Infinity;
+      if (isEating) {
+        distToFood = 0;
+      } else if (rolledSnake) {
+        const newHead = rolledSnake[0];
+        const isEatingFinal = (this.food && newHead.x === this.food.x && newHead.y === this.food.y);
+        if (isEatingFinal) {
+          distToFood = 0;
+        } else {
+          const pathToFood = this.getPath(newHead, this.food, rolledSnake);
+          if (pathToFood) {
+            distToFood = pathToFood.length;
+          }
+        }
+      }
+
+      evaluations.push({
+        dx: d.dx,
+        dy: d.dy,
+        isSafe,
+        canReachTail,
+        isolatedHoles,
+        isEatingMove: isEating,
+        distToFood,
+        distToTail,
+        reachableSpace
+      });
     }
 
-    if (bestDir) {
-       this.nextDx = bestDir.dx;
-       this.nextDy = bestDir.dy;
-    } else {
-       // Literally trapped, pick any valid move to delay death
-       for (let d of dirs) {
-         if (d.dx === -this.dx && d.dy === -this.dy && this.snake.length > 1) continue;
-         const nx = head.x + d.dx;
-         const ny = head.y + d.dy;
-         if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
-         let hitSelf = false;
-         for (let i = 0; i < this.snake.length - 1; i++) {
-           if (this.snake[i].x === nx && this.snake[i].y === ny) { hitSelf = true; break; }
-         }
-         if (!hitSelf) {
-            this.nextDx = d.dx;
-            this.nextDy = d.dy;
-            return;
-         }
-       }
+    if (evaluations.length === 0) {
+      // Literally trapped, no valid moves, just keep moving in current dir or any dir
+      return;
     }
+
+    // Sort evaluations to find the best move
+    evaluations.sort((a, b) => {
+      // 1. Prioritize safe moves
+      if (a.isSafe !== b.isSafe) {
+        return a.isSafe ? -1 : 1;
+      }
+      // 2. Minimize isolated holes (prevent partitioning space)
+      if (a.isolatedHoles !== b.isolatedHoles) {
+        return a.isolatedHoles - b.isolatedHoles;
+      }
+      // 3. Prioritize eating if safe
+      if (a.isEatingMove !== b.isEatingMove) {
+        return a.isEatingMove ? -1 : 1;
+      }
+      
+      // 4. Path prioritization: 
+      // If we can reach the food, prioritize getting closer to it.
+      // If food is unreachable, prioritize following the tail closely (minimize distToTail).
+      const aCanReachFood = a.distToFood !== Infinity;
+      const bCanReachFood = b.distToFood !== Infinity;
+      if (aCanReachFood !== bCanReachFood) {
+        return aCanReachFood ? -1 : 1;
+      }
+
+      if (aCanReachFood) {
+        if (a.distToFood !== b.distToFood) {
+          return a.distToFood - b.distToFood;
+        }
+      } else {
+        if (a.distToTail !== b.distToTail) {
+          return a.distToTail - b.distToTail;
+        }
+      }
+
+      // 5. Prefer moves that can reach tail (as a tie-breaker)
+      if (a.canReachTail !== b.canReachTail) {
+        return a.canReachTail ? -1 : 1;
+      }
+      // 6. Maximize reachable space
+      if (a.reachableSpace !== b.reachableSpace) {
+        return b.reachableSpace - a.reachableSpace;
+      }
+      return 0;
+    });
+
+    const bestMove = evaluations[0];
+    this.nextDx = bestMove.dx;
+    this.nextDy = bestMove.dy;
   }
 
   private moveSnake() {

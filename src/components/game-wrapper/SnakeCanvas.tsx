@@ -17,6 +17,7 @@ export default function SnakeCanvas() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
+  const [autoSpeed, setAutoSpeed] = useState(1);
   const [soundOn, setSoundOn] = useState(true);
 
   // Initialize Canvas and Game
@@ -65,9 +66,10 @@ export default function SnakeCanvas() {
   useEffect(() => {
     if (gameRef.current) {
       gameRef.current.isAutoPlay = autoPlay;
+      gameRef.current.autoPlaySpeed = autoSpeed;
       gameRef.current.audio.enabled = soundOn;
     }
-  }, [autoPlay, soundOn]);
+  }, [autoPlay, autoSpeed, soundOn]);
 
   const startGame = () => {
     if (gameRef.current) {
@@ -149,6 +151,23 @@ export default function SnakeCanvas() {
                   {autoPlay ? 'ON' : 'OFF'}
                 </button>
               </div>
+
+              {autoPlay && (
+                <div className={styles.settingRow}>
+                  <span>BOT SPEED</span>
+                  <div className={styles.speedGroup}>
+                    {[1, 2, 3, 5, 10].map((s) => (
+                      <button
+                        key={s}
+                        className={`${styles.speedBtn} ${autoSpeed === s ? styles.speedBtnActive : ''}`}
+                        onClick={() => setAutoSpeed(s)}
+                      >
+                        x{s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <button className={styles.closeBtn} onClick={() => setIsSettingsOpen(false)}>
                 [ CLOSE ]

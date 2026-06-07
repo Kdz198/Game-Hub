@@ -209,6 +209,7 @@ export class StackBallGame {
   private ballY = 0; // World Y position
   private ballVY = 0; // Vertical velocity
   private ballRadius = 16;
+  private ballHistory: { x: number; y: number }[] = []; // History of ball positions for organic trails
   private isPressing = false; // Player is clicking/holding
   private targetCameraY = 0;
   private cameraY = 0;
@@ -259,6 +260,7 @@ export class StackBallGame {
     this.shards = [];
     this.particles = [];
     this.floatingTexts = [];
+    this.ballHistory = [];
     this.comboStreak = 0;
     this.isGameOver = false;
     this.isCompleted = false;
@@ -728,6 +730,12 @@ export class StackBallGame {
       this.targetCameraY = activePlatformY + 32;
     }
     this.cameraY += (this.targetCameraY - this.cameraY) * 0.0065 * dt;
+
+    // Track ball history for organic trails
+    this.ballHistory.push({ x: 0, y: this.ballY });
+    if (this.ballHistory.length > 15) {
+      this.ballHistory.shift();
+    }
   }
 
   private checkCollision(platform: Platform) {
@@ -1170,13 +1178,30 @@ export class StackBallGame {
       const ang1 = seg.startAngle + baseAngle;
       const ang2 = seg.endAngle + baseAngle;
 
-      // Fill colors
+      // Fill colors depending on active skin
       let fill = palette.safe;
       let sideFill = palette.safeDark;
 
       if (seg.type === 'hazard') {
         fill = '#1c1c24';
         sideFill = '#0e0e12';
+      } else {
+        if (this.activeSkin === 'magma') {
+          fill = '#1c0c08'; // Volcanic dark rock
+          sideFill = '#0a0503';
+        } else if (this.activeSkin === 'matrix') {
+          fill = 'rgba(0, 25, 0, 0.45)'; // Cyber transparent green
+          sideFill = '#001a00';
+        } else if (this.activeSkin === 'saturn') {
+          fill = 'rgba(230, 184, 92, 0.42)'; // Golden stardust
+          sideFill = '#805d15';
+        } else if (this.activeSkin === 'disco') {
+          fill = 'rgba(20, 20, 25, 0.45)'; // Dark mirror base
+          sideFill = '#111116';
+        } else if (this.activeSkin === 'plasma') {
+          fill = 'rgba(60, 0, 90, 0.48)'; // Electrified violet
+          sideFill = '#220038';
+        }
       }
 
       // Draw outer wall (side face of 3D disk)
@@ -1210,14 +1235,18 @@ export class StackBallGame {
 
       // Modern Safe Segments: Cyber Glass style with Neon borders
       if (seg.type === 'safe') {
-        const hexToRgb = (hex: string) => {
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          return `${r}, ${g}, ${b}`;
-        };
-        const rgb = hexToRgb(palette.safe);
-        c.fillStyle = `rgba(${rgb}, 0.55)`; // Translucent cyber-glass
+        if (this.activeSkin === 'neon') {
+          const hexToRgb = (hex: string) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `${r}, ${g}, ${b}`;
+          };
+          const rgb = hexToRgb(palette.safe);
+          c.fillStyle = `rgba(${rgb}, 0.55)`; // Translucent cyber-glass
+        } else {
+          c.fillStyle = fill;
+        }
       } else {
         // Hazard segments: charcoal metallic
         c.fillStyle = '#1c1c24';
@@ -1241,6 +1270,122 @@ export class StackBallGame {
       c.closePath();
       c.fill();
 
+      // Add skin-specific detailed textures and visual effects inside safe segments
+      if (seg.type === 'safe') {
+        if (this.activeSkin === 'magma') {
+          // Shifting volcanic cracks
+          c.save();
+          c.clip();
+          c.strokeStyle = '#ff5500';
+          c.lineWidth = 1.6;
+          c.shadowBlur = 4;
+          c.shadowColor = '#ff5500';
+          
+          c.beginPath();
+          const seed = Math.sin(platform.y) * 80;
+          for (let j = 0; j < 4; j++) {
+            const crackAngle1 = ang1 + (ang2 - ang1) * ((j + 0.15) / 4);
+            const crackAngle2 = ang1 + (ang2 - ang1) * ((j + 0.85) / 4);
+            const x1 = cx + (rInner + 5) * Math.cos(crackAngle1);
+            const y1 = screenY + (rInner + 5) * 0.28 * Math.sin(crackAngle1);
+            const x2 = cx + (rOuter - 10) * Math.cos(crackAngle2);
+            const y2 = screenY + (rOuter - 10) * 0.28 * Math.sin(crackAngle2);
+            c.moveTo(x1, y1);
+            
+            const midAng = (crackAngle1 + crackAngle2) / 2;
+            const midR = (rInner + rOuter) / 2;
+            const mx = cx + midR * Math.cos(midAng) + (Math.sin(seed + j) * 8);
+            const my = screenY + midR * 0.28 * Math.sin(midAng) + (Math.cos(seed + j) * 4);
+            c.lineTo(mx, my);
+            c.lineTo(x2, y2);
+          }
+          c.stroke();
+          c.restore();
+        } else if (this.activeSkin === 'matrix') {
+          // Green matrix terminal wireframe grid
+          c.save();
+          c.clip();
+          c.strokeStyle = 'rgba(57, 255, 20, 0.25)';
+          c.lineWidth = 1.0;
+          
+          // Concentric lines
+          for (let r = rInner + 20; r < rOuter; r += 24) {
+            c.beginPath();
+            c.ellipse(cx, screenY, r, r * 0.28, 0, ang1, ang2);
+            c.stroke();
+          }
+          // Radial lines
+          const gridLines = 4;
+          for (let j = 0; j <= gridLines; j++) {
+            const a = ang1 + (ang2 - ang1) * (j / gridLines);
+            c.beginPath();
+            c.moveTo(cx + rInner * Math.cos(a), screenY + rInner * 0.28 * Math.sin(a));
+            c.lineTo(cx + rOuter * Math.cos(a), screenY + rOuter * 0.28 * Math.sin(a));
+            c.stroke();
+          }
+          c.restore();
+        } else if (this.activeSkin === 'disco') {
+          // Blinking neon dance floor tiles
+          c.save();
+          c.clip();
+          const subTiles = 3;
+          for (let j = 0; j < subTiles; j++) {
+            const ta1 = ang1 + (ang2 - ang1) * (j / subTiles);
+            const ta2 = ang1 + (ang2 - ang1) * ((j + 1) / subTiles);
+            
+            const tileIdx = Math.floor(platform.y / 25) + j;
+            const hue = (tileIdx * 80 + Math.floor(this.gameTime / 240) * 120) % 360;
+            c.fillStyle = `hsla(${hue}, 85%, 60%, 0.48)`;
+            
+            c.beginPath();
+            // Start from inner boundary
+            c.moveTo(cx + rInner * Math.cos(ta1), screenY + rInner * 0.28 * Math.sin(ta1));
+            for (let a = ta1; a <= ta2 + 0.01; a += 0.05) {
+              c.lineTo(cx + rInner * Math.cos(a), screenY + rInner * 0.28 * Math.sin(a));
+            }
+            // Trace outer boundary
+            for (let a = ta2; a >= ta1 - 0.01; a -= 0.05) {
+              c.lineTo(cx + rOuter * Math.cos(a), screenY + rOuter * 0.28 * Math.sin(a));
+            }
+            c.closePath();
+            c.fill();
+            
+            c.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+            c.lineWidth = 0.8;
+            c.stroke();
+          }
+          c.restore();
+        } else if (this.activeSkin === 'plasma') {
+          // Electrified violet storm cracks
+          c.save();
+          c.clip();
+          c.strokeStyle = '#e600ff';
+          c.lineWidth = 1.3;
+          c.shadowBlur = 4;
+          c.shadowColor = '#e600ff';
+          
+          const seed = Math.sin(platform.y) * 200;
+          if (Math.floor(platform.y + this.gameTime * 0.02) % 18 === 0) {
+            c.beginPath();
+            const startAng = ang1 + (ang2 - ang1) * 0.5;
+            let lx = cx + rInner * Math.cos(startAng);
+            let ly = screenY + rInner * 0.28 * Math.sin(startAng);
+            c.moveTo(lx, ly);
+            
+            const steps = 4;
+            for (let k = 1; k <= steps; k++) {
+              const r = rInner + (rOuter - rInner) * (k / steps);
+              const a = startAng + (Math.sin(seed + k) * 0.12);
+              const nlx = cx + r * Math.cos(a) + (Math.random() - 0.5) * 4;
+              const nly = screenY + r * 0.28 * Math.sin(a) + (Math.random() - 0.5) * 2;
+              c.lineTo(nlx, nly);
+            }
+            c.stroke();
+          }
+          c.restore();
+        }
+      }
+
       // Modern diagonal warning lines on hazard blocks
       if (seg.type === 'hazard') {
         c.save();
@@ -1261,8 +1406,16 @@ export class StackBallGame {
         c.restore();
       }
 
-      // Glowing Neon outline stroke
-      c.strokeStyle = seg.type === 'hazard' ? '#ff2a2a' : palette.safe;
+      // Glowing outline stroke matching skin base colors
+      let borderStroke = palette.safe;
+      if (seg.type === 'safe') {
+        if (this.activeSkin === 'magma') borderStroke = '#ff5500';
+        else if (this.activeSkin === 'matrix') borderStroke = '#39ff14';
+        else if (this.activeSkin === 'saturn') borderStroke = '#e6b85c';
+        else if (this.activeSkin === 'disco') borderStroke = '#ff00ff';
+        else if (this.activeSkin === 'plasma') borderStroke = '#bd00ff';
+      }
+      c.strokeStyle = seg.type === 'hazard' ? '#ff2a2a' : borderStroke;
       c.lineWidth = 1.8;
       c.shadowBlur = 5;
       c.shadowColor = c.strokeStyle;
@@ -1502,39 +1655,64 @@ export class StackBallGame {
 
     c.save();
 
-    // 1. Fever/Fireball Trail (Skin-specific colors and shapes)
-    if (this.isFeverMode) {
+    // 1. Physics-based Organic Ball Trail (tracks history of coordinates)
+    if (this.ballHistory.length > 0) {
       c.save();
       c.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 8; i++) {
-        const trailY = sy + (i * 9);
-        const trailR = this.ballRadius * (1 - i * 0.11);
+      
+      const isFever = this.isFeverMode;
+      const historyLength = this.ballHistory.length;
+      const baseHue = (this.gameTime * 0.35) % 360;
+      
+      this.ballHistory.forEach((pos, idx) => {
+        // t goes from 0 (oldest) to 1 (newest)
+        const t = idx / historyLength;
+        const histScreenY = ballScreenY - (pos.y - this.cameraY);
         
-        let color = `rgba(255, 69, 0, ${0.55 - i * 0.07})`; // magma / default
-        if (this.activeSkin === 'matrix') {
-          color = `rgba(57, 255, 20, ${0.55 - i * 0.07})`;
-        } else if (this.activeSkin === 'saturn') {
-          color = `rgba(230, 184, 92, ${0.55 - i * 0.07})`;
-        } else if (this.activeSkin === 'disco') {
-          const hue = (this.gameTime * 0.3 + i * 40) % 360;
-          color = `hsla(${hue}, 90%, 65%, ${0.55 - i * 0.07})`;
-        } else if (this.activeSkin === 'plasma') {
-          color = `rgba(189, 0, 255, ${0.55 - i * 0.07})`;
-        } else if (this.activeSkin === 'neon') {
-          color = `rgba(0, 240, 255, ${0.55 - i * 0.07})`;
-        }
+        // Don't draw the trail exactly on the ball
+        if (idx === historyLength - 1) return;
 
+        // Trail radius gets smaller for older coordinates
+        const r = this.ballRadius * (0.35 + t * 0.65) * (isFever ? 1.25 : 0.85);
+        
+        // Define trail color per skin
+        let color = '';
+        if (this.activeSkin === 'magma') {
+          color = isFever ? `rgba(255, ${Math.floor(80 + t * 130)}, 0, ${0.15 + t * 0.5})` : `rgba(220, 60, 0, ${0.1 + t * 0.35})`;
+        } else if (this.activeSkin === 'matrix') {
+          color = `rgba(57, 255, 20, ${0.15 + t * 0.45})`;
+        } else if (this.activeSkin === 'saturn') {
+          color = `rgba(230, 184, 92, ${0.15 + t * 0.45})`;
+        } else if (this.activeSkin === 'disco') {
+          const hue = (baseHue + idx * 24) % 360;
+          color = `hsla(${hue}, 85%, 65%, ${0.18 + t * 0.45})`;
+        } else if (this.activeSkin === 'plasma') {
+          color = `rgba(189, 0, 255, ${0.15 + t * 0.45})`;
+        } else {
+          color = `rgba(0, 240, 255, ${0.15 + t * 0.45})`; // Neon Cyan
+        }
+        
         c.fillStyle = color;
+        c.save();
+        c.shadowBlur = isFever ? 14 : 5;
+        c.shadowColor = color;
         
         if (this.activeSkin === 'matrix') {
-          // Matrix square digit trail
-          c.fillRect(cx + (Math.random() - 0.5) * 8 - trailR, trailY - trailR, trailR * 2, trailR * 2);
+          // Matrix: draw square bits
+          const sqSize = r * 1.5;
+          c.fillRect(cx - sqSize / 2, histScreenY - sqSize / 2, sqSize, sqSize);
+        } else if (this.activeSkin === 'plasma') {
+          // Plasma: electric distorted ovals
+          c.beginPath();
+          c.ellipse(cx, histScreenY, r * (1 + (Math.random() - 0.5) * 0.2), r * 0.9, 0, 0, Math.PI * 2);
+          c.fill();
         } else {
           c.beginPath();
-          c.arc(cx + (Math.random() - 0.5) * 8, trailY, trailR, 0, Math.PI * 2);
+          c.arc(cx, histScreenY, r, 0, Math.PI * 2);
           c.fill();
         }
-      }
+        c.restore();
+      });
       c.restore();
     }
 
@@ -1658,23 +1836,56 @@ export class StackBallGame {
   private drawMagmaSkin(c: CanvasRenderingContext2D, cx: number, sy: number) {
     c.save();
 
-    // Magma Fever Mode: raging solar flares and lava gases
+    // Magma Fever Mode: Raging solar flares and licking Bezier flames pointing UPWARDS!
     if (this.isFeverMode) {
       c.globalCompositeOperation = 'lighter';
       c.shadowBlur = 30;
       c.shadowColor = '#ff4500';
 
-      // Fiery plasma gas layers
-      for (let i = 0; i < 6; i++) {
-        const radius = this.ballRadius * (1.2 + Math.random() * 0.5);
+      // 1. Draw glowing background fire core
+      for (let i = 0; i < 5; i++) {
+        const radius = this.ballRadius * (1.3 + Math.random() * 0.4);
         const grad = c.createRadialGradient(cx, sy, this.ballRadius * 0.2, cx, sy, radius);
-        grad.addColorStop(0, 'rgba(255, 220, 0, 0.45)');
-        grad.addColorStop(0.5, 'rgba(255, 69, 0, 0.2)');
+        grad.addColorStop(0, 'rgba(255, 200, 0, 0.5)');
+        grad.addColorStop(0.5, 'rgba(255, 69, 0, 0.22)');
         grad.addColorStop(1, 'rgba(120, 0, 0, 0)');
         c.fillStyle = grad;
         c.beginPath();
-        c.arc(cx + (Math.random() - 0.5) * 8, sy + (Math.random() - 0.5) * 8, radius, 0, Math.PI * 2);
+        c.arc(cx + (Math.random() - 0.5) * 6, sy + (Math.random() - 0.5) * 6, radius, 0, Math.PI * 2);
         c.fill();
+      }
+
+      // 2. Draw actual flickering licking flames pointing UP (against gravity)
+      const flameCount = 5;
+      for (let i = 0; i < flameCount; i++) {
+        c.save();
+        c.translate(cx, sy);
+        // Tilt each flame petal slightly
+        const angle = -0.15 + (0.3 / flameCount) * i + (Math.sin(this.gameTime * 0.012 + i) * 0.06);
+        c.rotate(angle);
+        
+        c.beginPath();
+        c.moveTo(-this.ballRadius * 0.8, 0);
+        // Flame curves up
+        const flameHeight = this.ballRadius * (1.8 + Math.random() * 0.6);
+        const cp1x = -this.ballRadius * 1.25;
+        const cp1y = -flameHeight * 0.45;
+        const cp2x = -this.ballRadius * 0.3;
+        const cp2y = -flameHeight * 0.8;
+        const endx = (Math.random() - 0.5) * 6;
+        const endy = -flameHeight;
+        
+        c.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endx, endy);
+        c.bezierCurveTo(cp2x + 8, cp2y, this.ballRadius * 1.25, cp1y, this.ballRadius * 0.8, 0);
+        c.closePath();
+        
+        const flameGrad = c.createLinearGradient(0, 0, 0, -flameHeight);
+        flameGrad.addColorStop(0, 'rgba(255, 69, 0, 0.9)');
+        flameGrad.addColorStop(0.45, 'rgba(255, 170, 0, 0.7)');
+        flameGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        c.fillStyle = flameGrad;
+        c.fill();
+        c.restore();
       }
     }
 
@@ -1709,7 +1920,7 @@ export class StackBallGame {
     c.ellipse(cx - 3, sy - 4, 4, 2, Math.PI * 0.2, 0, Math.PI * 2);
     c.fill();
     
-    // Draw animated shifting cracks
+    // Draw animated cracks
     const crackOffset = Math.sin(this.gameTime * 0.002) * 1.5;
     c.strokeStyle = this.isFeverMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 200, 0, 0.7)';
     c.lineWidth = 1.3;
