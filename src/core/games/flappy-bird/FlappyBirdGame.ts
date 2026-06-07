@@ -592,13 +592,14 @@ export class FlappyBirdGame {
     if (this.rlPrevState !== null) {
       let reward = 0.1; // Base survival reward
       
-      // Dense reward: closer to the vertical center of the next pipe's gap is better
-      if (nextPipe) {
-        const gapCenterY = nextPipe.topHeight + nextPipe.gapSize / 2;
-        const distToCenter = Math.abs(this.bird.y - gapCenterY);
-        const normDist = distToCenter / (this.groundY / 2);
-        reward += Math.max(0, (1.0 - normDist) * 0.3); // Up to +0.3 extra reward for staying centered
-      }
+      // Dense reward: stay near the target center (gap center if pipe exists, screen center if no pipe)
+      const targetY = nextPipe 
+        ? (nextPipe.topHeight + nextPipe.gapSize / 2) 
+        : (this.groundY / 2);
+      
+      const distToTarget = Math.abs(this.bird.y - targetY);
+      const normDist = distToTarget / (this.groundY / 2);
+      reward += Math.max(0, (1.0 - normDist) * 0.3); // Up to +0.3 extra reward for staying near the target center
 
       if (this.score > this.rlPrevScore) {
         reward = 15.0; // High reward for passing pipe
