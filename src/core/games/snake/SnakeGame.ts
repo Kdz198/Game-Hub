@@ -58,6 +58,7 @@ export class SnakeGame {
   private screenFlash = 0;
   private time = 0;
   private milestoneFlash: { text: string, life: number, scale: number } | null = null;
+  private stepsSinceLastEat = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -179,6 +180,7 @@ export class SnakeGame {
     this.moveInterval = this.baseMoveInterval;
     this.moveTimer = 0;
     this.isDigesting = false;
+    this.stepsSinceLastEat = 0;
 
     // Start in middle
     const startX = Math.floor(this.gridCols / 2);
@@ -288,6 +290,12 @@ export class SnakeGame {
         if (this.isAutoPlay) this.calculateAutoMove();
         this.moveSnake();
         if (this.isGameOver) break;
+
+        // Infinite loop check (only when autoplay is enabled)
+        if (this.isAutoPlay && this.stepsSinceLastEat > this.gridCols * this.gridRows * 3) {
+          this.printDebugMap();
+          this.stepsSinceLastEat = 0; // reset to avoid spamming every single step
+        }
       }
     }
 
@@ -682,10 +690,12 @@ export class SnakeGame {
         this.moveInterval -= 2; // Increase speed
       }
       this.isDigesting = true;
+      this.stepsSinceLastEat = 0;
     } else {
       // Not eating, remove tail
       this.snake.pop();
       this.isDigesting = false;
+      this.stepsSinceLastEat++;
     }
   }
 
@@ -880,5 +890,47 @@ export class SnakeGame {
     }
 
     c.restore();
+  }
+
+  private printDebugMap() {
+    console.log("=== SNAKE AI LOOP DETECTED ===");
+    console.log(`Grid Size: ${this.gridCols}x${this.gridRows}, Snake Length: ${this.snake.length}, Steps since eat: ${this.stepsSinceLastEat}`);
+    
+    const grid: string[][] = Array(this.gridRows).fill(null).map(() => Array(this.gridCols).fill('.'));
+    
+    // Draw food
+    if (this.food) {
+      grid[this.food.y][this.food.x] = 'A';
+    }
+    
+    // Draw snake body
+    for (let i = 1; i < this.snake.length - 1; i++) {
+      const p = this.snake[i];
+      if (p.y >= 0 && p.y < this.gridRows && p.x >= 0 && p.x < this.gridCols) {
+        grid[p.y][p.x] = 'S';
+      }
+    }
+    
+    // Draw tail
+    if (this.snake.length > 1) {
+      const t = this.snake[this.snake.length - 1];
+      if (t.y >= 0 && t.y < this.gridRows && t.x >= 0 && t.x < this.gridCols) {
+        grid[t.y][t.x] = 'T';
+      }
+    }
+    
+    // Draw head
+    if (this.snake.length > 0) {
+      const h = this.snake[0];
+      if (h.y >= 0 && h.y < this.gridRows && h.x >= 0 && h.x < this.gridCols) {
+        grid[h.y][h.x] = 'H';
+      }
+    }
+    
+    // Print grid
+    for (let r = 0; r < this.gridRows; r++) {
+      console.log(grid[r].join(' '));
+    }
+    console.log("===============================");
   }
 }
