@@ -505,8 +505,8 @@ export class SnakeGame {
         const totalEmptyCells = (this.gridCols * this.gridRows) - (rolledSnake.length - 1);
         isolatedHoles = Math.max(0, totalEmptyCells - reachableSpace);
 
-        // A move is safe if we can reach the tail OR the reachable space is large enough to contain our entire body
-        isSafe = canReachTail || reachableSpace >= rolledSnake.length;
+        // A move is safe if we can reach the tail
+        isSafe = canReachTail;
       }
 
       // 3. Distance to food
