@@ -20,14 +20,14 @@ export class FlappyRLAgent {
   public minEpsilon = 0.01;
   public epsilonDecay = 0.9985;
   private gamma = 0.9;
-  private learningRate = 0.001;
+  private learningRate = 0.0005;
   private batchSize = 64;
   
   public stateSize = 6;
   public actionSize = 2; // 0: Glide (Do Nothing), 1: Flap (Jump)
   
   public trainCount = 0;
-  private updateTargetEvery = 15; // steps
+  private updateTargetEvery = 100; // steps
   private isTraining = false;
 
   constructor() {
