@@ -439,17 +439,15 @@ export class SnakeGame {
         // Check bounds
         if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) continue;
 
-        // Check body collision (using time-space safety check)
+        // Check body collision (since currentSnake is shifted, we check up to L - 2, or L - 1 if eating)
         let hitSelf = false;
         const L = currentSnake.length;
-        const nextTime = step + 1;
-        for (let i = 0; i < L; i++) {
+        const isNextMoveEating = (this.food && nx === this.food.x && ny === this.food.y);
+        const checkLimit = isNextMoveEating ? L : L - 1;
+        for (let i = 0; i < checkLimit; i++) {
           if (currentSnake[i].x === nx && currentSnake[i].y === ny) {
-            // It is occupied if nextTime < L - i
-            if (nextTime < L - i) {
-              hitSelf = true;
-              break;
-            }
+            hitSelf = true;
+            break;
           }
         }
         if (hitSelf) continue;
