@@ -15,7 +15,12 @@ function Zombie({ position }: { position: [number, number, number] }) {
     if (!rigidBody.current || health <= 0) return;
 
     const currentPos = rigidBody.current.translation();
-    const direction = new THREE.Vector3(0 - currentPos.x, 0, 0 - currentPos.z).normalize();
+    const direction = new THREE.Vector3(0 - currentPos.x, 0, 0 - currentPos.z);
+    if (direction.lengthSq() > 0.001) {
+      direction.normalize();
+    } else {
+      direction.set(0, 0, 0);
+    }
     
     // Slow movement speed
     const speed = 1.5;

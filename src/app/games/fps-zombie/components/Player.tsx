@@ -101,7 +101,7 @@ export default function Player() {
 
   return (
     <>
-      <RigidBody ref={rigidBody} colliders={false} mass={1} type="dynamic" position={[0, 5, 0]} enabledRotations={[false, false, false]}>
+      <RigidBody ref={rigidBody} colliders={false} mass={1} type="dynamic" position={[0, 5, 0]} lockRotations>
         <CapsuleCollider args={[0.5, 0.5]} />
       </RigidBody>
       <Weapon isShooting={isShooting} isReloading={isReloading} />

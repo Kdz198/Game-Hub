@@ -10,8 +10,8 @@ import ZombieSpawner from "./components/ZombieSpawner";
 export default function FPSGame() {
   return (
     <Canvas shadows camera={{ fov: 75, position: [0, 1.6, 0] }}>
-      <Sky sunPosition={[100, 20, 100]} turbidity={0.1} rayleigh={0.5} />
-      <ambientLight intensity={0.3} />
+      <color attach="background" args={['#202030']} />
+      <ambientLight intensity={0.5} />
       <directionalLight
         castShadow
         position={[10, 20, 10]}
@@ -25,7 +25,7 @@ export default function FPSGame() {
         shadow-camera-top={20}
         shadow-camera-bottom={-20}
       />
-      <fog attach="fog" args={['#202030', 5, 40]} />
+
 
       <Physics gravity={[0, -20, 0]}>
         <Player />
@@ -33,7 +33,7 @@ export default function FPSGame() {
         <ZombieSpawner />
       </Physics>
 
-      <PointerLockControls selector="#__next" />
+      <PointerLockControls />
     </Canvas>
   );
 }
