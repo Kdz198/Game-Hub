@@ -7,11 +7,14 @@ import Player from "./components/Player";
 import Environment from "./components/Environment";
 import ZombieSpawner from "./components/ZombieSpawner";
 
+import { Suspense } from "react";
+
 export default function FPSGame() {
   return (
     <Canvas shadows camera={{ fov: 75, position: [0, 1.6, 0] }}>
-      <color attach="background" args={['#87CEEB']} />
-      <ambientLight intensity={2} />
+      <Suspense fallback={null}>
+        <color attach="background" args={['#87CEEB']} />
+        <ambientLight intensity={2} />
       <directionalLight
         castShadow
         position={[10, 20, 10]}
@@ -34,6 +37,7 @@ export default function FPSGame() {
       </Physics>
 
       <PointerLockControls />
+      </Suspense>
     </Canvas>
   );
 }
