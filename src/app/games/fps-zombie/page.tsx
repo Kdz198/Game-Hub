@@ -24,30 +24,25 @@ export default function FPSZombiePage() {
       </div>
       
       {!isPlaying && (
-        <div className={styles.startScreen}>
+        <div className={styles.startScreen} style={{ pointerEvents: "none" }}>
           <h1 className={`${orbitron.className} ${styles.title}`}>ZOMBIE NEXUS</h1>
-          <p className={orbitron.className}>CLICK TO LOCK CURSOR AND PLAY</p>
+          <p className={orbitron.className}>CLICK ANYWHERE TO LOCK CURSOR AND PLAY</p>
           <p className={styles.instructions}>
             WASD - Move | SPACE - Jump | SHIFT - Sprint <br/>
-            LEFT CLICK - Shoot | R - Reload
+            LEFT CLICK - Shoot | RIGHT CLICK - Aim | R - Reload
           </p>
-          <button 
-            className={`${styles.playButton} ${orbitron.className}`}
-            onClick={() => setIsPlaying(true)}
-          >
-            START OPERATION
-          </button>
         </div>
       )}
 
-      {isPlaying && (
-        <>
-          <div id="ammo-hud" className={`${styles.ammoHud} ${orbitron.className}`}>30 / 30</div>
-          <div id="wave-hud" className={`${styles.waveHud} ${orbitron.className}`}>WAVE 1 | ALIVE: 5</div>
-          <div id="hit-marker" className={styles.hitMarker}>X</div>
-          <FPSGameCanvas />
-        </>
-      )}
+      {/* Always render HUDs, just hide them with CSS or conditionally, but keeping them rendered is fine. */}
+      <div id="ammo-hud" className={`${styles.ammoHud} ${orbitron.className}`} style={{ opacity: isPlaying ? 1 : 0 }}>30 / 30</div>
+      <div id="wave-hud" className={`${styles.waveHud} ${orbitron.className}`} style={{ opacity: isPlaying ? 1 : 0 }}>WAVE 1 | ALIVE: 5</div>
+      <div id="hit-marker" className={styles.hitMarker}>X</div>
+      
+      <FPSGameCanvas 
+        onLock={() => setIsPlaying(true)} 
+        onUnlock={() => setIsPlaying(false)} 
+      />
     </div>
   );
 }

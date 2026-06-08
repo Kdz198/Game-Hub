@@ -9,7 +9,12 @@ import ZombieSpawner from "./components/ZombieSpawner";
 
 import { Suspense } from "react";
 
-export default function FPSGame() {
+interface FPSGameProps {
+  onLock?: () => void;
+  onUnlock?: () => void;
+}
+
+export default function FPSGame({ onLock, onUnlock }: FPSGameProps) {
   return (
     <Canvas shadows camera={{ fov: 75, position: [0, 1.6, 0] }}>
       <Suspense fallback={null}>
@@ -36,7 +41,7 @@ export default function FPSGame() {
         <ZombieSpawner />
       </Physics>
 
-      <PointerLockControls />
+      <PointerLockControls onLock={onLock} onUnlock={onUnlock} />
       </Suspense>
     </Canvas>
   );
