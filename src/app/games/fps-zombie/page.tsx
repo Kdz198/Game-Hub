@@ -43,6 +43,7 @@ export default function FPSZombiePage() {
       {isPlaying && (
         <>
           <div id="ammo-hud" className={`${styles.ammoHud} ${orbitron.className}`}>30 / 30</div>
+          <div id="wave-hud" className={`${styles.waveHud} ${orbitron.className}`}>WAVE 1 | ALIVE: 5</div>
           <div id="hit-marker" className={styles.hitMarker}>X</div>
           <FPSGameCanvas />
         </>

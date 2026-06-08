@@ -20,7 +20,7 @@ export default function Weapon({ isShooting, isReloading, isAiming }: WeaponProp
 
     // Base position relative to camera (center when aiming, offset when hip firing)
     const baseOffset = isAiming 
-      ? new THREE.Vector3(0, -0.08, -0.4) // Centered, eye-level with scope
+      ? new THREE.Vector3(0, -0.11, -0.4) // Centered, eye-level with new Holo-sight at Y=0.11
       : new THREE.Vector3(0.3, -0.3, -0.6); // Hip-fire position
     
     const baseRotation = new THREE.Euler(0, 0, 0);
@@ -94,16 +94,48 @@ export default function Weapon({ isShooting, isReloading, isAiming }: WeaponProp
         <meshStandardMaterial color="#1a1a1a" />
       </mesh>
 
-      {/* Scope */}
-      <mesh castShadow receiveShadow position={[0, 0.08, 0]}>
-        <boxGeometry args={[0.04, 0.04, 0.15]} />
-        <meshStandardMaterial color="#111" metalness={0.6} />
+      {/* Picatinny Rail */}
+      <mesh castShadow receiveShadow position={[0, 0.065, 0]}>
+        <boxGeometry args={[0.03, 0.01, 0.3]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.8} />
+      </mesh>
+
+      {/* Holographic Scope Base */}
+      <mesh castShadow receiveShadow position={[0, 0.08, -0.02]}>
+        <boxGeometry args={[0.04, 0.02, 0.08]} />
+        <meshStandardMaterial color="#111" metalness={0.8} roughness={0.3} />
       </mesh>
       
-      {/* Scope lens */}
-      <mesh position={[0, 0.08, -0.076]}>
-        <circleGeometry args={[0.015, 16]} />
-        <meshBasicMaterial color="#00f0ff" />
+      {/* Holographic Scope Frame (Left) */}
+      <mesh castShadow position={[0.018, 0.11, -0.02]}>
+        <boxGeometry args={[0.004, 0.04, 0.01]} />
+        <meshStandardMaterial color="#222" metalness={0.8} />
+      </mesh>
+      {/* Holographic Scope Frame (Right) */}
+      <mesh castShadow position={[-0.018, 0.11, -0.02]}>
+        <boxGeometry args={[0.004, 0.04, 0.01]} />
+        <meshStandardMaterial color="#222" metalness={0.8} />
+      </mesh>
+      {/* Holographic Scope Frame (Top) */}
+      <mesh castShadow position={[0, 0.128, -0.02]}>
+        <boxGeometry args={[0.04, 0.004, 0.01]} />
+        <meshStandardMaterial color="#222" metalness={0.8} />
+      </mesh>
+
+      {/* Holographic Glass */}
+      <mesh position={[0, 0.11, -0.02]}>
+        <planeGeometry args={[0.032, 0.032]} />
+        <meshBasicMaterial color="#00f0ff" transparent opacity={0.1} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Holographic Reticle (Red Dot / Crosshair) */}
+      <mesh position={[0, 0.11, -0.021]}>
+        <ringGeometry args={[0.004, 0.006, 16]} />
+        <meshBasicMaterial color="#ff0000" transparent opacity={0.8} blending={THREE.AdditiveBlending} />
+      </mesh>
+      <mesh position={[0, 0.11, -0.021]}>
+        <circleGeometry args={[0.001, 8]} />
+        <meshBasicMaterial color="#ff0000" blending={THREE.AdditiveBlending} />
       </mesh>
 
       {/* Neon glowing parts */}
@@ -127,10 +159,25 @@ export default function Weapon({ isShooting, isReloading, isAiming }: WeaponProp
       
       {/* Muzzle Flash Mesh */}
       {isShooting && (
-        <mesh position={[0, 0.02, -0.45]}>
-          <sphereGeometry args={[0.05, 8, 8]} />
-          <meshBasicMaterial color="#ffcc00" transparent opacity={0.8} />
-        </mesh>
+        <group position={[0, 0.02, -0.5]}>
+          <mesh rotation={[0, 0, Math.PI / 4]}>
+            <planeGeometry args={[0.15, 0.15]} />
+            <meshBasicMaterial color="#ffaa00" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh rotation={[0, 0, -Math.PI / 4]}>
+            <planeGeometry args={[0.15, 0.15]} />
+            <meshBasicMaterial color="#ff5500" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh rotation={[0, Math.PI / 2, 0]}>
+            <planeGeometry args={[0.15, 0.15]} />
+            <meshBasicMaterial color="#ffcc00" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Front-facing glow */}
+          <mesh position={[0, 0, -0.05]}>
+            <circleGeometry args={[0.08, 16]} />
+            <meshBasicMaterial color="#ff2200" transparent opacity={0.6} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </mesh>
+        </group>
       )}
     </group>
   );

@@ -5,7 +5,7 @@ import { RigidBody, CapsuleCollider } from "@react-three/rapier";
 import { useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 
-function Zombie({ id, position }: { id: number, position: [number, number, number] }) {
+function Zombie({ id, position, onDeath }: { id: number, position: [number, number, number], onDeath: (id: number) => void }) {
   const rigidBody = useRef<any>(null);
   const { camera } = useThree();
   const [health, setHealth] = useState(100);
@@ -18,10 +18,19 @@ function Zombie({ id, position }: { id: number, position: [number, number, numbe
   const leftLegRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
 
+  const isDeadRef = useRef(false);
+
   useEffect(() => {
     const handleHit = (e: any) => {
-      if (e.detail.id === id) {
-        setHealth((h) => h - 25);
+      if (e.detail.id === id && !isDeadRef.current) {
+        setHealth((h) => {
+          const newHealth = h - 25;
+          if (newHealth <= 0 && !isDeadRef.current) {
+            isDeadRef.current = true;
+            onDeath(id);
+          }
+          return newHealth;
+        });
         setIsHit(true);
         setTimeout(() => setIsHit(false), 150);
 
@@ -166,19 +175,55 @@ function Zombie({ id, position }: { id: number, position: [number, number, numbe
 }
 
 export default function ZombieSpawner() {
-  const initialZombies = [
-    { id: 1, position: [15, 5, 15] as [number, number, number] },
-    { id: 2, position: [-15, 5, -10] as [number, number, number] },
-    { id: 3, position: [10, 5, -20] as [number, number, number] },
-    { id: 4, position: [-5, 5, 20] as [number, number, number] },
-    { id: 5, position: [20, 5, -5] as [number, number, number] },
-    { id: 6, position: [-20, 5, 5] as [number, number, number] },
-  ];
+  const [wave, setWave] = useState(1);
+  const [zombies, setZombies] = useState<{ id: number; position: [number, number, number] }[]>([]);
+
+  useEffect(() => {
+    startWave(1);
+  }, []);
+
+  const startWave = (waveNum: number) => {
+    const count = 5 + (waveNum - 1) * 3;
+    const newZombies = [];
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 15 + Math.random() * 10;
+      newZombies.push({
+        id: waveNum * 100 + i,
+        position: [Math.cos(angle) * radius, 5, Math.sin(angle) * radius] as [number, number, number]
+      });
+    }
+    setZombies(newZombies);
+    
+    // Update HUD
+    const hud = document.getElementById("wave-hud");
+    if (hud) hud.innerText = `WAVE ${waveNum} | ALIVE: ${count}`;
+  };
+
+  const handleZombieDeath = (id: number) => {
+    setZombies((prev) => {
+      const remaining = prev.filter(z => z.id !== id);
+      
+      const hud = document.getElementById("wave-hud");
+      if (hud) hud.innerText = `WAVE ${wave} | ALIVE: ${remaining.length}`;
+      
+      if (remaining.length === 0) {
+        setTimeout(() => {
+          setWave((w) => {
+            const nextWave = w + 1;
+            startWave(nextWave);
+            return nextWave;
+          });
+        }, 3000);
+      }
+      return remaining;
+    });
+  };
 
   return (
     <>
-      {initialZombies.map((z) => (
-        <Zombie key={z.id} id={z.id} position={z.position} />
+      {zombies.map((z) => (
+        <Zombie key={z.id} id={z.id} position={z.position} onDeath={handleZombieDeath} />
       ))}
     </>
   );
