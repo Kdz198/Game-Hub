@@ -10,12 +10,12 @@ import ZombieSpawner from "./components/ZombieSpawner";
 export default function FPSGame() {
   return (
     <Canvas shadows camera={{ fov: 75, position: [0, 1.6, 0] }}>
-      <color attach="background" args={['#202030']} />
-      <ambientLight intensity={0.5} />
+      <color attach="background" args={['#87CEEB']} />
+      <ambientLight intensity={2} />
       <directionalLight
         castShadow
         position={[10, 20, 10]}
-        intensity={1.5}
+        intensity={5}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
         shadow-camera-near={0.5}

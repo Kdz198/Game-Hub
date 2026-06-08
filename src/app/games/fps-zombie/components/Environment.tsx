@@ -10,7 +10,7 @@ export default function Environment() {
       <RigidBody type="fixed" colliders="cuboid" position={[0, -0.5, 0]}>
         <mesh receiveShadow>
           <boxGeometry args={[100, 1, 100]} />
-          <meshStandardMaterial color="#303030" metalness={0.1} roughness={0.9} />
+          <meshStandardMaterial color="#808080" metalness={0.1} roughness={0.9} />
         </mesh>
       </RigidBody>
 
