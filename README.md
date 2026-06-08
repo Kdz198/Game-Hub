@@ -33,26 +33,32 @@ AI học chơi game từ con số 0 bằng phương pháp thử - sai (Trial and
 
 ## 🕹️ Danh sách các trò chơi khác trong Hub
 
-### 1. 🧊 Synth Block (Neon Block Blast)
+### 1. 🚀 Neon Flapper (Cyberpunk Flappy Bird)
+Trải nghiệm bay không giới hạn qua các chướng ngại vật neon chớp nháy:
+*   Vật lý rơi tự do mượt mà với cảm giác phản hồi lực đẩy tốt.
+*   Hiệu ứng ánh sáng Neon tỏa sáng rực rỡ và bám đuôi theo di chuyển của nhân vật.
+*   Tốc độ trò chơi tăng dần theo thời gian tạo cảm giác thử thách.
+
+### 2. 🧊 Synth Block (Neon Block Blast)
 Tựa game xếp khối neon mang tính gây nghiện cao:
 *   Cơ chế kéo thả tối ưu, hiển thị bóng ảo (Shadow Preview) trước khi hạ khối.
 *   Vật lý rơi tự do (Gravity Collapse): Khi chết game và chơi lại, các khối gạch cũ sẽ rơi lả tả theo trọng lực.
 *   Vỡ hàng/cột đi kèm sóng xung kích (Explosion Wave) và bụi hạt lấp lánh rực rỡ.
 
-### 2. 🏎️ Grid Rider (GTA Style Endless Chill Drive)
+### 3. 🏎️ Grid Rider (GTA Style Endless Chill Drive)
 Trải nghiệm lái siêu xe Hypercar Bugatti Chiron/Porsche 911 chạy bất tận trong đêm đô thị mờ ảo:
 *   Mô phỏng vật lý lốp nghiêng thể thao (Negative Camber `/ \`), gai lốp chuyển động cuộn tròn và lazang xoay mâm theo tốc độ thực.
 *   Đĩa phanh gốm Carbon phát sáng cam đỏ rực lửa khi phanh gấp.
 *   Cánh gió chủ động (Active Spoiler) nâng cao theo tốc độ và gập nghiêng thành phanh khí động học (Airbrake) khi nhấn phanh.
 *   Hiệu ứng phản quang Moon Specular Highlight chạy dọc thân vỏ xe khi vào cua.
 
-### 3. 💥 Stack Ball (3D Helix Smash)
+### 4. 💥 Stack Ball (3D Helix Smash)
 Đập phá tháp đĩa tròn xoay được mô phỏng giả lập 3D trên Canvas 2D:
 *   Cơ chế Z-Sorting phân tầng vẽ đĩa trước/sau cột trung tâm giúp tháp đĩa quay tròn tự nhiên.
 *   **6 loại Skins cao cấp**: Neon Orb, Magma Core, Matrix Cube, Saturn Ring, Disco Glitter, Plasma Arc mang các hiệu ứng hạt vật lý đặc trưng (mưa mã nhị phân, tia sét plasma, bụi sao tinh vân, tia laser disco).
 *   Chế độ Fever Mode cuồng nộ hủy diệt đĩa đen đi kèm hiệu ứng thay đổi theo từng Skin.
 
-### 4. 🪲 Bug Hunter (Retro Space Invaders)
+### 5. 🪲 Bug Hunter (Retro Space Invaders)
 Trò chơi bắn súng phản xạ diệt Drone phá hoại hệ thống:
 *   Tích hợp hệ thống tính điểm liên hoàn (Combo Multiplier) tăng độ kịch tính.
 *   Nhiều chủng loại Drone từ nhỏ gọn nhanh nhẹn đến Tanker khổng lồ nhiều máu.

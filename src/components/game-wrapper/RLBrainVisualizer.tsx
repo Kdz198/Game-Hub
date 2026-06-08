@@ -134,9 +134,9 @@ export default function RLBrainVisualizer({ game, gameType = 'snake' }: RLBrainV
           ctx.moveTo(input.x, input.y);
           ctx.lineTo(hidden.x, hidden.y);
           if (input.active) {
-            const intensity = input.val !== undefined ? input.val : 1;
-            ctx.strokeStyle = `rgba(0, 240, 255, ${0.08 + intensity * 0.22})`;
-            ctx.lineWidth = 0.5 + intensity * 1.5;
+            const intensity = input.val !== undefined ? Math.abs(input.val) : 1;
+            ctx.strokeStyle = `rgba(0, 240, 255, ${Math.max(0.02, Math.min(0.6, 0.08 + intensity * 0.22))})`;
+            ctx.lineWidth = Math.max(0.2, 0.5 + intensity * 1.5);
           } else {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
             ctx.lineWidth = 0.5;
@@ -145,11 +145,11 @@ export default function RLBrainVisualizer({ game, gameType = 'snake' }: RLBrainV
 
           // Animated pulses flowing along active connections
           if (input.active) {
-            const intensity = input.val !== undefined ? input.val : 1;
+            const intensity = input.val !== undefined ? Math.abs(input.val) : 1;
             const px = input.x + (hidden.x - input.x) * pulseOffsetRef.current;
             const py = input.y + (hidden.y - input.y) * pulseOffsetRef.current;
             ctx.beginPath();
-            ctx.arc(px, py, 1.5 + intensity * 1.0, 0, Math.PI * 2);
+            ctx.arc(px, py, Math.max(0.5, 1.5 + intensity * 1.0), 0, Math.PI * 2);
             ctx.fillStyle = '#00f0ff';
             ctx.fill();
           }
@@ -188,10 +188,10 @@ export default function RLBrainVisualizer({ game, gameType = 'snake' }: RLBrainV
         ctx.beginPath();
         ctx.arc(node.x, node.y, 5, 0, Math.PI * 2);
         if (node.active) {
-          const intensity = node.val !== undefined ? node.val : 1;
+          const intensity = node.val !== undefined ? Math.abs(node.val) : 1;
           ctx.fillStyle = node.label.startsWith('DANGER') ? '#ff007f' : '#00f0ff';
           ctx.shadowColor = ctx.fillStyle;
-          ctx.shadowBlur = 4 + intensity * 8;
+          ctx.shadowBlur = Math.max(0, 4 + intensity * 8);
         } else {
           ctx.fillStyle = '#1c1c3a';
           ctx.shadowBlur = 0;

@@ -299,7 +299,7 @@ export class FlappyBirdGame {
 
   // RL Visualization Data
   public isVisualizing = false;
-  public rlLastState: number[] = Array(6).fill(0);
+  public rlLastState: number[] = Array(7).fill(0);
   public rlLastQValues: number[] = [0, 0];
   public rlLastAction = 0;
 
