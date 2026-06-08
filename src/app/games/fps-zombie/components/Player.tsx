@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame, useThree } from "@react-three/fiber";
-import { RigidBody, CapsuleCollider } from "@react-three/rapier";
+import { RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import Weapon from "./Weapon";
