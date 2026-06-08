@@ -66,6 +66,16 @@ export default function Home() {
       neonColor: "#ffaa00", // Neon Orange
       status: "ONLINE",
       players: "3,120"
+    },
+    {
+      id: "fps-zombie",
+      title: "ZOMBIE NEXUS",
+      category: "FPS / SURVIVAL",
+      description: "Bắn súng góc nhìn thứ nhất chân thực. Tiêu diệt thây ma trong không gian 3D u ám.",
+      icon: "🔫",
+      neonColor: "#ff0000", // Blood Red
+      status: "ONLINE",
+      players: "4,500"
     }
   ];
 
