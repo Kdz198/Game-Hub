@@ -40,7 +40,13 @@ export default function FPSZombiePage() {
         </div>
       )}
 
-      {isPlaying && <FPSGameCanvas />}
+      {isPlaying && (
+        <>
+          <div id="ammo-hud" className={`${styles.ammoHud} ${orbitron.className}`}>30 / 30</div>
+          <div id="hit-marker" className={styles.hitMarker}>X</div>
+          <FPSGameCanvas />
+        </>
+      )}
     </div>
   );
 }

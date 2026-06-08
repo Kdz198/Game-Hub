@@ -13,9 +13,9 @@ export default function FPSGame() {
   return (
     <Canvas shadows camera={{ fov: 75, position: [0, 1.6, 0] }}>
       <Suspense fallback={null}>
-        <color attach="background" args={['#87CEEB']} />
-        <ambientLight intensity={2} />
-      <directionalLight
+        <color attach="background" args={['#050510']} />
+        <ambientLight intensity={1} />
+        <directionalLight
         castShadow
         position={[10, 20, 10]}
         intensity={5}

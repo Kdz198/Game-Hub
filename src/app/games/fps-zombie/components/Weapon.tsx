@@ -72,13 +72,23 @@ export default function Weapon({ isShooting, isReloading }: WeaponProps) {
       */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[0.1, 0.1, 0.5]} />
-        <meshStandardMaterial color="#333333" metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color="#111111" metalness={0.2} roughness={0.9} />
+      </mesh>
+
+      {/* Neon glowing parts */}
+      <mesh position={[0.051, 0, 0]}>
+        <boxGeometry args={[0.01, 0.05, 0.4]} />
+        <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2} />
+      </mesh>
+      <mesh position={[-0.051, 0, 0]}>
+        <boxGeometry args={[0.01, 0.05, 0.4]} />
+        <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2} />
       </mesh>
 
       {/* Gun barrel */}
       <mesh position={[0, 0, -0.3]} castShadow>
         <cylinderGeometry args={[0.02, 0.02, 0.2]} />
-        <meshStandardMaterial color="#111111" metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color="#000000" metalness={0.1} roughness={0.9} />
       </mesh>
 
       {/* Muzzle Flash Light */}

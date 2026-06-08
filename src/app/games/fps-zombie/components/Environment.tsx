@@ -1,18 +1,33 @@
 "use client";
 
 import { RigidBody } from "@react-three/rapier";
+import { Grid } from "@react-three/drei";
 import * as THREE from "three";
 
 export default function Environment() {
   return (
-    <>
+    <group>
       {/* Ground */}
       <RigidBody type="fixed" colliders="cuboid" position={[0, -0.5, 0]}>
         <mesh receiveShadow>
           <boxGeometry args={[100, 1, 100]} />
-          <meshStandardMaterial color="#808080" metalness={0.1} roughness={0.9} />
+          <meshStandardMaterial color="#050510" metalness={0.8} roughness={0.2} />
         </mesh>
       </RigidBody>
+
+      {/* Cyberpunk Grid Visual */}
+      <Grid
+        position={[0, 0.01, 0]}
+        args={[100, 100]}
+        cellSize={1}
+        cellThickness={1}
+        cellColor="#00f0ff"
+        sectionSize={5}
+        sectionThickness={1.5}
+        sectionColor="#ff007f"
+        fadeDistance={50}
+        fadeStrength={1.5}
+      />
 
       {/* Some walls/obstacles */}
       <RigidBody type="fixed" colliders="cuboid" position={[10, 2, -10]}>
@@ -39,6 +54,6 @@ export default function Environment() {
       {/* Decorative Lights */}
       <pointLight position={[10, 3, -8]} color="#ff0000" intensity={2} distance={10} />
       <pointLight position={[-8, 3, -10]} color="#00ff00" intensity={1.5} distance={10} />
-    </>
+    </group>
   );
 }
