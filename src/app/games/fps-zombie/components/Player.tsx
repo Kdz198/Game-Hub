@@ -25,7 +25,10 @@ export default function Player() {
 
   const [isShooting, setIsShooting] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
+  const [isAiming, setIsAiming] = useState(false);
+  
   const isReloadingRef = useRef(false);
+  const isAimingRef = useRef(false);
   const ammoRef = useRef(30);
 
   useEffect(() => {
@@ -65,7 +68,11 @@ export default function Player() {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0 && !isReloadingRef.current && ammoRef.current > 0) {
+      if (e.button === 2) {
+        isAimingRef.current = true;
+        setIsAiming(true);
+      }
+      else if (e.button === 0 && !isReloadingRef.current && ammoRef.current > 0) {
         // Fire
         ammoRef.current -= 1;
         const hud = document.getElementById("ammo-hud");
@@ -74,6 +81,10 @@ export default function Player() {
         setIsShooting(true);
         setTimeout(() => setIsShooting(false), 100);
         
+        // Camera Recoil (FOV punch)
+        camera.fov -= isAimingRef.current ? 1 : 2;
+        camera.updateProjectionMatrix();
+
         // Raycast for hits using Three.js
         const raycaster = new THREE.Raycaster();
         const rayDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
@@ -109,19 +120,33 @@ export default function Player() {
       }
     };
 
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 2) {
+        isAimingRef.current = false;
+        setIsAiming(false);
+      }
+    };
+
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
     
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
       document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [camera, scene]);
 
   useFrame(() => {
     if (!rigidBody.current) return;
+
+    // ADS Zoom smoothing
+    const targetFov = isAimingRef.current ? 40 : 75;
+    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.15);
+    camera.updateProjectionMatrix();
 
     // Movement logic
     const velocity = rigidBody.current.linvel();
@@ -129,10 +154,12 @@ export default function Player() {
     const frontVector = new THREE.Vector3(0, 0, (movementRef.current.backward ? 1 : 0) - (movementRef.current.forward ? 1 : 0));
     const sideVector = new THREE.Vector3((movementRef.current.left ? 1 : 0) - (movementRef.current.right ? 1 : 0), 0, 0);
 
+    const speed = isAimingRef.current ? SPEED * 0.5 : (movementRef.current.sprint ? SPRINT_SPEED : SPEED);
+
     direction
       .subVectors(frontVector, sideVector)
       .normalize()
-      .multiplyScalar(movementRef.current.sprint ? SPRINT_SPEED : SPEED)
+      .multiplyScalar(speed)
       .applyEuler(camera.rotation);
 
     rigidBody.current.setLinvel({ x: direction.x, y: velocity.y, z: direction.z }, true);
@@ -153,7 +180,7 @@ export default function Player() {
       <RigidBody ref={rigidBody} colliders={false} mass={1} type="dynamic" position={[0, 5, 0]} lockRotations>
         <CapsuleCollider args={[0.5, 0.5]} />
       </RigidBody>
-      <Weapon isShooting={isShooting} isReloading={isReloading} />
+      <Weapon isShooting={isShooting} isReloading={isReloading} isAiming={isAiming} />
     </>
   );
 }

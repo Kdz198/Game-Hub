@@ -7,9 +7,10 @@ import * as THREE from "three";
 interface WeaponProps {
   isShooting: boolean;
   isReloading: boolean;
+  isAiming: boolean;
 }
 
-export default function Weapon({ isShooting, isReloading }: WeaponProps) {
+export default function Weapon({ isShooting, isReloading, isAiming }: WeaponProps) {
   const weaponRef = useRef<THREE.Group>(null);
   const flashRef = useRef<THREE.PointLight>(null);
   const { camera } = useThree();
@@ -17,14 +18,18 @@ export default function Weapon({ isShooting, isReloading }: WeaponProps) {
   useFrame((state) => {
     if (!weaponRef.current) return;
 
-    // Base position relative to camera
-    const baseOffset = new THREE.Vector3(0.3, -0.3, -0.6);
+    // Base position relative to camera (center when aiming, offset when hip firing)
+    const baseOffset = isAiming 
+      ? new THREE.Vector3(0, -0.08, -0.4) // Centered, eye-level with scope
+      : new THREE.Vector3(0.3, -0.3, -0.6); // Hip-fire position
+    
     const baseRotation = new THREE.Euler(0, 0, 0);
 
     // Apply sway based on mouse movement/time
     const time = state.clock.getElapsedTime();
-    const swayX = Math.sin(time * 2) * 0.005;
-    const swayY = Math.cos(time * 4) * 0.005;
+    const swayAmount = isAiming ? 0.001 : 0.005;
+    const swayX = Math.sin(time * 2) * swayAmount;
+    const swayY = Math.cos(time * 4) * swayAmount;
 
     // Apply reload animation
     if (isReloading) {
@@ -34,8 +39,8 @@ export default function Weapon({ isShooting, isReloading }: WeaponProps) {
     } 
     // Apply shooting recoil
     else if (isShooting) {
-      baseOffset.z += 0.1;
-      baseRotation.x += 0.1;
+      baseOffset.z += isAiming ? 0.05 : 0.1;
+      baseRotation.x += isAiming ? 0.02 : 0.1;
     }
 
     baseOffset.x += swayX;
