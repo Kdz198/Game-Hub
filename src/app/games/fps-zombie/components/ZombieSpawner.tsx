@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { RigidBody } from "@react-three/rapier";
+import { RigidBody, CapsuleCollider } from "@react-three/rapier";
 import { useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 
@@ -29,7 +29,8 @@ function Zombie({ position }: { position: [number, number, number] }) {
   if (health <= 0) return null; // Zombie is dead
 
   return (
-    <RigidBody ref={rigidBody} colliders="capsule" mass={1} position={position} type="dynamic" lockRotations>
+    <RigidBody ref={rigidBody} colliders={false} mass={1} position={position} type="dynamic" lockRotations>
+      <CapsuleCollider args={[0.4, 0.5]} position={[0, 0, 0]} />
       {/* 
         Placeholder for Zombie Model 
         Replace with useGLTF() later
