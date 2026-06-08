@@ -65,38 +65,64 @@ export default function Weapon({ isShooting, isReloading }: WeaponProps) {
     // Attach weapon to camera using createPortal or just grouping in useFrame
     // In R3F, since Player is updating camera position manually, we can attach this group directly to the camera
     <group ref={weaponRef} position={[0.3, -0.3, -0.6]}>
-      {/* 
-        This is a placeholder geometry for the weapon.
-        To use a realistic 3D model, replace this mesh with useGLTF() 
-        e.g., const { scene } = useGLTF('/models/gun.glb'); <primitive object={scene} />
-      */}
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.1, 0.1, 0.5]} />
-        <meshStandardMaterial color="#111111" metalness={0.2} roughness={0.9} />
+      {/* Main Body */}
+      <mesh castShadow receiveShadow position={[0, 0, 0]}>
+        <boxGeometry args={[0.08, 0.12, 0.4]} />
+        <meshStandardMaterial color="#1a1a1a" metalness={0.5} roughness={0.8} />
+      </mesh>
+
+      {/* Grip */}
+      <mesh castShadow receiveShadow position={[0, -0.1, 0.1]} rotation={[0.2, 0, 0]}>
+        <boxGeometry args={[0.04, 0.15, 0.08]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.9} />
+      </mesh>
+
+      {/* Magazine */}
+      <mesh castShadow receiveShadow position={[0, -0.12, -0.05]} rotation={[-0.1, 0, 0]}>
+        <boxGeometry args={[0.05, 0.15, 0.08]} />
+        <meshStandardMaterial color="#111" metalness={0.3} />
+      </mesh>
+
+      {/* Stock */}
+      <mesh castShadow receiveShadow position={[0, -0.02, 0.25]}>
+        <boxGeometry args={[0.06, 0.1, 0.2]} />
+        <meshStandardMaterial color="#1a1a1a" />
+      </mesh>
+
+      {/* Scope */}
+      <mesh castShadow receiveShadow position={[0, 0.08, 0]}>
+        <boxGeometry args={[0.04, 0.04, 0.15]} />
+        <meshStandardMaterial color="#111" metalness={0.6} />
+      </mesh>
+      
+      {/* Scope lens */}
+      <mesh position={[0, 0.08, -0.076]}>
+        <circleGeometry args={[0.015, 16]} />
+        <meshBasicMaterial color="#00f0ff" />
       </mesh>
 
       {/* Neon glowing parts */}
-      <mesh position={[0.051, 0, 0]}>
-        <boxGeometry args={[0.01, 0.05, 0.4]} />
+      <mesh position={[0.041, 0, -0.05]}>
+        <boxGeometry args={[0.01, 0.02, 0.2]} />
         <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2} />
       </mesh>
-      <mesh position={[-0.051, 0, 0]}>
-        <boxGeometry args={[0.01, 0.05, 0.4]} />
+      <mesh position={[-0.041, 0, -0.05]}>
+        <boxGeometry args={[0.01, 0.02, 0.2]} />
         <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2} />
       </mesh>
 
       {/* Gun barrel */}
-      <mesh position={[0, 0, -0.3]} castShadow>
-        <cylinderGeometry args={[0.02, 0.02, 0.2]} />
-        <meshStandardMaterial color="#000000" metalness={0.1} roughness={0.9} />
+      <mesh position={[0, 0.02, -0.3]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.015, 0.02, 0.3, 8]} />
+        <meshStandardMaterial color="#222" metalness={0.8} roughness={0.2} />
       </mesh>
 
       {/* Muzzle Flash Light */}
-      <pointLight ref={flashRef} position={[0, 0, -0.5]} color="#ffa500" distance={5} decay={2} intensity={0} />
+      <pointLight ref={flashRef} position={[0, 0.02, -0.5]} color="#ffa500" distance={5} decay={2} intensity={0} />
       
       {/* Muzzle Flash Mesh */}
       {isShooting && (
-        <mesh position={[0, 0, -0.45]}>
+        <mesh position={[0, 0.02, -0.45]}>
           <sphereGeometry args={[0.05, 8, 8]} />
           <meshBasicMaterial color="#ffcc00" transparent opacity={0.8} />
         </mesh>

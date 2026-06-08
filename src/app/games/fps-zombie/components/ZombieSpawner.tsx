@@ -59,7 +59,7 @@ function Zombie({ id, position }: { id: number, position: [number, number, numbe
   return (
     <RigidBody ref={rigidBody} userData={{ type: "zombie", id }} colliders={false} mass={1} position={position} type="dynamic" lockRotations>
       <CapsuleCollider args={[0.4, 0.5]} position={[0, 0, 0]} />
-      <mesh castShadow receiveShadow position={[0, 0, 0]}>
+      <mesh name={`zombie-${id}`} castShadow receiveShadow position={[0, 0, 0]}>
         <capsuleGeometry args={[0.4, 1, 4, 8]} />
         <meshStandardMaterial color={isHit ? "#ff0000" : "#111111"} roughness={0.9} metalness={0.5} />
       </mesh>

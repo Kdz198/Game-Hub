@@ -11,11 +11,10 @@ const SPRINT_SPEED = 10;
 const JUMP_FORCE = 8;
 
 export default function Player() {
-  const { camera } = useThree();
+  const { camera, scene } = useThree();
   const rigidBody = useRef<any>(null);
   
-  const { rapier, world } = useRapier();
-  const [movement, setMovement] = useState({
+  const movementRef = useRef({
     forward: false,
     backward: false,
     left: false,
@@ -26,24 +25,27 @@ export default function Player() {
 
   const [isShooting, setIsShooting] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
+  const isReloadingRef = useRef(false);
   const ammoRef = useRef(30);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.code) {
-        case "KeyW": setMovement((m) => ({ ...m, forward: true })); break;
-        case "KeyS": setMovement((m) => ({ ...m, backward: true })); break;
-        case "KeyA": setMovement((m) => ({ ...m, left: true })); break;
-        case "KeyD": setMovement((m) => ({ ...m, right: true })); break;
-        case "Space": setMovement((m) => ({ ...m, jump: true })); break;
-        case "ShiftLeft": setMovement((m) => ({ ...m, sprint: true })); break;
+        case "KeyW": movementRef.current.forward = true; break;
+        case "KeyS": movementRef.current.backward = true; break;
+        case "KeyA": movementRef.current.left = true; break;
+        case "KeyD": movementRef.current.right = true; break;
+        case "Space": movementRef.current.jump = true; break;
+        case "ShiftLeft": movementRef.current.sprint = true; break;
         case "KeyR": 
-          if (!isReloading && ammoRef.current < 30) {
-            setIsReloading(true); 
+          if (!isReloadingRef.current && ammoRef.current < 30) {
+            isReloadingRef.current = true;
+            setIsReloading(true);
             setTimeout(() => { 
               ammoRef.current = 30;
               const hud = document.getElementById("ammo-hud");
               if (hud) hud.innerText = `30 / 30`;
+              isReloadingRef.current = false;
               setIsReloading(false); 
             }, 2000); 
           }
@@ -53,17 +55,17 @@ export default function Player() {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       switch (e.code) {
-        case "KeyW": setMovement((m) => ({ ...m, forward: false })); break;
-        case "KeyS": setMovement((m) => ({ ...m, backward: false })); break;
-        case "KeyA": setMovement((m) => ({ ...m, left: false })); break;
-        case "KeyD": setMovement((m) => ({ ...m, right: false })); break;
-        case "Space": setMovement((m) => ({ ...m, jump: false })); break;
-        case "ShiftLeft": setMovement((m) => ({ ...m, sprint: false })); break;
+        case "KeyW": movementRef.current.forward = false; break;
+        case "KeyS": movementRef.current.backward = false; break;
+        case "KeyA": movementRef.current.left = false; break;
+        case "KeyD": movementRef.current.right = false; break;
+        case "Space": movementRef.current.jump = false; break;
+        case "ShiftLeft": movementRef.current.sprint = false; break;
       }
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0 && !isReloading && ammoRef.current > 0) {
+      if (e.button === 0 && !isReloadingRef.current && ammoRef.current > 0) {
         // Fire
         ammoRef.current -= 1;
         const hud = document.getElementById("ammo-hud");
@@ -72,16 +74,17 @@ export default function Player() {
         setIsShooting(true);
         setTimeout(() => setIsShooting(false), 100);
         
-        // Raycast for hits
-        const rayOrigin = camera.position;
+        // Raycast for hits using Three.js
+        const raycaster = new THREE.Raycaster();
         const rayDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
-        const ray = new rapier.Ray(rayOrigin, rayDirection);
-        const hit = world.castRay(ray, 100, true);
+        raycaster.set(camera.position, rayDirection);
         
-        if (hit && hit.collider) {
-          const body = hit.collider.parent();
-          if (body && body.userData && body.userData.type === "zombie") {
-            window.dispatchEvent(new CustomEvent("zombieHit", { detail: { id: body.userData.id } }));
+        const intersects = raycaster.intersectObjects(scene.children, true);
+        for (let i = 0; i < intersects.length; i++) {
+          const object = intersects[i].object;
+          if (object.name && object.name.startsWith("zombie-")) {
+            const id = parseInt(object.name.split("-")[1]);
+            window.dispatchEvent(new CustomEvent("zombieHit", { detail: { id } }));
             
             // Hit marker
             const marker = document.getElementById("hit-marker");
@@ -89,15 +92,18 @@ export default function Player() {
               marker.style.opacity = "1";
               setTimeout(() => { marker.style.opacity = "0"; }, 100);
             }
+            break; // Stop at first hit
           }
         }
-      } else if (e.button === 0 && ammoRef.current <= 0 && !isReloading) {
+      } else if (e.button === 0 && ammoRef.current <= 0 && !isReloadingRef.current) {
         // Auto reload
+        isReloadingRef.current = true;
         setIsReloading(true);
         setTimeout(() => {
           ammoRef.current = 30;
           const hud = document.getElementById("ammo-hud");
           if (hud) hud.innerText = `30 / 30`;
+          isReloadingRef.current = false;
           setIsReloading(false);
         }, 2000);
       }
@@ -112,7 +118,7 @@ export default function Player() {
       document.removeEventListener("keyup", handleKeyUp);
       document.removeEventListener("mousedown", handleMouseDown);
     };
-  }, [camera, isReloading, rapier, world]);
+  }, [camera, scene]);
 
   useFrame(() => {
     if (!rigidBody.current) return;
@@ -120,22 +126,22 @@ export default function Player() {
     // Movement logic
     const velocity = rigidBody.current.linvel();
     const direction = new THREE.Vector3();
-    const frontVector = new THREE.Vector3(0, 0, (movement.backward ? 1 : 0) - (movement.forward ? 1 : 0));
-    const sideVector = new THREE.Vector3((movement.left ? 1 : 0) - (movement.right ? 1 : 0), 0, 0);
+    const frontVector = new THREE.Vector3(0, 0, (movementRef.current.backward ? 1 : 0) - (movementRef.current.forward ? 1 : 0));
+    const sideVector = new THREE.Vector3((movementRef.current.left ? 1 : 0) - (movementRef.current.right ? 1 : 0), 0, 0);
 
     direction
       .subVectors(frontVector, sideVector)
       .normalize()
-      .multiplyScalar(movement.sprint ? SPRINT_SPEED : SPEED)
+      .multiplyScalar(movementRef.current.sprint ? SPRINT_SPEED : SPEED)
       .applyEuler(camera.rotation);
 
     rigidBody.current.setLinvel({ x: direction.x, y: velocity.y, z: direction.z }, true);
 
     // Jump
     const worldPosition = rigidBody.current.translation();
-    if (movement.jump && Math.abs(velocity.y) < 0.1) {
+    if (movementRef.current.jump && Math.abs(velocity.y) < 0.1) {
       rigidBody.current.setLinvel({ x: velocity.x, y: JUMP_FORCE, z: velocity.z }, true);
-      setMovement((m) => ({ ...m, jump: false }));
+      movementRef.current.jump = false;
     }
 
     // Attach camera to rigid body
